@@ -2,7 +2,7 @@
 Ask Yourself
 
 ## What Is Nudgery
-Nudgery asks you your own questions, on a schedule you choose. You will be able to view the history of each nudge you record, and identify trends over time.
+Nudgery is an Android app that asks you your own questions, on a schedule you choose. You will be able to view the history of each nudge you record, and identify trends over time.
 
 Nudgery contains no ads, and your data stays on your phone (unless you go through the steps to export it).
 
@@ -31,9 +31,18 @@ After the questions are finished, you can edit the schedule for your Nudge to as
 
 Save the Nudge. It will appear on the main screen in the list with the rest of your Nudges, indicating the Nudge's name, schedule, next nudge date and time, and whether or not it is enabled. 
 
-Enabled Nudges will send you notifications when it's time to answer your questions.
+Enabled Nudges will send you notifications when it's time to answer your questions. When the notification pops up, clicking on it will take you directly to the question form.
 
 ## Viewing Nudges
-From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a graph of the data you have entered so far, and editable details of that Nudge.
+From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV/TSV file. There will also be an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately.
 
-Note: Editing questions and keeping the old data is a MESS.
+The visualizations available for each main question will differ, based on the main question type.
+Available visualizations include calendar heat maps, bar charts, line graphs, column charts, and tag clouds. The timeframe can be switched between weekly, monthly, yearly, and all-time. 
+
+
+## Editing Nudges
+Nudge configuration be edited, except for the base type of the main question. If you edit the main question text or selectable option text, you will be asked if you would prefer to split the Nudge instead of editing in place.
+* If you are changing the question enough that the previous answers are no longer accurate answers for the new question, choose to split. The old version of the Nudge and all its related data will be preserved, and the old Nudge will be disabled. The edits will essentially be a new Nudge, which will be enabled going forward.
+* If the change to the question is not significant (like a typo change), or if you just don't care (also totally valid), choose not to split the Nudge. The old data will be kept with the new question text, and a note recording the date/time and contents of the edit will be saved with the Nudge.
+
+While you cannot edit Nudge answer data once entered, you can select individual answers and tag them as hidden. Hidden rows no longer appear in the data visualization.
