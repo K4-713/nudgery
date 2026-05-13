@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Android
+*.apk
+*.aab
+*.ap_
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Kotlin
+*.class
+
+# Secrets — never commit
+*.keystore
+keystore.properties
+google-services.json
