@@ -13,7 +13,7 @@ Project requirements are defined by the end-user documentation. To implement the
   * These tests will not be the only automated tests, so they should be easily identifiable by a TDD_ prefix in the test name, and commented with the line(s) in the documentation covered by this test
 * Implement the new feature(s)
 * Once the feature is implemented, the documentation tests will pass, and keeping those tests will prevent regressions.
-* Note next steps for implementation, if any, in TODO.md
+* Always note next steps for implementation, if any, in TODO.md
 
 # Guidelines
 * Update code comments when relevant changes are made to the code
