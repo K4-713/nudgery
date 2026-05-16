@@ -1,67 +1,211 @@
 package com.nudgery.shared
 
+import com.nudgery.shared.model.QuestionType
+import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.usecase.CreateNudgeRequest
+import com.nudgery.shared.usecase.CreateNudgeResult
+import com.nudgery.shared.usecase.CreateNudgeUseCase
+import com.nudgery.shared.usecase.QuestionRequest
+import com.nudgery.shared.usecase.ScheduleRequest
+import com.nudgery.shared.util.FakeNotificationScheduler
+import com.nudgery.shared.util.TestRepositories
+import com.nudgery.shared.util.createTestRepositories
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalTime
+import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class NudgeCreationTest {
 
+    private lateinit var repos: TestRepositories
+    private lateinit var fakeScheduler: FakeNotificationScheduler
+    private lateinit var createNudge: CreateNudgeUseCase
+
+    @BeforeTest
+    fun setup() {
+        repos = createTestRepositories()
+        fakeScheduler = FakeNotificationScheduler()
+        createNudge = CreateNudgeUseCase(
+            repos.nudgeRepository,
+            repos.questionRepository,
+            repos.questionOptionRepository,
+            repos.scheduleRepository,
+            fakeScheduler
+        )
+    }
+
+    private fun dailySchedule() = ScheduleRequest(
+        type = ScheduleType.DAILY,
+        timeOfDay = LocalTime(12, 0),
+        activeDaysOfWeek = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+    )
+
     @Test
-    fun TDD_createNudgeWithYesNoQuestion() {
+    fun TDD_createNudgeWithYesNoQuestion() = runTest {
         // README "Setting Up a Nudge": "choose what kind of answer you want with the main question (Yes or No...)"
-        TODO("TDD skeleton")
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Did you sleep well?", QuestionType.YES_NO),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val questions = repos.questionRepository.getByNudgeId(result.nudgeId)
+        assertEquals(1, questions.size)
+        assertEquals(QuestionType.YES_NO, questions[0].type)
     }
 
     @Test
-    fun TDD_createNudgeWithNumberQuestion() {
+    fun TDD_createNudgeWithNumberQuestion() = runTest {
         // README "Setting Up a Nudge": "...Number..."
-        TODO("TDD skeleton")
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How many hours did you sleep?", QuestionType.NUMBER),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val questions = repos.questionRepository.getByNudgeId(result.nudgeId)
+        assertEquals(QuestionType.NUMBER, questions[0].type)
     }
 
     @Test
-    fun TDD_createNudgeWithOptionSingleQuestion() {
+    fun TDD_createNudgeWithOptionSingleQuestion() = runTest {
         // README "Setting Up a Nudge": "...Option (Single)..."
-        TODO("TDD skeleton")
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(
+                    text = "How do you feel?",
+                    type = QuestionType.OPTION_SINGLE,
+                    options = listOf("Great", "Good", "Bad")
+                ),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val questions = repos.questionRepository.getByNudgeId(result.nudgeId)
+        assertEquals(QuestionType.OPTION_SINGLE, questions[0].type)
+        val options = repos.questionOptionRepository.getByQuestionId(questions[0].id)
+        assertEquals(3, options.size)
     }
 
     @Test
-    fun TDD_createNudgeWithOptionMultiQuestion() {
+    fun TDD_createNudgeWithOptionMultiQuestion() = runTest {
         // README "Setting Up a Nudge": "...Option (Multi)"
-        TODO("TDD skeleton")
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(
+                    text = "Which symptoms do you have?",
+                    type = QuestionType.OPTION_MULTI,
+                    options = listOf("Headache", "Fatigue", "Nausea")
+                ),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val questions = repos.questionRepository.getByNudgeId(result.nudgeId)
+        assertEquals(QuestionType.OPTION_MULTI, questions[0].type)
+        val options = repos.questionOptionRepository.getByQuestionId(questions[0].id)
+        assertEquals(3, options.size)
     }
 
     @Test
-    fun TDD_optionQuestionAllowsUpToSixteenOptions() {
+    fun TDD_optionQuestionAllowsUpToSixteenOptions() = runTest {
         // README "Setting Up a Nudge": "you will be prompted here to add up to 16 selectable answers"
-        TODO("TDD skeleton")
+        val options = (1..16).map { "Option $it" }
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Pick one", QuestionType.OPTION_SINGLE, options),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val questions = repos.questionRepository.getByNudgeId(result.nudgeId)
+        val savedOptions = repos.questionOptionRepository.getByQuestionId(questions[0].id)
+        assertEquals(16, savedOptions.size)
     }
 
     @Test
-    fun TDD_optionQuestionRejectsMoreThanSixteenOptions() {
+    fun TDD_optionQuestionRejectsMoreThanSixteenOptions() = runTest {
         // README "Setting Up a Nudge": "...up to 16 selectable answers"
-        TODO("TDD skeleton")
+        val options = (1..17).map { "Option $it" }
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Pick one", QuestionType.OPTION_SINGLE, options),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.TooManyOptions>(result)
     }
 
     @Test
-    fun TDD_nudgeNameDefaultsToMainQuestionText() {
+    fun TDD_nudgeNameDefaultsToMainQuestionText() = runTest {
         // ARCHITECTURE.md Nudge.name: "Derived from main question text by default"
-        TODO("TDD skeleton")
+        val questionText = "Did you exercise today?"
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(questionText, QuestionType.YES_NO),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val nudge = repos.nudgeRepository.getById(result.nudgeId)
+        assertEquals(questionText, nudge!!.name)
     }
 
     @Test
-    fun TDD_newNudgeIsEnabledByDefault() {
+    fun TDD_newNudgeIsEnabledByDefault() = runTest {
         // README "Viewing Nudges": "whether or not it is enabled" — new nudges should fire from the start
-        TODO("TDD skeleton")
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Question?", QuestionType.YES_NO),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val nudge = repos.nudgeRepository.getById(result.nudgeId)
+        assertTrue(nudge!!.isEnabled)
     }
 
     @Test
-    fun TDD_savedNudgeAppearsInNudgeList() {
+    fun TDD_savedNudgeAppearsInNudgeList() = runTest {
         // README "Setting Up a Nudge": "It will appear on the main screen in the list with the rest of your Nudges"
-        TODO("TDD skeleton")
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Question?", QuestionType.YES_NO),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val nudges = repos.nudgeRepository.observeAll().first()
+        assertTrue(nudges.any { it.id == result.nudgeId })
     }
 
     @Test
-    fun TDD_nudgeListEntryShowsNameScheduleNextDateAndEnabledStatus() {
+    fun TDD_nudgeListEntryShowsNameScheduleNextDateAndEnabledStatus() = runTest {
         // README "Setting Up a Nudge": "indicating the Nudge's name, schedule, next nudge date and time,
         //   and whether or not it is enabled"
-        TODO("TDD skeleton")
+        val nudgeName = "My Sleep Tracker"
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Question?", QuestionType.YES_NO),
+                schedule = dailySchedule(),
+                name = nudgeName,
+                isEnabled = true
+            )
+        ) as CreateNudgeResult.Success
+
+        val nudge = repos.nudgeRepository.getById(result.nudgeId)
+        val schedule = repos.scheduleRepository.getByNudgeId(result.nudgeId)
+
+        assertNotNull(nudge)
+        assertNotNull(schedule)
+        assertEquals(nudgeName, nudge.name)
+        assertTrue(nudge.isEnabled)
+        assertEquals(ScheduleType.DAILY, schedule.type)
     }
 }

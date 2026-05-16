@@ -24,6 +24,10 @@ class SqlDelightAnswerRepository(private val database: NudgeryDatabase) : Answer
             .mapToList(Dispatchers.Default)
             .map { rows -> rows.map { it.toDomain() } }
 
+    override suspend fun getAllByNudgeId(nudgeId: String): List<Answer> = withContext(Dispatchers.Default) {
+        database.answerQueries.selectByNudgeId(nudgeId).executeAsList().map { it.toDomain() }
+    }
+
     override suspend fun getVisibleByNudgeIdSince(nudgeId: String, since: Instant): List<Answer> =
         withContext(Dispatchers.Default) {
             database.answerQueries

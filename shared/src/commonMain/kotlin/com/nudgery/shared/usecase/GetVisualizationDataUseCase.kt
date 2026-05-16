@@ -1,0 +1,117 @@
+package com.nudgery.shared.usecase
+
+import com.nudgery.shared.model.Answer
+import com.nudgery.shared.model.DailyCount
+import com.nudgery.shared.model.DataPoint
+import com.nudgery.shared.model.NamedCount
+import com.nudgery.shared.model.QuestionType
+import com.nudgery.shared.model.Timeframe
+import com.nudgery.shared.model.VisualizationData
+import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.QuestionOptionRepository
+import com.nudgery.shared.repository.QuestionRepository
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
+
+class GetVisualizationDataUseCase(
+    private val answerRepository: AnswerRepository,
+    private val questionRepository: QuestionRepository,
+    private val questionOptionRepository: QuestionOptionRepository
+) {
+    suspend fun execute(
+        nudgeId: String,
+        questionId: String,
+        timeframe: Timeframe,
+        now: Instant = Clock.System.now(),
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): List<VisualizationData> {
+        val question = questionRepository.getByNudgeId(nudgeId).firstOrNull { it.id == questionId }
+            ?: return emptyList()
+
+        val since = computeSince(timeframe, now, timeZone)
+        val answers = answerRepository.getVisibleByNudgeIdSince(nudgeId, since)
+            .filter { it.questionId == questionId }
+
+        return when (question.type) {
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone)
+            QuestionType.NUMBER -> buildNumberCharts(answers, timeZone)
+            QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
+            QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
+            QuestionType.TEXT -> emptyList()
+        }
+    }
+
+    private fun computeSince(timeframe: Timeframe, now: Instant, timeZone: TimeZone): Instant {
+        val today = now.toLocalDateTime(timeZone).date
+        return when (timeframe) {
+            Timeframe.WEEKLY -> today.minus(7, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
+            Timeframe.MONTHLY -> today.minus(30, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
+            Timeframe.YEARLY -> today.minus(365, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
+            Timeframe.ALL_TIME -> Instant.DISTANT_PAST
+        }
+    }
+
+    private fun buildYesNoCharts(answers: List<Answer>, timeZone: TimeZone): List<VisualizationData> {
+        val dailyCounts = answers
+            .groupBy { it.recordedAt.toLocalDateTime(timeZone).date }
+            .map { (date, dayAnswers) ->
+                DailyCount(date, dayAnswers.count { it.value.uppercase() == "YES" }.toDouble())
+            }
+            .sortedBy { it.date }
+
+        val totalYes = answers.count { it.value.uppercase() == "YES" }
+        val totalNo = answers.count { it.value.uppercase() == "NO" }
+
+        return listOf(
+            VisualizationData.CalendarHeatMap(dailyCounts),
+            VisualizationData.ColumnChart(listOf(NamedCount("YES", totalYes), NamedCount("NO", totalNo)))
+        )
+    }
+
+    private fun buildNumberCharts(answers: List<Answer>, timeZone: TimeZone): List<VisualizationData> {
+        val points = answers
+            .mapNotNull { answer ->
+                answer.value.toDoubleOrNull()?.let { DataPoint(answer.recordedAt, it) }
+            }
+            .sortedBy { it.at }
+
+        val dailyCounts = answers
+            .groupBy { it.recordedAt.toLocalDateTime(timeZone).date }
+            .map { (date, dayAnswers) ->
+                val avg = dayAnswers.mapNotNull { it.value.toDoubleOrNull() }.average()
+                DailyCount(date, if (avg.isNaN()) 0.0 else avg)
+            }
+            .sortedBy { it.date }
+
+        return listOf(
+            VisualizationData.LineGraph(points),
+            VisualizationData.CalendarHeatMap(dailyCounts)
+        )
+    }
+
+    private suspend fun buildOptionCharts(
+        answers: List<Answer>,
+        questionId: String,
+        includeColumnChart: Boolean
+    ): List<VisualizationData> {
+        val optionsById = questionOptionRepository.getByQuestionId(questionId).associateBy { it.id }
+
+        val optionCounts = answers
+            .flatMap { answer -> answer.value.split(",").map { it.trim() } }
+            .filter { it.isNotBlank() }
+            .groupBy { id -> optionsById[id]?.text ?: id }
+            .map { (label, occurrences) -> NamedCount(label, occurrences.size) }
+            .sortedByDescending { it.count }
+
+        return buildList {
+            add(VisualizationData.BarChart(optionCounts))
+            if (includeColumnChart) add(VisualizationData.ColumnChart(optionCounts))
+            add(VisualizationData.TagCloud(optionCounts))
+        }
+    }
+}
