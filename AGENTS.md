@@ -5,7 +5,10 @@ This project will take a Documentation Driven Development approach, in which the
 - See README.md
 
 # Architecture
-See ARCHITECTURE.md
+- See ARCHITECTURE.md
+
+# Next Steps
+- See TODO.md
 
 # Coding Practices
 Project requirements are defined by the end-user documentation. To implement these requirements:
