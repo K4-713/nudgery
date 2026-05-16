@@ -11,8 +11,14 @@ All 8 test files filled in with real assertions against in-memory SQLite (74 tes
 Test utilities: `TestDatabase.kt` (in-memory repo factory), `FakeNotificationScheduler`.
 Note: `androidApp/test/NudgeListViewModelTest.kt` skeletons remain (ViewModels not yet implemented).
 
-## Android Notification Scheduling (`shared/androidMain`)
-Implement `NotificationScheduler` using WorkManager. Use a `PeriodicWorkRequest` or `OneTimeWorkRequest` chain based on `ScheduleType`; account for timezone changes via a `BroadcastReceiver` on `ACTION_TIMEZONE_CHANGED`.
+## Android Notification Scheduling (`shared/androidMain`) ✅ DONE
+- `WorkManagerNotificationScheduler` in `shared/androidMain/scheduler/` — schedules `OneTimeWorkRequest` chains per nudge using `ComputeNextFireTimeUseCase`; `ExistingWorkPolicy.REPLACE` for atomic reschedule
+- `NudgeNotificationWorker` — shows notification, then re-enqueues the next fire (self-scheduling pattern)
+- `RescheduleAllNudgesWorker` — rescheduled all enabled nudges; triggered on boot and timezone change
+- `NudgeNotificationChannel` — creates the `nudge_prompts` notification channel on app startup
+- `BootReceiver` and `TimezoneChangeReceiver` registered in `AndroidManifest.xml`
+- `AppModule` provides `WorkManagerNotificationScheduler` as the `NotificationScheduler` singleton
+- Instrumented tests: `WorkManagerSchedulerTest` (3 tests) and `NudgeNotificationWorkerTest` (4 tests) in `androidApp/src/androidTest/`; test manifest removes WorkManager auto-init so `WorkManagerTestInitHelper` controls initialization per test
 
 ## ViewModels (`androidApp`)
 - `NudgeListViewModel` — exposes `Flow<List<NudgeSummary>>` (nudge + next fire time + enabled status)

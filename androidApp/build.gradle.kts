@@ -58,6 +58,7 @@ dependencies {
 
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+    implementation(libs.workmanager)
 
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
@@ -67,4 +68,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.compose.ui.test)
+    androidTestImplementation(libs.workmanager.testing)
+    androidTestImplementation(libs.kotlinx.datetime)
+    androidTestImplementation(libs.sqldelight.android.driver)
 }

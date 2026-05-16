@@ -43,6 +43,7 @@ compose-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel
 
 # WorkManager
 workmanager = { module = "androidx.work:work-runtime-ktx", version.ref = "workmanager" }
+workmanager-testing = { module = "androidx.work:work-testing", version.ref = "workmanager" }
 
 # Vico charts
 vico-compose = { module = "com.patrykandpatrick.vico:compose", version.ref = "vico" }

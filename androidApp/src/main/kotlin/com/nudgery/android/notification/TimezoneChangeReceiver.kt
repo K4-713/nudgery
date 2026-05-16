@@ -8,13 +8,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.nudgery.shared.notification.RescheduleAllNudgesWorker
 
-private const val TAG = "BootReceiver"
+private const val TAG = "TimezoneChangeReceiver"
 
-class BootReceiver : BroadcastReceiver() {
+class TimezoneChangeReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.i(TAG, "Device rebooted — rescheduling all active nudges")
+        if (intent.action == Intent.ACTION_TIMEZONE_CHANGED) {
+            Log.i(TAG, "Timezone changed — rescheduling all active nudges")
             WorkManager.getInstance(context).enqueue(
                 OneTimeWorkRequestBuilder<RescheduleAllNudgesWorker>().build()
             )
