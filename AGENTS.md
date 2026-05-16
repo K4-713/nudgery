@@ -13,6 +13,7 @@ Project requirements are defined by the end-user documentation. To implement the
   * These tests will not be the only automated tests, so they should be easily identifiable by a TDD_ prefix in the test name, and commented with the line(s) in the documentation covered by this test
 * Implement the new feature(s)
 * Once the feature is implemented, the documentation tests will pass, and keeping those tests will prevent regressions.
+* Note next steps for implementation, if any, in TODO.md
 
 # Guidelines
 * Update code comments when relevant changes are made to the code
@@ -52,6 +53,8 @@ Project requirements are defined by the end-user documentation. To implement the
 * Examine test run output for errors and warnings, and address them appropriately
   * If they are warnings or errors we are intentionally throwing or expecting as part of the test, try to catch them gracefully before they make it to test output
   * If they are errors or warnings thrown by the test infrastructure, or unexpected messages from the code we are testing, diagnose and address the underlying issue being described
+* Test the things we expect to happen. Also test things like edge cases, missing resources, garbage inputs, and successful prevention of things we don't want to happen.
+
 
 ## Refactoring
 * Code should occasionally be refactored to:
