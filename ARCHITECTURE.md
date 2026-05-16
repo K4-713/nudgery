@@ -34,11 +34,21 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 nudgery/
 ├── shared/
 │   ├── commonMain/          # Platform-agnostic models, repos, use cases, DB schema
-│   ├── androidMain/         # Android actual implementations (e.g. notification scheduler)
+│   │   ├── model/           # Nudge, Question, Schedule, Answer, etc.
+│   │   ├── repository/      # Repository interfaces
+│   │   ├── usecase/         # Business logic (CreateNudge, UpdateNudge, RecordAnswer, etc.)
+│   │   ├── scheduler/       # NotificationScheduler interface
+│   │   └── di/              # sharedModule (Koin)
+│   ├── androidMain/         # Android implementations
+│   │   ├── db/              # AndroidSqliteDriver, DatabaseDriverFactory
+│   │   ├── notification/    # NudgeNotificationWorker, RescheduleAllNudgesWorker, channel setup
+│   │   └── scheduler/       # WorkManagerNotificationScheduler
 │   └── iosMain/             # (future) iOS actual implementations
 ├── androidApp/
-│   ├── ui/                  # Jetpack Compose screens and components
-│   ├── viewmodel/           # AndroidX ViewModels
+│   ├── di/                  # appModule (Koin) — DatabaseDriverFactory, scheduler, ViewModels
+│   ├── notification/        # BootReceiver, TimezoneChangeReceiver
+│   ├── viewmodel/           # AndroidX ViewModels + UiState types + form state helpers
+│   ├── ui/                  # (next) Jetpack Compose screens and components
 │   └── MainActivity.kt
 └── iosApp/                  # (future) SwiftUI app target
 ```
@@ -47,17 +57,27 @@ nudgery/
 
 ## Architecture Pattern
 
-MVVM with a Repository layer.
+MVVM with a Use Case layer between ViewModels and Repositories.
 
 ```
 UI (Compose / SwiftUI)
-    └── ViewModel
-            └── Repository (interface in shared/commonMain)
-                    ├── SQLDelight DAOs  (data access)
-                    └── NotificationScheduler (interface in shared/commonMain)
+    └── ViewModel  (androidApp/viewmodel)
+            └── Use Cases  (shared/commonMain/usecase)
+                    └── Repository interfaces  (shared/commonMain/repository)
+                            ├── SQLDelight implementations  (shared/androidMain/db)
+                            └── NotificationScheduler  (shared/androidMain/scheduler)
 ```
 
 ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All business logic lives in `shared/commonMain` use cases and repositories, keeping it testable without a device.
+
+### ViewModel conventions
+
+- Each screen has one ViewModel that exposes a single `StateFlow<UiState>` (plus secondary flows for one-shot events like navigation).
+- ViewModels accept **use cases** as constructor dependencies for mutations, and **repositories** for flows/observations.
+- Form state (create and edit screens) is held in a `*FormState` data class updated via fine-grained setters; the final state is converted to a use-case request on `submit()`.
+- `ScheduleFormState` and `QuestionFormState` are shared between `CreateNudgeViewModel` and `EditNudgeViewModel`.
+- The edit flow for question/option text uses a `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` pattern, corresponding to the split-or-in-place choice described in the README.
+- ViewModels are registered in `appModule` via Koin `viewModel { }` blocks. Detail and edit ViewModels receive their `nudgeId` via Koin `parametersOf(nudgeId)` at the call site.
 
 ---
 
@@ -145,12 +165,12 @@ The `NotificationScheduler` interface is defined in `shared/commonMain`:
 ```kotlin
 interface NotificationScheduler {
     fun schedule(nudge: Nudge, schedule: Schedule)
-    fun cancel(nudgeId: UUID)
+    fun cancel(nudgeId: String)
     fun reschedule(nudge: Nudge, schedule: Schedule)
 }
 ```
 
-**Android:** Implemented in `shared/androidMain` using WorkManager. Recurring work requests are used for predictable scheduling; the implementation accounts for timezone changes and DST.
+**Android:** Implemented in `shared/androidMain` using WorkManager (`WorkManagerNotificationScheduler`). Rather than `PeriodicWorkRequest`, a self-scheduling `OneTimeWorkRequest` chain is used: `NudgeNotificationWorker` shows the notification and then re-enqueues itself for the next fire time by calling `ComputeNextFireTimeUseCase`. `ExistingWorkPolicy.REPLACE` ensures reschedules are atomic. `RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`) to recompute all pending notification times. The notification's launch `Intent` carries `EXTRA_NUDGE_ID` so the app can navigate directly to the answer form on tap.
 
 **iOS (future):** Will be implemented using `UNUserNotificationCenter`. The interface contract is identical, so the shared business logic requires no changes.
 

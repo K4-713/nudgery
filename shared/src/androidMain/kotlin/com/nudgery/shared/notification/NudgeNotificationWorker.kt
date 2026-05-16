@@ -71,6 +71,7 @@ class NudgeNotificationWorker(
         val launchIntent = applicationContext.packageManager
             .getLaunchIntentForPackage(applicationContext.packageName)
             ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            ?.putExtra(EXTRA_NUDGE_ID, nudgeId)
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,

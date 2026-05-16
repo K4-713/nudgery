@@ -40,6 +40,12 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -59,6 +65,7 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
     implementation(libs.workmanager)
+    implementation(libs.kotlinx.datetime)
 
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
@@ -66,6 +73,8 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotlinx.datetime)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.workmanager.testing)

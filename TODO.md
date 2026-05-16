@@ -7,9 +7,9 @@ All 7 use cases implemented in `shared/src/commonMain/kotlin/com/nudgery/shared/
 Supporting types: `NudgeRequest.kt`, `Timeframe`, `ExportFormat`, `VisualizationData` (with `DailyCount`, `DataPoint`, `NamedCount`).
 
 ## TDD Tests (`shared/commonTest`, `androidApp/test`) ✅ DONE
-All 8 test files filled in with real assertions against in-memory SQLite (74 tests, 0 failures).
+All 8 shared test files filled in with real assertions against in-memory SQLite (74 tests, 0 failures).
 Test utilities: `TestDatabase.kt` (in-memory repo factory), `FakeNotificationScheduler`.
-Note: `androidApp/test/NudgeListViewModelTest.kt` skeletons remain (ViewModels not yet implemented).
+ViewModel tests added alongside the ViewModel implementation (see below); 96 total tests, 0 failures.
 
 ## Android Notification Scheduling (`shared/androidMain`) ✅ DONE
 - `WorkManagerNotificationScheduler` in `shared/androidMain/scheduler/` — schedules `OneTimeWorkRequest` chains per nudge using `ComputeNextFireTimeUseCase`; `ExistingWorkPolicy.REPLACE` for atomic reschedule
@@ -20,11 +20,15 @@ Note: `androidApp/test/NudgeListViewModelTest.kt` skeletons remain (ViewModels n
 - `AppModule` provides `WorkManagerNotificationScheduler` as the `NotificationScheduler` singleton
 - Instrumented tests: `WorkManagerSchedulerTest` (3 tests) and `NudgeNotificationWorkerTest` (4 tests) in `androidApp/src/androidTest/`; test manifest removes WorkManager auto-init so `WorkManagerTestInitHelper` controls initialization per test
 
-## ViewModels (`androidApp`)
-- `NudgeListViewModel` — exposes `Flow<List<NudgeSummary>>` (nudge + next fire time + enabled status)
-- `CreateNudgeViewModel` — form state + calls `CreateNudgeUseCase`
-- `NudgeDetailViewModel` — answer history, visualization data, "Answer Now", enabled toggle
-- `EditNudgeViewModel` — edit form state + calls `UpdateNudgeUseCase`, surfaces split-or-in-place prompt
+## ViewModels (`androidApp`) ✅ DONE
+All 4 ViewModels in `androidApp/src/main/kotlin/com/nudgery/android/viewmodel/`:
+- `NudgeListViewModel` — observes nudge list, builds `NudgeSummary` (name, schedule description, next fire time, enabled), exposes `toggleEnabled()` and `handleNotificationIntent()` for notification-tap navigation
+- `CreateNudgeViewModel` — manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled), calls `CreateNudgeUseCase` on `submit()`
+- `NudgeDetailViewModel` — loads static data on init, live-observes answers (joined with question/option text via `combine`), loads visualizations per timeframe, exposes `setAnswerHidden()`, `exportAnswers()`, `updateEnabled()`
+- `EditNudgeViewModel` — pre-populates form from DB, detects question/option text changes, uses `submit()` → split dialog → `submitWithSplit()` / `submitInPlace()` flow
+- Shared form types: `QuestionFormState`, `ScheduleFormState` (with `toRequest()`, `fromSchedule()`, `toDescription()`)
+- All 4 ViewModels registered in `AppModule` via Koin `viewModel { }` blocks; detail/edit receive `nudgeId` via `parametersOf()`
+- 22 new ViewModel unit tests in `androidApp/src/test/` using fake repositories and `UnconfinedTestDispatcher`
 
 ## Compose UI (`androidApp`)
 - Main screen: nudge list
