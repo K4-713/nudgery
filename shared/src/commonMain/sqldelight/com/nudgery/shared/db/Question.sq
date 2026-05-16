@@ -1,0 +1,23 @@
+CREATE TABLE Question (
+    id TEXT NOT NULL PRIMARY KEY,
+    nudgeId TEXT NOT NULL,
+    text TEXT NOT NULL,
+    type TEXT NOT NULL,
+    orderIndex INTEGER NOT NULL,
+    triggerAnswerValue TEXT,
+    triggerOperator TEXT,
+    FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE
+);
+
+selectByNudgeId:
+SELECT * FROM Question WHERE nudgeId = :nudgeId ORDER BY orderIndex ASC;
+
+insert:
+INSERT INTO Question (id, nudgeId, text, type, orderIndex, triggerAnswerValue, triggerOperator)
+VALUES (:id, :nudgeId, :text, :type, :orderIndex, :triggerAnswerValue, :triggerOperator);
+
+updateText:
+UPDATE Question SET text = :text WHERE id = :id;
+
+deleteByNudgeId:
+DELETE FROM Question WHERE nudgeId = :nudgeId;

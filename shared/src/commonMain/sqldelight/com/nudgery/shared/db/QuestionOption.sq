@@ -1,0 +1,20 @@
+CREATE TABLE QuestionOption (
+    id TEXT NOT NULL PRIMARY KEY,
+    questionId TEXT NOT NULL,
+    text TEXT NOT NULL,
+    orderIndex INTEGER NOT NULL,
+    FOREIGN KEY (questionId) REFERENCES Question(id) ON DELETE CASCADE
+);
+
+selectByQuestionId:
+SELECT * FROM QuestionOption WHERE questionId = :questionId ORDER BY orderIndex ASC;
+
+insert:
+INSERT INTO QuestionOption (id, questionId, text, orderIndex)
+VALUES (:id, :questionId, :text, :orderIndex);
+
+updateText:
+UPDATE QuestionOption SET text = :text WHERE id = :id;
+
+deleteByQuestionId:
+DELETE FROM QuestionOption WHERE questionId = :questionId;

@@ -1,0 +1,29 @@
+CREATE TABLE Schedule (
+    id TEXT NOT NULL PRIMARY KEY,
+    nudgeId TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL,
+    timeOfDay TEXT NOT NULL,
+    activeDaysOfWeek TEXT,
+    dayOfMonth INTEGER,
+    activeHours TEXT,
+    FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE
+);
+
+selectByNudgeId:
+SELECT * FROM Schedule WHERE nudgeId = :nudgeId;
+
+insert:
+INSERT INTO Schedule (id, nudgeId, type, timeOfDay, activeDaysOfWeek, dayOfMonth, activeHours)
+VALUES (:id, :nudgeId, :type, :timeOfDay, :activeDaysOfWeek, :dayOfMonth, :activeHours);
+
+update:
+UPDATE Schedule
+SET type = :type,
+    timeOfDay = :timeOfDay,
+    activeDaysOfWeek = :activeDaysOfWeek,
+    dayOfMonth = :dayOfMonth,
+    activeHours = :activeHours
+WHERE nudgeId = :nudgeId;
+
+deleteByNudgeId:
+DELETE FROM Schedule WHERE nudgeId = :nudgeId;

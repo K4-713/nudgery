@@ -1,0 +1,15 @@
+CREATE TABLE NudgeEdit (
+    id TEXT NOT NULL PRIMARY KEY,
+    nudgeId TEXT NOT NULL,
+    editedAt TEXT NOT NULL,
+    fieldChanged TEXT NOT NULL,
+    previousValue TEXT NOT NULL,
+    FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE
+);
+
+selectByNudgeId:
+SELECT * FROM NudgeEdit WHERE nudgeId = :nudgeId ORDER BY editedAt DESC;
+
+insert:
+INSERT INTO NudgeEdit (id, nudgeId, editedAt, fieldChanged, previousValue)
+VALUES (:id, :nudgeId, :editedAt, :fieldChanged, :previousValue);
