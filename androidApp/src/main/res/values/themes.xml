@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Nudgery" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Base activity theme — minimal; NudgeryTheme in Compose owns all visual styling -->
+    <style name="Theme.Nudgery" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

@@ -30,12 +30,28 @@ All 4 ViewModels in `androidApp/src/main/kotlin/com/nudgery/android/viewmodel/`:
 - All 4 ViewModels registered in `AppModule` via Koin `viewModel { }` blocks; detail/edit receive `nudgeId` via `parametersOf()`
 - 22 new ViewModel unit tests in `androidApp/src/test/` using fake repositories and `UnconfinedTestDispatcher`
 
-## Compose UI (`androidApp`)
-- Main screen: nudge list
-- Create/Edit screen: question builder, option list, schedule picker
-- Detail screen: chart selector, timeframe picker, raw answer table, export button
-- Answer form screen: driven by notification tap or "Answer Now"
-- Navigation graph wiring in `MainActivity`
+## Compose UI (`androidApp`) ✅ DONE
+All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/`:
+- `NudgeListScreen` — list with empty-state oversized FAB; `NudgeListItem` with schedule info and enable toggle
+- `CreateNudgeScreen` — 3-step wizard (question/follow-ups/schedule) with shared `WizardNavBar` and `WizardSteps.kt`
+- `EditNudgeScreen` — 2-step wizard (question/schedule); split-vs-in-place dialog when question text changes
+- `NudgeDetailScreen` — schedule row, Answer Now button, chart section with timeframe chips, answer table with per-row hide/confirm
+- `AnswerFormScreen` — animated step-by-step multi-question form; input widgets: YesNo, Number (slider), OptionSingle, OptionMulti, Text
+- `SettingsScreen` — theme radio buttons (System/Light/Dark), bold text toggle, About link
+- `AboutScreen` — app description and version from BuildConfig
+- Theme: `NudgeryTheme` (dark/light palettes, violet/teal/yellow), `nudgeryTypography(bold)`, `nudgeryShapes`
+- `AppSettings` (DataStore): `themePreference` + `boldText` flows; `SettingsViewModel` combines both
+- `AnswerFormViewModel` — loads questions, evaluates follow-up triggers (EQ/GT/GTE/LT/LTE), records answer with `scheduledAt`
+- `NudgeryScreen` sealed class + `ARG_NUDGE_ID` in `ui/nav/NudgeryNavGraph.kt`
+- Full `NavHost` in `MainActivity` with all 7 destinations; notification intent handled via `onNewIntent`
+
+### Remaining Compose UI work
+- **Missed nudge indicator**: jaunty exclamation sticker on `NudgeListItem` when most recent scheduled fire is unanswered — requires `ComputePreviousFireTimeUseCase` (not yet implemented)
+- **Atkinson Hyperlegible Next font**: `AtkinsonHyperlegibleNext` is currently `FontFamily.SansSerif`; bundle the TTF/OTF files in `res/font/` and wire them up in `Type.kt`
+- **Vico chart integration**: chart composables currently show placeholder text summaries; replace with real Vico `CartesianChartHost` / `LineCartesianLayer` / `ColumnCartesianLayer` calls
+- **Chart type picker**: the chart-type icon button in `NudgeDetailScreen` is a no-op TODO
+- **Full-screen chart**: the zoom/expand icon is a no-op TODO
+- **Runtime permissions**: `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` flows (see below)
 
 ## Runtime Permissions (`androidApp`)
 These need UI flows — best added alongside the Compose screens:

@@ -1,4 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Nudgery</string>
+
+    <!-- Navigation / top bar -->
+    <string name="nav_settings">Settings</string>
+    <string name="nav_back">Back</string>
+    <string name="nav_close">Close</string>
+    <string name="nav_about">About</string>
+
+    <!-- Nudge list screen -->
+    <string name="nudge_list_title">Nudgery</string>
+    <string name="nudge_list_create_first">Create Your First Nudge</string>
+    <string name="nudge_list_add">Add nudge</string>
+    <string name="nudge_next_fire">Next: %1$s</string>
+    <string name="nudge_no_schedule">No schedule</string>
+    <string name="nudge_missed_indicator">Missed answer</string>
+
+    <!-- Create / Edit nudge wizard -->
+    <string name="create_nudge_title">New Nudge</string>
+    <string name="edit_nudge_title">Edit Nudge</string>
+    <string name="wizard_step_of">Step %1$d of %2$d</string>
+    <string name="wizard_back">Back</string>
+    <string name="wizard_next">Next</string>
+    <string name="wizard_save">Save Nudge</string>
+
+    <!-- Wizard step 1 — Question -->
+    <string name="step_question_title">The Question</string>
+    <string name="field_nudge_name">Nudge name (optional)</string>
+    <string name="field_nudge_name_hint">e.g. Migraine tracker</string>
+    <string name="field_question_text">Question</string>
+    <string name="field_question_text_hint">e.g. Did you have a headache today?</string>
+    <string name="field_answer_type">Answer type</string>
+    <string name="answer_type_yes_no">Yes / No</string>
+    <string name="answer_type_number">Number</string>
+    <string name="answer_type_option_single">Choose one</string>
+    <string name="answer_type_option_multi">Choose multiple</string>
+    <string name="answer_type_text">Free text</string>
+    <string name="field_options">Options</string>
+    <string name="option_add">Add option</string>
+    <string name="option_remove">Remove option</string>
+    <string name="option_hint">Option text</string>
+    <string name="error_question_text_required">Question text is required</string>
+    <string name="error_option_text_required">All options must have text</string>
+    <string name="error_min_two_options">At least two options are required</string>
+    <string name="warn_change_type_clears_followups">Changing the answer type will remove your follow-up questions. Continue?</string>
+    <string name="warn_change_type_confirm">Change type</string>
+    <string name="warn_change_type_cancel">Keep current type</string>
+
+    <!-- Wizard step 2 — Follow-ups -->
+    <string name="step_followups_title">Follow-up Questions</string>
+    <string name="followup_add">Add follow-up question</string>
+    <string name="followup_remove">Remove follow-up</string>
+    <string name="followup_trigger_label">Show this question when answer is…</string>
+
+    <!-- Wizard step 3 — Schedule -->
+    <string name="step_schedule_title">Schedule</string>
+    <string name="schedule_type_daily">Daily</string>
+    <string name="schedule_type_weekly">Weekly</string>
+    <string name="schedule_type_monthly">Monthly</string>
+    <string name="schedule_type_hourly">Hourly</string>
+    <string name="schedule_time_of_day">Time of day</string>
+    <string name="schedule_active_days">Active days</string>
+    <string name="schedule_day_of_month">Day of month</string>
+    <string name="schedule_active_hours">Active hours</string>
+    <string name="nudge_enabled">Enabled</string>
+
+    <!-- Nudge detail screen -->
+    <string name="detail_answer_now">Answer Now</string>
+    <string name="detail_edit_nudge">Edit nudge</string>
+    <string name="detail_edit_schedule">Edit schedule</string>
+    <string name="detail_edit_chart_type">Change chart type</string>
+    <string name="detail_export">Export data</string>
+    <string name="detail_expand_chart">Expand chart</string>
+    <string name="detail_answers_header">%1$d answers</string>
+    <string name="detail_no_answers">No answers recorded yet.</string>
+    <string name="detail_hide_answer">Hide this answer</string>
+    <string name="detail_show_answer">Show this answer</string>
+    <string name="detail_hide_confirm_title">Hide this answer?</string>
+    <string name="detail_hide_confirm_body">Hidden answers are excluded from charts and counts. You can unhide them later.</string>
+    <string name="detail_hide_confirm_action">Hide</string>
+    <string name="detail_cancel">Cancel</string>
+    <string name="detail_export_csv">Export as CSV</string>
+    <string name="detail_export_tsv">Export as TSV</string>
+    <string name="detail_followup_questions">Follow-up questions</string>
+
+    <!-- Timeframe chips -->
+    <string name="timeframe_weekly">Weekly</string>
+    <string name="timeframe_monthly">Monthly</string>
+    <string name="timeframe_yearly">Yearly</string>
+    <string name="timeframe_all_time">All time</string>
+
+    <!-- Answer form screen -->
+    <string name="answer_form_title">%1$s</string>
+    <string name="answer_save">Save Answer</string>
+    <string name="answer_yes">Yes</string>
+    <string name="answer_no">No</string>
+    <string name="answer_text_hint">Your answer…</string>
+    <string name="answer_step_indicator">%1$d of %2$d</string>
+
+    <!-- Split dialog (edit nudge) -->
+    <string name="split_dialog_title">Question text changed</string>
+    <string name="split_dialog_body">You changed the question or option text. Do you want to start a new version of this nudge, or edit in place?\n\nSplitting preserves all past data under the original question and starts fresh. Editing in place keeps past data with the updated text.</string>
+    <string name="split_dialog_split">Split into new nudge</string>
+    <string name="split_dialog_in_place">Edit in place</string>
+    <string name="split_dialog_cancel">Cancel</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_bold_text">Bold text</string>
+    <string name="settings_bold_text_description">Increase font weight throughout the app</string>
+    <string name="settings_about">About Nudgery</string>
+
+    <!-- About screen -->
+    <string name="about_title">About Nudgery</string>
+    <string name="about_tagline">Ask Yourself</string>
+    <string name="about_description">Nudgery lets you create questions and have your phone ask you those questions on a schedule you choose. Your data stays on your device — no accounts, no ads, no cloud.</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_open_source">Nudgery is free and open source software.</string>
+
+    <!-- Generic actions -->
+    <string name="action_confirm">Confirm</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_save">Save</string>
+
+    <!-- Days of week (abbreviated) -->
+    <string name="day_sun">Sun</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
 </resources>
