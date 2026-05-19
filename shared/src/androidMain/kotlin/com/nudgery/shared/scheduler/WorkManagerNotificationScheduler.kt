@@ -10,6 +10,7 @@ import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.notification.NudgeNotificationWorker
 import com.nudgery.shared.notification.WORKER_KEY_NUDGE_ID
+import com.nudgery.shared.notification.WORKER_KEY_SCHEDULED_AT
 import com.nudgery.shared.notification.nudgeWorkName
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import kotlinx.datetime.Clock
@@ -51,7 +52,10 @@ class WorkManagerNotificationScheduler(private val context: Context) : Notificat
             ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<NudgeNotificationWorker>()
                 .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
-                .setInputData(workDataOf(WORKER_KEY_NUDGE_ID to nudgeId))
+                .setInputData(workDataOf(
+                    WORKER_KEY_NUDGE_ID to nudgeId,
+                    WORKER_KEY_SCHEDULED_AT to nextFireTime.toEpochMilliseconds()
+                ))
                 .build()
         )
         Log.i(TAG, "Notification enqueued for nudge $nudgeId, fires in ${delayMillis / 1000}s")

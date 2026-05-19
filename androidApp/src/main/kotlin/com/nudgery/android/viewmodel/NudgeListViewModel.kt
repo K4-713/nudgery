@@ -23,6 +23,8 @@ import kotlinx.datetime.TimeZone
 
 private const val TAG = "NudgeListViewModel"
 
+data class PendingAnswerNavigation(val nudgeId: String, val scheduledAt: Instant?)
+
 data class NudgeSummary(
     val nudgeId: String,
     val name: String,
@@ -42,8 +44,8 @@ class NudgeListViewModel(
         .map { nudges -> nudges.map { it.toSummary() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _pendingAnswerNudgeId = MutableStateFlow<String?>(null)
-    val pendingAnswerNudgeId: StateFlow<String?> = _pendingAnswerNudgeId.asStateFlow()
+    private val _pendingAnswer = MutableStateFlow<PendingAnswerNavigation?>(null)
+    val pendingAnswer: StateFlow<PendingAnswerNavigation?> = _pendingAnswer.asStateFlow()
 
     fun toggleEnabled(nudgeId: String) {
         viewModelScope.launch {
@@ -53,13 +55,13 @@ class NudgeListViewModel(
         }
     }
 
-    fun handleNotificationIntent(nudgeId: String) {
-        Log.i(TAG, "Notification tap received for nudge $nudgeId")
-        _pendingAnswerNudgeId.value = nudgeId
+    fun handleNotificationIntent(nudgeId: String, scheduledAt: Instant?) {
+        Log.i(TAG, "Notification tap received for nudge $nudgeId scheduled at $scheduledAt")
+        _pendingAnswer.value = PendingAnswerNavigation(nudgeId, scheduledAt)
     }
 
     fun consumePendingAnswerNavigation() {
-        _pendingAnswerNudgeId.value = null
+        _pendingAnswer.value = null
     }
 
     private suspend fun Nudge.toSummary(): NudgeSummary {

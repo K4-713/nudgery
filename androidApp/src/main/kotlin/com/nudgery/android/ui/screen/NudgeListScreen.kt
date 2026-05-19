@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.NudgeListViewModel
 import com.nudgery.android.viewmodel.NudgeSummary
+import kotlinx.datetime.Instant
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,16 +48,16 @@ fun NudgeListScreen(
     onNudgeClick: (String) -> Unit,
     onCreateClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onNavigateToAnswerForm: (String) -> Unit,
+    onNavigateToAnswerForm: (nudgeId: String, scheduledAt: Long?) -> Unit,
     viewModel: NudgeListViewModel = koinViewModel()
 ) {
     val nudges by viewModel.uiState.collectAsState()
-    val pendingAnswerNudgeId by viewModel.pendingAnswerNudgeId.collectAsState()
+    val pendingAnswer by viewModel.pendingAnswer.collectAsState()
 
-    LaunchedEffect(pendingAnswerNudgeId) {
-        pendingAnswerNudgeId?.let { nudgeId ->
+    LaunchedEffect(pendingAnswer) {
+        pendingAnswer?.let { pending ->
             viewModel.consumePendingAnswerNavigation()
-            onNavigateToAnswerForm(nudgeId)
+            onNavigateToAnswerForm(pending.nudgeId, pending.scheduledAt?.toEpochMilliseconds())
         }
     }
 

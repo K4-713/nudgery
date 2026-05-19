@@ -15,10 +15,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.nudgery.android.ui.nav.ARG_NUDGE_ID
+import com.nudgery.android.ui.nav.ARG_SCHEDULED_AT
 import com.nudgery.android.ui.nav.NudgeryScreen
 import com.nudgery.android.ui.screen.AboutScreen
 import com.nudgery.android.ui.screen.AnswerFormScreen
@@ -31,6 +34,8 @@ import com.nudgery.android.ui.theme.NudgeryTheme
 import com.nudgery.android.viewmodel.NudgeListViewModel
 import com.nudgery.android.viewmodel.SettingsViewModel
 import com.nudgery.shared.notification.EXTRA_NUDGE_ID
+import com.nudgery.shared.notification.EXTRA_SCHEDULED_AT
+import kotlinx.datetime.Instant
 import org.koin.androidx.compose.koinViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel as koinActivityViewModel
 
@@ -73,8 +78,8 @@ class MainActivity : ComponentActivity() {
                             onSettingsClick = {
                                 navController.navigate(NudgeryScreen.Settings.route)
                             },
-                            onNavigateToAnswerForm = { nudgeId ->
-                                navController.navigate(NudgeryScreen.AnswerForm.createRoute(nudgeId))
+                            onNavigateToAnswerForm = { nudgeId, scheduledAt ->
+                                navController.navigate(NudgeryScreen.AnswerForm.createRoute(nudgeId, scheduledAt))
                             },
                             viewModel = nudgeListViewModel  // shared instance — also receives notification taps
                         )
@@ -110,11 +115,19 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable(NudgeryScreen.AnswerForm.route) { backStackEntry ->
+                    composable(
+                        NudgeryScreen.AnswerForm.route,
+                        arguments = listOf(
+                            navArgument(ARG_NUDGE_ID) { type = NavType.StringType },
+                            navArgument(ARG_SCHEDULED_AT) { type = NavType.LongType; defaultValue = -1L }
+                        )
+                    ) { backStackEntry ->
                         val nudgeId = backStackEntry.arguments?.getString(ARG_NUDGE_ID) ?: return@composable
+                        val scheduledAtMs = backStackEntry.arguments?.getLong(ARG_SCHEDULED_AT, -1L) ?: -1L
+                        val scheduledAt = if (scheduledAtMs > 0) Instant.fromEpochMilliseconds(scheduledAtMs) else null
                         AnswerFormScreen(
                             nudgeId = nudgeId,
-                            scheduledAt = null,
+                            scheduledAt = scheduledAt,
                             onDismiss = { navController.popBackStack() }
                         )
                     }
@@ -141,8 +154,9 @@ class MainActivity : ComponentActivity() {
 
     private fun handleNudgeIntent(intent: Intent?) {
         val nudgeId = intent?.getStringExtra(EXTRA_NUDGE_ID) ?: return
-        Log.i(TAG, "Notification tap received for nudge $nudgeId")
-        nudgeListViewModel.handleNotificationIntent(nudgeId)
+        val scheduledAtMs = intent.getLongExtra(EXTRA_SCHEDULED_AT, -1L)
+        val scheduledAt = if (scheduledAtMs > 0) Instant.fromEpochMilliseconds(scheduledAtMs) else null
+        nudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)
     }
 }
 

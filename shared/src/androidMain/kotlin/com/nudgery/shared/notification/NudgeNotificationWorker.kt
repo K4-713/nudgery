@@ -41,6 +41,7 @@ class NudgeNotificationWorker(
             Log.e(TAG, "Worker received no nudge ID in input data")
             return Result.failure()
         }
+        val scheduledAtMs = inputData.getLong(WORKER_KEY_SCHEDULED_AT, -1L)
 
         val nudge = nudgeRepository.getById(nudgeId)
         if (nudge == null) {
@@ -56,7 +57,7 @@ class NudgeNotificationWorker(
         val mainQuestion = questions.firstOrNull { it.isMainQuestion }
         val schedule = scheduleRepository.getByNudgeId(nudgeId)
 
-        showNotification(nudgeId, nudge.name, mainQuestion?.text ?: nudge.name)
+        showNotification(nudgeId, nudge.name, mainQuestion?.text ?: nudge.name, scheduledAtMs)
 
         if (schedule != null) {
             scheduleNextFire(nudgeId, schedule)
@@ -67,11 +68,12 @@ class NudgeNotificationWorker(
         return Result.success()
     }
 
-    private fun showNotification(nudgeId: String, title: String, text: String) {
+    private fun showNotification(nudgeId: String, title: String, text: String, scheduledAtMs: Long) {
         val launchIntent = applicationContext.packageManager
             .getLaunchIntentForPackage(applicationContext.packageName)
             ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             ?.putExtra(EXTRA_NUDGE_ID, nudgeId)
+            ?.putExtra(EXTRA_SCHEDULED_AT, scheduledAtMs)
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
@@ -107,7 +109,10 @@ class NudgeNotificationWorker(
             ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<NudgeNotificationWorker>()
                 .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
-                .setInputData(workDataOf(WORKER_KEY_NUDGE_ID to nudgeId))
+                .setInputData(workDataOf(
+                    WORKER_KEY_NUDGE_ID to nudgeId,
+                    WORKER_KEY_SCHEDULED_AT to nextFireTime.toEpochMilliseconds()
+                ))
                 .build()
         )
         Log.i(TAG, "Next notification for nudge $nudgeId scheduled in ${delayMillis / 1000}s")

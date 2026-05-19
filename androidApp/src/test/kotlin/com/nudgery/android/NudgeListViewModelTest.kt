@@ -111,11 +111,11 @@ class NudgeListViewModelTest {
     fun TDD_notificationTapNavigatesToQuestionForm() = runTest {
         // README "Setting Up a Nudge": "When the notification pops up, clicking on it will
         //   take you directly to the question form"
-        assertNull(viewModel.pendingAnswerNudgeId.value)
+        assertNull(viewModel.pendingAnswer.value)
 
-        viewModel.handleNotificationIntent("nudge-abc")
+        viewModel.handleNotificationIntent("nudge-abc", scheduledAt = null)
 
-        assertEquals("nudge-abc", viewModel.pendingAnswerNudgeId.value)
+        assertEquals("nudge-abc", viewModel.pendingAnswer.value?.nudgeId)
     }
 
     private fun makeNudge(id: String, name: String, isEnabled: Boolean = true) = Nudge(
