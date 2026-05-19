@@ -42,7 +42,8 @@ class SqlDelightAnswerRepository(private val database: NudgeryDatabase) : Answer
             nudgeId = answer.nudgeId,
             questionId = answer.questionId,
             value = answer.value,
-            recordedAt = answer.recordedAt.toString(),
+            scheduledAt = answer.scheduledAt.toString(),
+            answeredAt = answer.answeredAt.toString(),
             isHidden = if (answer.isHidden) 1L else 0L
         )
     }
@@ -59,7 +60,8 @@ class SqlDelightAnswerRepository(private val database: NudgeryDatabase) : Answer
         nudgeId = nudgeId,
         questionId = questionId,
         value = value_,
-        recordedAt = Instant.parse(recordedAt),
+        scheduledAt = Instant.parse(scheduledAt),
+        answeredAt = Instant.parse(answeredAt),
         isHidden = isHidden != 0L
     )
 }

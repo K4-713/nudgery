@@ -3,26 +3,27 @@ CREATE TABLE Answer (
     nudgeId TEXT NOT NULL,
     questionId TEXT NOT NULL,
     value TEXT NOT NULL,
-    recordedAt TEXT NOT NULL,
+    scheduledAt TEXT NOT NULL,
+    answeredAt TEXT NOT NULL,
     isHidden INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE,
     FOREIGN KEY (questionId) REFERENCES Question(id)
 );
 
 selectByNudgeId:
-SELECT * FROM Answer WHERE nudgeId = :nudgeId ORDER BY recordedAt DESC;
+SELECT * FROM Answer WHERE nudgeId = :nudgeId ORDER BY scheduledAt DESC;
 
 selectVisibleByNudgeId:
-SELECT * FROM Answer WHERE nudgeId = :nudgeId AND isHidden = 0 ORDER BY recordedAt DESC;
+SELECT * FROM Answer WHERE nudgeId = :nudgeId AND isHidden = 0 ORDER BY scheduledAt DESC;
 
 selectVisibleByNudgeIdSince:
 SELECT * FROM Answer
-WHERE nudgeId = :nudgeId AND isHidden = 0 AND recordedAt >= :since
-ORDER BY recordedAt ASC;
+WHERE nudgeId = :nudgeId AND isHidden = 0 AND scheduledAt >= :since
+ORDER BY scheduledAt ASC;
 
 insert:
-INSERT INTO Answer (id, nudgeId, questionId, value, recordedAt, isHidden)
-VALUES (:id, :nudgeId, :questionId, :value, :recordedAt, :isHidden);
+INSERT INTO Answer (id, nudgeId, questionId, value, scheduledAt, answeredAt, isHidden)
+VALUES (:id, :nudgeId, :questionId, :value, :scheduledAt, :answeredAt, :isHidden);
 
 setHidden:
 UPDATE Answer SET isHidden = :isHidden WHERE id = :id;

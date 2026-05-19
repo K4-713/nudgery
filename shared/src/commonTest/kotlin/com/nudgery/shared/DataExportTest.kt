@@ -73,7 +73,8 @@ class DataExportTest {
                 nudgeId = nudgeId,
                 questionId = questionId,
                 value = answerValue,
-                recordedAt = Clock.System.now(),
+                scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(),
                 isHidden = false
             )
         )
@@ -155,7 +156,8 @@ class DataExportTest {
                 nudgeId = nudgeId,
                 questionId = questionId,
                 value = optionId,
-                recordedAt = Clock.System.now(),
+                scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(),
                 isHidden = false
             )
         )
@@ -166,7 +168,7 @@ class DataExportTest {
 
     @Test
     fun TDD_exportRowContainsAnswerTimestamp() = runTest {
-        // ARCHITECTURE.md Answer.recordedAt — timestamp should be included in the export record
+        // ARCHITECTURE.md Answer.scheduledAt / answeredAt — both timestamps included in export record
         val (nudgeId, _, _) = createNudgeWithAnswer()
         val csv = exportAnswers.execute(nudgeId, ExportFormat.CSV)
 

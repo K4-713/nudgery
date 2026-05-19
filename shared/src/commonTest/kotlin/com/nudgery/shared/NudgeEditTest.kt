@@ -254,7 +254,8 @@ class NudgeEditTest {
                 nudgeId = nudgeId,
                 questionId = questionId,
                 value = "YES",
-                recordedAt = kotlinx.datetime.Clock.System.now(),
+                scheduledAt = kotlinx.datetime.Clock.System.now(),
+                answeredAt = kotlinx.datetime.Clock.System.now(),
                 isHidden = false
             )
         )

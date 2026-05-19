@@ -7,6 +7,7 @@ data class Answer(
     val nudgeId: String,
     val questionId: String,
     val value: String,
-    val recordedAt: Instant,
+    val scheduledAt: Instant,
+    val answeredAt: Instant,
     val isHidden: Boolean
 )

@@ -83,13 +83,14 @@ class AnswerRecordingTest {
 
     @Test
     fun TDD_answerRecordedWithTimestamp() = runTest {
-        // ARCHITECTURE.md Answer.recordedAt: "Instant"
+        // ARCHITECTURE.md Answer.scheduledAt / answeredAt: "Instant"
         val (nudgeId, questionId) = createYesNoNudge()
 
         recordAnswer.execute(nudgeId, questionId, "YES")
 
         val answers = repos.answerRepository.getAllByNudgeId(nudgeId)
-        assertNotNull(answers[0].recordedAt)
+        assertNotNull(answers[0].scheduledAt)
+        assertNotNull(answers[0].answeredAt)
     }
 
     @Test

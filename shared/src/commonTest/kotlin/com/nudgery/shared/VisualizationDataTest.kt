@@ -74,7 +74,8 @@ class VisualizationDataTest {
                 nudgeId = nudgeId,
                 questionId = questionId,
                 value = answerValue,
-                recordedAt = Clock.System.now(),
+                scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(),
                 isHidden = false
             )
         )
@@ -143,7 +144,7 @@ class VisualizationDataTest {
 
         repos.answerRepository.insert(
             Answer(id = "ans", nudgeId = nudgeId, questionId = questionId,
-                value = optionId, recordedAt = Clock.System.now(), isHidden = false)
+                value = optionId, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false)
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
@@ -167,7 +168,7 @@ class VisualizationDataTest {
 
         repos.answerRepository.insert(
             Answer(id = "ans2", nudgeId = nudgeId, questionId = questionId,
-                value = optionId, recordedAt = Clock.System.now(), isHidden = false)
+                value = optionId, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false)
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
@@ -191,7 +192,7 @@ class VisualizationDataTest {
 
         repos.answerRepository.insert(
             Answer(id = "ans3", nudgeId = nudgeId, questionId = questionId,
-                value = optionId, recordedAt = Clock.System.now(), isHidden = false)
+                value = optionId, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false)
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
@@ -217,7 +218,7 @@ class VisualizationDataTest {
 
         repos.answerRepository.insert(
             Answer(id = "ans4", nudgeId = nudgeId, questionId = questionId,
-                value = optionId, recordedAt = Clock.System.now(), isHidden = false)
+                value = optionId, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false)
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
@@ -241,7 +242,7 @@ class VisualizationDataTest {
 
         repos.answerRepository.insert(
             Answer(id = "ans5", nudgeId = nudgeId, questionId = questionId,
-                value = optionId, recordedAt = Clock.System.now(), isHidden = false)
+                value = optionId, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false)
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)

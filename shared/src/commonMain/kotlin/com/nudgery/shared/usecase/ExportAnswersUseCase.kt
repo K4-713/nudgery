@@ -7,7 +7,7 @@ import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 
-private val EXPORT_HEADERS = listOf("nudge_name", "question_text", "answer_value", "option_text", "recorded_at")
+private val EXPORT_HEADERS = listOf("nudge_name", "question_text", "answer_value", "option_text", "scheduled_at", "answered_at")
 
 class ExportAnswersUseCase(
     private val nudgeRepository: NudgeRepository,
@@ -47,7 +47,7 @@ class ExportAnswersUseCase(
                 ""
             }
 
-            val row = listOf(nudge.name, questionText, answer.value, optionText, answer.recordedAt.toString())
+            val row = listOf(nudge.name, questionText, answer.value, optionText, answer.scheduledAt.toString(), answer.answeredAt.toString())
             sb.appendLine(row.joinToString(delimiter) { escape(it, format) })
         }
 

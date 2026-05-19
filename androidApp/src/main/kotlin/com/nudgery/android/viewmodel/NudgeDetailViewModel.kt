@@ -36,7 +36,8 @@ data class AnswerRow(
     val answerId: String,
     val questionText: String,
     val displayValue: String,
-    val recordedAt: Instant,
+    val scheduledAt: Instant,
+    val answeredAt: Instant,
     val isHidden: Boolean
 )
 
@@ -90,7 +91,8 @@ class NudgeDetailViewModel(
                         answerId = answer.id,
                         questionText = question?.text ?: "",
                         displayValue = formatDisplayValue(answer.value, question?.type, optionTexts),
-                        recordedAt = answer.recordedAt,
+                        scheduledAt = answer.scheduledAt,
+                        answeredAt = answer.answeredAt,
                         isHidden = answer.isHidden
                     )
                 }

@@ -142,7 +142,8 @@ One row per question answered per notification event.
 | nudgeId | UUID | FK → Nudge |
 | questionId | UUID | FK → Question |
 | value | String | Serialized answer value; format depends on QuestionType |
-| recordedAt | Instant | |
+| scheduledAt | Instant | The nudge's intended fire time; used to anchor the data point to the correct day in visualizations |
+| answeredAt | Instant | When the user actually submitted the answer; kept for transparency and auditing |
 | isHidden | Boolean | Hidden rows excluded from visualizations |
 
 ### NudgeEdit

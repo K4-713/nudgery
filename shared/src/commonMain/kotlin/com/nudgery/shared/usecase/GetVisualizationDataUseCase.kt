@@ -58,7 +58,7 @@ class GetVisualizationDataUseCase(
 
     private fun buildYesNoCharts(answers: List<Answer>, timeZone: TimeZone): List<VisualizationData> {
         val dailyCounts = answers
-            .groupBy { it.recordedAt.toLocalDateTime(timeZone).date }
+            .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
             .map { (date, dayAnswers) ->
                 DailyCount(date, dayAnswers.count { it.value.uppercase() == "YES" }.toDouble())
             }
@@ -76,12 +76,12 @@ class GetVisualizationDataUseCase(
     private fun buildNumberCharts(answers: List<Answer>, timeZone: TimeZone): List<VisualizationData> {
         val points = answers
             .mapNotNull { answer ->
-                answer.value.toDoubleOrNull()?.let { DataPoint(answer.recordedAt, it) }
+                answer.value.toDoubleOrNull()?.let { DataPoint(answer.scheduledAt, it) }
             }
             .sortedBy { it.at }
 
         val dailyCounts = answers
-            .groupBy { it.recordedAt.toLocalDateTime(timeZone).date }
+            .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
             .map { (date, dayAnswers) ->
                 val avg = dayAnswers.mapNotNull { it.value.toDoubleOrNull() }.average()
                 DailyCount(date, if (avg.isNaN()) 0.0 else avg)

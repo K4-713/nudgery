@@ -173,6 +173,6 @@ class NudgeDetailViewModelTest {
         id: String = "ans-${System.nanoTime()}"
     ) = Answer(
         id = id, nudgeId = nudgeId, questionId = questionId,
-        value = value, recordedAt = Clock.System.now(), isHidden = false
+        value = value, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false
     )
 }

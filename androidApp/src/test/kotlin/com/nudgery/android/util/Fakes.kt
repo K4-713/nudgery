@@ -99,7 +99,7 @@ class FakeAnswerRepository : AnswerRepository {
     override suspend fun getAllByNudgeId(nudgeId: String): List<Answer> =
         _answers.value.filter { it.nudgeId == nudgeId }
     override suspend fun getVisibleByNudgeIdSince(nudgeId: String, since: Instant): List<Answer> =
-        _answers.value.filter { it.nudgeId == nudgeId && !it.isHidden && it.recordedAt >= since }
+        _answers.value.filter { it.nudgeId == nudgeId && !it.isHidden && it.scheduledAt >= since }
     override suspend fun insert(answer: Answer) { _answers.update { it + answer } }
     override suspend fun setHidden(answerId: String, isHidden: Boolean) {
         _answers.update { list ->
