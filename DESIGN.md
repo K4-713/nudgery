@@ -272,12 +272,17 @@ Bottom of screen: Back and Next buttons. Final step has a Save button in place o
 Empty state with an "Add follow-up question" button. User can ignore this entirely and tap Next to proceed without follow-ups.
 
 Each follow-up question defines:
-- A trigger condition (specific answer, or range of answers for Number type)
+- A **trigger condition** — controls rendered by main question type:
+  - *Yes/No*: two chips (Yes / No)
+  - *Number*: operator chips (=, >, ≥, <, ≤) + numeric text field
+  - *Option Single / Option Multi*: one chip per option from the main question; OPTION_MULTI uses `CONTAINS` operator so the follow-up fires when that option appears anywhere in the multi-select answer
 - Question text
 - Answer type (Yes/No, Number, Option Single, Option Multi, or Text)
 - Options if Option type
 
-Multiple follow-ups can be added. Follow-ups can be removed or reordered.
+Multiple follow-ups can be added. Follow-ups can be removed.
+
+This step is accessible from both the creation wizard and the edit wizard. The edit wizard pre-populates it with any existing follow-up questions.
 
 ### Step 3 — Schedule
 
@@ -294,15 +299,15 @@ Multiple follow-ups can be added. Follow-ups can be removed or reordered.
 Top to bottom:
 
 1. **Main question text** — `titleMedium`, `onSurfaceVariant`; shown just below the nudge name
-2. **Schedule** — inline with a calendar (`CalendarMonth`) icon; tapping the icon navigates to `EditNudgeScreen` opened directly on the schedule step (`initialStep = 1`)
-3. **"Answer Now" button** — pill-shaped, prominent
-4. **Main chart** — with a vertical column of icons outside the upper-right corner:
+2. **Schedule** — inline with a calendar (`CalendarMonth`) icon; tapping the icon navigates to `EditNudgeScreen` at `initialStep = 2` (schedule step)
+3. **Follow-up questions** — shows count ("N follow-up question(s)") when any exist, or the label "Follow-up questions" when none; inline with an edit icon (`QuestionAnswer`); tapping navigates to `EditNudgeScreen` at `initialStep = 1` (follow-ups step)
+4. **"Answer Now" button** — pill-shaped, prominent
+5. **Main chart** — with a vertical column of icons outside the upper-right corner:
    - Chart type icon (opens chart editor)
    - Download icon (exports CSV)
    - Magnifying glass (opens expanded chart view)
    - Icons are visually small but maintain 48dp touch targets
-5. **Timeframe picker** — row of chips just below the chart; changes the current view but does not persist. Persistent default is set inside the chart editor.
-6. **Follow-up questions** — text only for now; answers appear in the data table. Each follow-up will get its own chart in a future pass.
+6. **Timeframe picker** — row of chips just below the chart; changes the current view but does not persist. Persistent default is set inside the chart editor.
 7. **Raw data table** — collapsed by default, with a visible header row (e.g. "12 answers") indicating content. Each row has a per-answer hide control; tapping it triggers a confirmation dialog before hiding.
 
 ### Chart Editor
@@ -313,7 +318,13 @@ Accessed via the chart type icon. Contains:
 
 ### General Nudge Editing
 
-Pencil icon in the top app bar navigates to the Edit Nudge screen (step 0 — question and name). Calendar icon next to the schedule row navigates to the Edit Nudge screen opened directly on the schedule step (step 1). Both routes use the same `EditNudgeScreen` with an `initialStep` parameter.
+All three entry points on the detail screen navigate to the same `EditNudgeScreen` via an `initialStep` parameter:
+
+| Entry point | Step | Content |
+|---|---|---|
+| Pencil icon (top bar) | 0 | Question text and name |
+| Follow-up icon (follow-up row) | 1 | Follow-up questions |
+| Calendar icon (schedule row) | 2 | Schedule |
 
 ## Empty States
 

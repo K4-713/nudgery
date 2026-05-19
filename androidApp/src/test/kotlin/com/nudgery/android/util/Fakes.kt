@@ -54,6 +54,13 @@ class FakeQuestionRepository : QuestionRepository {
         val i = questions.indexOfFirst { it.id == questionId }
         if (i >= 0) questions[i] = questions[i].copy(text = text)
     }
+    override suspend fun update(question: Question) {
+        val i = questions.indexOfFirst { it.id == question.id }
+        if (i >= 0) questions[i] = question
+    }
+    override suspend fun deleteById(questionId: String) {
+        questions.removeAll { it.id == questionId }
+    }
     override suspend fun deleteByNudgeId(nudgeId: String) {
         questions.removeAll { it.nudgeId == nudgeId }
     }

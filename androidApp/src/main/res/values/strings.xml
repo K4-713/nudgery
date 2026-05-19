@@ -51,7 +51,14 @@
     <string name="step_followups_title">Follow-up Questions</string>
     <string name="followup_add">Add follow-up question</string>
     <string name="followup_remove">Remove follow-up</string>
-    <string name="followup_trigger_label">Show this question when answer is…</string>
+    <string name="followup_trigger_label">Show this follow-up when the answer is…</string>
+    <string name="trigger_op_eq">=</string>
+    <string name="trigger_op_gt">&gt;</string>
+    <string name="trigger_op_gte">≥</string>
+    <string name="trigger_op_lt">&lt;</string>
+    <string name="trigger_op_lte">≤</string>
+    <string name="trigger_number_value">Value</string>
+    <string name="trigger_no_options">Add answer options to the main question first</string>
 
     <!-- Wizard step 3 — Schedule -->
     <string name="step_schedule_title">Schedule</string>
@@ -69,6 +76,8 @@
     <string name="detail_answer_now">Answer Now</string>
     <string name="detail_edit_nudge">Edit nudge</string>
     <string name="detail_edit_schedule">Edit schedule</string>
+    <string name="detail_edit_followups">Edit follow-up questions</string>
+    <string name="detail_followup_count">%1$d follow-up question(s)</string>
     <string name="detail_edit_chart_type">Change chart type</string>
     <string name="detail_export">Export data</string>
     <string name="detail_expand_chart">Expand chart</string>

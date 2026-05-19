@@ -108,11 +108,98 @@ class UpdateNudgeUseCase(
             updatedNudge = updatedNudge.copy(updatedAt = now)
         }
 
+        if (request.followUpReplacements != null) {
+            applyFollowUpReplacements(nudge = updatedNudge, replacements = request.followUpReplacements)
+            updatedNudge = updatedNudge.copy(updatedAt = now)
+        }
+
         if (updatedNudge != nudge) {
             nudgeRepository.update(updatedNudge)
         }
 
         return UpdateNudgeResult.Success(request.nudgeId)
+    }
+
+    private suspend fun applyFollowUpReplacements(nudge: Nudge, replacements: List<FollowUpReplacement>) {
+        val allQuestions = questionRepository.getByNudgeId(nudge.id)
+        val existingFollowUps = allQuestions.filter { !it.isMainQuestion }
+        val existingFollowUpMap = existingFollowUps.associateBy { it.id }
+
+        val mainQuestion = allQuestions.firstOrNull { it.isMainQuestion }
+        val mainOptionIds = if (mainQuestion?.type?.isOptionType == true) {
+            questionOptionRepository.getByQuestionId(mainQuestion.id)
+                .sortedBy { it.orderIndex }
+                .map { it.id }
+        } else {
+            emptyList()
+        }
+
+        // Delete follow-ups that were removed from the list
+        val keptIds = replacements.mapNotNull { it.questionId }.toSet()
+        existingFollowUps
+            .filter { it.id !in keptIds }
+            .forEach { removed ->
+                questionOptionRepository.deleteByQuestionId(removed.id)
+                questionRepository.deleteById(removed.id)
+            }
+
+        // Apply each replacement in order; orderIndex = position + 1 (main question is 0)
+        replacements.forEachIndexed { index, replacement ->
+            val orderIndex = index + 1
+            val req = replacement.request
+            val resolvedTriggerValue = resolveFollowUpTriggerValue(req.triggerAnswerValue, mainOptionIds)
+
+            if (replacement.questionId != null) {
+                val existing = existingFollowUpMap[replacement.questionId] ?: return@forEachIndexed
+                questionRepository.update(
+                    existing.copy(
+                        text = req.text,
+                        type = req.type,
+                        orderIndex = orderIndex,
+                        triggerAnswerValue = resolvedTriggerValue,
+                        triggerOperator = req.triggerOperator
+                    )
+                )
+                val existingOptionTexts = questionOptionRepository.getByQuestionId(existing.id)
+                    .sortedBy { it.orderIndex }
+                    .map { it.text }
+                val newOptionTexts = if (req.type.isOptionType) req.options else emptyList()
+                if (newOptionTexts != existingOptionTexts) {
+                    questionOptionRepository.deleteByQuestionId(existing.id)
+                    newOptionTexts.forEachIndexed { optIdx, text ->
+                        questionOptionRepository.insert(
+                            QuestionOption(id = generateUuid(), questionId = existing.id, text = text, orderIndex = optIdx)
+                        )
+                    }
+                }
+            } else {
+                val newQuestionId = generateUuid()
+                questionRepository.insert(
+                    Question(
+                        id = newQuestionId,
+                        nudgeId = nudge.id,
+                        text = req.text,
+                        type = req.type,
+                        orderIndex = orderIndex,
+                        triggerAnswerValue = resolvedTriggerValue,
+                        triggerOperator = req.triggerOperator
+                    )
+                )
+                if (req.type.isOptionType) {
+                    req.options.forEachIndexed { optIdx, text ->
+                        questionOptionRepository.insert(
+                            QuestionOption(id = generateUuid(), questionId = newQuestionId, text = text, orderIndex = optIdx)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun resolveFollowUpTriggerValue(triggerValue: String?, mainOptionIds: List<String>): String? {
+        if (triggerValue == null || mainOptionIds.isEmpty()) return triggerValue
+        val index = triggerValue.toIntOrNull() ?: return triggerValue
+        return mainOptionIds.getOrElse(index) { triggerValue }
     }
 
     private suspend fun createSplitNudge(

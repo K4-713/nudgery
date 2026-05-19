@@ -87,9 +87,9 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 |---|---|
 | `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time formatted as `String?` in local time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
 | `CreateNudgeViewModel` | Manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled); calls `CreateNudgeUseCase` on `submit()` |
-| `EditNudgeViewModel` | Pre-populates form from DB; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()`; accepts `initialStep` to open directly on a specific wizard page |
-| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` for display under the nudge name); live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
-| `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE); records each answer with its `scheduledAt` time; manages multi-step form progression |
+| `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId`); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
+| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
+| `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
 | `SettingsViewModel` | Combines `themePreference` and `boldText` flows from `AppSettings` (DataStore) into a single `SettingsUiState` |
 
 ### ViewModel conventions
@@ -139,7 +139,10 @@ Belongs to a `Nudge`. The first question (orderIndex 0) is the main question; su
 | triggerOperator | TriggerOperator? | EQ, GTE, LTE, etc. Allows range-based follow-up triggers (e.g. score ≥ 7) |
 
 **QuestionType** enum: `YES_NO`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`
-`TEXT` is only valid for follow-up questions.
+`TEXT` is only valid for follow-up questions (`isValidForMainQuestion` is false for `TEXT`).
+
+**TriggerOperator** enum: `EQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`
+`CONTAINS` is used for `OPTION_MULTI` follow-ups: the trigger fires when the stored option ID appears anywhere in the comma-separated multi-select answer string.
 
 ### QuestionOption
 Selectable answer choices for `OPTION_SINGLE` and `OPTION_MULTI` questions. Up to 16 per question.
@@ -222,7 +225,13 @@ Navigation uses Jetpack Navigation Compose with a single `NavHost` in `MainActiv
 
 The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background)` so that crossfade transitions blend through the correct theme color rather than the window background. Transition duration is controlled by `NAV_TRANSITION_DURATION_MS` (490ms) applied to all four transition lambdas (`enterTransition`, `exitTransition`, `popEnterTransition`, `popExitTransition`).
 
-`ARG_INITIAL_STEP` is an optional integer query parameter on the `EditNudge` route (default 0). It is read by `EditNudgeScreen` to seed `currentStep`, allowing entry points to open directly on the relevant wizard page — e.g. the calendar icon on `NudgeDetailScreen` passes `initialStep = 1` to open on the schedule step.
+`ARG_INITIAL_STEP` is an optional integer query parameter on the `EditNudge` route (default 0). It is read by `EditNudgeScreen` to seed `currentStep`, allowing three distinct entry points from `NudgeDetailScreen`:
+
+| Entry point | `initialStep` | Step opened |
+|---|---|---|
+| Pencil icon (top bar) | 0 | Question and name |
+| Follow-up questions icon | 1 | Follow-up questions |
+| Calendar icon | 2 | Schedule |
 
 ### Theme
 
@@ -239,7 +248,7 @@ The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background
 | `NudgeListScreen` | App launch, back-stack root |
 | `CreateNudgeScreen` | FAB on NudgeList |
 | `NudgeDetailScreen` | Nudge row tap on NudgeList |
-| `EditNudgeScreen` | Pencil icon on NudgeDetail top bar (step 0 — question/name); calendar icon next to schedule (step 1 — schedule) |
+| `EditNudgeScreen` | Pencil icon on NudgeDetail top bar (step 0 — question/name); follow-up icon on NudgeDetail (step 1 — follow-ups); calendar icon on NudgeDetail (step 2 — schedule) |
 | `AnswerFormScreen` | "Answer Now" on NudgeDetail; notification tap |
 | `SettingsScreen` | Settings icon on NudgeList |
 | `AboutScreen` | About link on Settings |

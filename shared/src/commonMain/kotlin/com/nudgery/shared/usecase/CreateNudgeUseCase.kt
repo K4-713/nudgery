@@ -44,10 +44,10 @@ class CreateNudgeUseCase(
         )
         nudgeRepository.insert(nudge)
 
-        persistQuestion(nudgeId = nudgeId, questionRequest = request.mainQuestion, orderIndex = 0)
+        val mainOptionIds = persistQuestion(nudgeId = nudgeId, questionRequest = request.mainQuestion, orderIndex = 0)
 
         request.followUpQuestions.forEachIndexed { index, questionReq ->
-            persistQuestion(nudgeId = nudgeId, questionRequest = questionReq, orderIndex = index + 1)
+            persistQuestion(nudgeId = nudgeId, questionRequest = questionReq, orderIndex = index + 1, mainOptionIds = mainOptionIds)
         }
 
         val schedule = Schedule(
@@ -71,9 +71,19 @@ class CreateNudgeUseCase(
     private suspend fun persistQuestion(
         nudgeId: String,
         questionRequest: QuestionRequest,
-        orderIndex: Int
-    ): String {
+        orderIndex: Int,
+        mainOptionIds: List<String> = emptyList()
+    ): List<String> {
         val questionId = generateUuid()
+        val triggerValue = when {
+            orderIndex == 0 -> null
+            mainOptionIds.isNotEmpty() -> {
+                // Wizard stores option index as trigger; resolve to the actual persisted option ID.
+                val index = questionRequest.triggerAnswerValue?.toIntOrNull()
+                index?.let { mainOptionIds.getOrNull(it) } ?: questionRequest.triggerAnswerValue
+            }
+            else -> questionRequest.triggerAnswerValue
+        }
         questionRepository.insert(
             Question(
                 id = questionId,
@@ -81,15 +91,18 @@ class CreateNudgeUseCase(
                 text = questionRequest.text,
                 type = questionRequest.type,
                 orderIndex = orderIndex,
-                triggerAnswerValue = if (orderIndex == 0) null else questionRequest.triggerAnswerValue,
+                triggerAnswerValue = triggerValue,
                 triggerOperator = if (orderIndex == 0) null else questionRequest.triggerOperator
             )
         )
+        val optionIds = mutableListOf<String>()
         if (questionRequest.type.isOptionType) {
             questionRequest.options.forEachIndexed { index, optionText ->
+                val optionId = generateUuid()
+                optionIds += optionId
                 questionOptionRepository.insert(
                     QuestionOption(
-                        id = generateUuid(),
+                        id = optionId,
                         questionId = questionId,
                         text = optionText,
                         orderIndex = index
@@ -97,6 +110,6 @@ class CreateNudgeUseCase(
                 )
             }
         }
-        return questionId
+        return optionIds
     }
 }

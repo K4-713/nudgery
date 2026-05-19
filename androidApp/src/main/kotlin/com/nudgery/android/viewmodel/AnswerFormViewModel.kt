@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
-import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.usecase.RecordAnswerUseCase
@@ -128,17 +127,6 @@ class AnswerFormViewModel(
 
     private fun isTriggerSatisfied(question: Question, mainAnswer: String): Boolean {
         val triggerValue = question.triggerAnswerValue ?: return true
-        val operator = question.triggerOperator ?: return mainAnswer == triggerValue
-
-        val answerNum = mainAnswer.toDoubleOrNull()
-        val triggerNum = triggerValue.toDoubleOrNull()
-
-        return when (operator) {
-            TriggerOperator.EQ -> mainAnswer == triggerValue
-            TriggerOperator.GT -> answerNum != null && triggerNum != null && answerNum > triggerNum
-            TriggerOperator.GTE -> answerNum != null && triggerNum != null && answerNum >= triggerNum
-            TriggerOperator.LT -> answerNum != null && triggerNum != null && answerNum < triggerNum
-            TriggerOperator.LTE -> answerNum != null && triggerNum != null && answerNum <= triggerNum
-        }
+        return evaluateTrigger(triggerValue, question.triggerOperator, mainAnswer)
     }
 }

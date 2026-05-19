@@ -38,11 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.android.viewmodel.toAbbreviation
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.model.TriggerOperator
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalTime
 
@@ -103,7 +106,8 @@ fun QuestionStep(
 @Composable
 private fun AnswerTypeSelector(
     selected: QuestionType,
-    onSelect: (QuestionType) -> Unit
+    onSelect: (QuestionType) -> Unit,
+    includeText: Boolean = false
 ) {
     Column {
         Text(
@@ -113,12 +117,13 @@ private fun AnswerTypeSelector(
         )
         Spacer(modifier = Modifier.height(4.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(
-                QuestionType.YES_NO to R.string.answer_type_yes_no,
-                QuestionType.NUMBER to R.string.answer_type_number,
-                QuestionType.OPTION_SINGLE to R.string.answer_type_option_single,
-                QuestionType.OPTION_MULTI to R.string.answer_type_option_multi,
-            ).forEach { (type, labelRes) ->
+            buildList {
+                add(QuestionType.YES_NO to R.string.answer_type_yes_no)
+                add(QuestionType.NUMBER to R.string.answer_type_number)
+                add(QuestionType.OPTION_SINGLE to R.string.answer_type_option_single)
+                add(QuestionType.OPTION_MULTI to R.string.answer_type_option_multi)
+                if (includeText) add(QuestionType.TEXT to R.string.answer_type_text)
+            }.forEach { (type, labelRes) ->
                 FilterChip(
                     selected = selected == type,
                     onClick = { onSelect(type) },
@@ -182,6 +187,7 @@ fun FollowUpStep(
             HorizontalDivider()
             FollowUpEditor(
                 index = index,
+                mainQuestion = mainQuestion,
                 followUp = followUp,
                 onUpdate = { onUpdate(index, it) },
                 onRemove = { onRemove(index) }
@@ -197,6 +203,7 @@ fun FollowUpStep(
 @Composable
 private fun FollowUpEditor(
     index: Int,
+    mainQuestion: QuestionFormState,
     followUp: QuestionFormState,
     onUpdate: (QuestionFormState) -> Unit,
     onRemove: () -> Unit
@@ -216,12 +223,20 @@ private fun FollowUpEditor(
             }
         }
 
-        OutlinedTextField(
-            value = followUp.triggerAnswerValue ?: "",
-            onValueChange = { onUpdate(followUp.copy(triggerAnswerValue = it.takeIf { v -> v.isNotBlank() })) },
-            label = { Text(stringResource(R.string.followup_trigger_label)) },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = stringResource(R.string.followup_trigger_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            when (mainQuestion.type) {
+                QuestionType.YES_NO -> YesNoTrigger(followUp, onUpdate)
+                QuestionType.NUMBER -> NumberTrigger(followUp, onUpdate)
+                QuestionType.OPTION_SINGLE -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = false)
+                QuestionType.OPTION_MULTI -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = true)
+                else -> {}
+            }
+        }
 
         OutlinedTextField(
             value = followUp.text,
@@ -229,6 +244,102 @@ private fun FollowUpEditor(
             label = { Text(stringResource(R.string.field_question_text)) },
             modifier = Modifier.fillMaxWidth()
         )
+
+        AnswerTypeSelector(
+            selected = followUp.type,
+            onSelect = { newType ->
+                onUpdate(followUp.copy(
+                    type = newType,
+                    options = if (newType.isOptionType) followUp.options else emptyList()
+                ))
+            },
+            includeText = true
+        )
+
+        if (followUp.type.isOptionType) {
+            OptionListEditor(
+                options = followUp.options,
+                onOptionsChange = { onUpdate(followUp.copy(options = it)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun YesNoTrigger(followUp: QuestionFormState, onUpdate: (QuestionFormState) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(
+            "YES" to R.string.answer_yes,
+            "NO" to R.string.answer_no
+        ).forEach { (value, labelRes) ->
+            FilterChip(
+                selected = followUp.triggerAnswerValue == value,
+                onClick = { onUpdate(followUp.copy(triggerAnswerValue = value, triggerOperator = TriggerOperator.EQ)) },
+                label = { Text(stringResource(labelRes)) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun NumberTrigger(followUp: QuestionFormState, onUpdate: (QuestionFormState) -> Unit) {
+    val operators = listOf(
+        TriggerOperator.EQ to R.string.trigger_op_eq,
+        TriggerOperator.GT to R.string.trigger_op_gt,
+        TriggerOperator.GTE to R.string.trigger_op_gte,
+        TriggerOperator.LT to R.string.trigger_op_lt,
+        TriggerOperator.LTE to R.string.trigger_op_lte
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            operators.forEach { (op, labelRes) ->
+                FilterChip(
+                    selected = followUp.triggerOperator == op,
+                    onClick = { onUpdate(followUp.copy(triggerOperator = op)) },
+                    label = { Text(stringResource(labelRes)) }
+                )
+            }
+        }
+        OutlinedTextField(
+            value = followUp.triggerAnswerValue ?: "",
+            onValueChange = { raw ->
+                val filtered = raw.filter { it.isDigit() || it == '.' || it == '-' }
+                onUpdate(followUp.copy(triggerAnswerValue = filtered.takeIf { it.isNotBlank() }))
+            },
+            label = { Text(stringResource(R.string.trigger_number_value)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun OptionTrigger(
+    options: List<String>,
+    followUp: QuestionFormState,
+    onUpdate: (QuestionFormState) -> Unit,
+    containsOnSelect: Boolean
+) {
+    if (options.isEmpty()) {
+        Text(
+            text = stringResource(R.string.trigger_no_options),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+    val selectedIndex = followUp.triggerAnswerValue?.toIntOrNull()
+    val operator = if (containsOnSelect) TriggerOperator.CONTAINS else TriggerOperator.EQ
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEachIndexed { index, optionText ->
+            FilterChip(
+                selected = selectedIndex == index,
+                onClick = { onUpdate(followUp.copy(triggerAnswerValue = "$index", triggerOperator = operator)) },
+                label = { Text(optionText) }
+            )
+        }
     }
 }
 

@@ -6,5 +6,7 @@ interface QuestionRepository {
     suspend fun getByNudgeId(nudgeId: String): List<Question>
     suspend fun insert(question: Question)
     suspend fun updateText(questionId: String, text: String)
+    suspend fun update(question: Question)
+    suspend fun deleteById(questionId: String)
     suspend fun deleteByNudgeId(nudgeId: String)
 }

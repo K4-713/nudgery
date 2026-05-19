@@ -49,6 +49,7 @@ data class NudgeDetailUiState(
     val schedule: Schedule? = null,
     val nextFireTime: Instant? = null,
     val mainQuestionId: String? = null,
+    val followUpCount: Int = 0,
     val answers: List<AnswerRow> = emptyList(),
     val visualizations: List<VisualizationData> = emptyList(),
     val selectedTimeframe: Timeframe = Timeframe.WEEKLY,
@@ -172,7 +173,8 @@ class NudgeDetailViewModel(
                 isEnabled = nudge.isEnabled,
                 schedule = schedule,
                 nextFireTime = nextFire,
-                mainQuestionId = mainQuestion?.id
+                mainQuestionId = mainQuestion?.id,
+                followUpCount = questions.count { q -> !q.isMainQuestion }
             )
         }
 

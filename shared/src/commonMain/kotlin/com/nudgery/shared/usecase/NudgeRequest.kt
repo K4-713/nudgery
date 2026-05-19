@@ -40,6 +40,11 @@ sealed class CreateNudgeResult {
 
 data class UpdateOptionRequest(val optionId: String, val newText: String)
 
+data class FollowUpReplacement(
+    val questionId: String?,  // null = new follow-up to insert; non-null = update existing
+    val request: QuestionRequest
+)
+
 data class UpdateNudgeRequest(
     val nudgeId: String,
     val name: String? = null,
@@ -47,7 +52,8 @@ data class UpdateNudgeRequest(
     val mainQuestionText: String? = null,
     val optionUpdates: List<UpdateOptionRequest> = emptyList(),
     val schedule: ScheduleRequest? = null,
-    val splitEdit: Boolean = false
+    val splitEdit: Boolean = false,
+    val followUpReplacements: List<FollowUpReplacement>? = null
 )
 
 sealed class UpdateNudgeResult {

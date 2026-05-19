@@ -3,6 +3,7 @@ package com.nudgery.android.viewmodel
 import com.nudgery.android.util.TestViewModelRepositories
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.usecase.CreateNudgeRequest
 import com.nudgery.shared.usecase.CreateNudgeResult
 import com.nudgery.shared.usecase.CreateNudgeUseCase
@@ -146,6 +147,59 @@ class EditNudgeViewModelTest {
         assertEquals(null, viewModel.formState.value.result)
     }
 
+    @Test
+    fun TDD_editFormLoadsExistingFollowUps() = runTest {
+        // README: follow-up questions are loaded into the edit wizard from the DB
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        val followUps = viewModel.formState.value.followUps
+        assertTrue("Should load one follow-up", followUps.size == 1)
+        assertEquals("Describe your workout", followUps.first().formState.text)
+        assertNotNull("Loaded follow-up should have a DB question ID", followUps.first().questionId)
+    }
+
+    @Test
+    fun TDD_addFollowUpAndSave() = runTest {
+        // README: follow-up questions can be added after nudge creation from the detail screen
+        val nudgeId = createNudge("Did you meditate?")
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.addFollowUp()
+        viewModel.updateFollowUp(0, viewModel.formState.value.followUps[0].formState.copy(
+            text = "For how long?",
+            type = com.nudgery.shared.model.QuestionType.NUMBER,
+            triggerAnswerValue = "YES",
+            triggerOperator = com.nudgery.shared.model.TriggerOperator.EQ
+        ))
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertTrue("Add follow-up should succeed", viewModel.formState.value.result is UpdateNudgeResult.Success)
+        val followUps = repos.questionRepo.getByNudgeId(nudgeId).filter { !it.isMainQuestion }
+        assertTrue("Should have one new follow-up", followUps.size == 1)
+        assertEquals("For how long?", followUps.first().text)
+    }
+
+    @Test
+    fun TDD_removeFollowUpAndSave() = runTest {
+        // Removing a follow-up via the wizard and saving deletes it from the DB
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        assertTrue("Precondition: one follow-up loaded", viewModel.formState.value.followUps.size == 1)
+        viewModel.removeFollowUp(0)
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertTrue("Remove follow-up should succeed", viewModel.formState.value.result is UpdateNudgeResult.Success)
+        val followUps = repos.questionRepo.getByNudgeId(nudgeId).filter { !it.isMainQuestion }
+        assertTrue("Follow-up should have been deleted", followUps.isEmpty())
+    }
+
     private fun buildViewModel(nudgeId: String) = EditNudgeViewModel(
         nudgeId = nudgeId,
         nudgeRepository = repos.nudgeRepo,
@@ -155,13 +209,22 @@ class EditNudgeViewModelTest {
         updateNudge = repos.updateNudgeUseCase()
     )
 
-    private suspend fun createNudge(questionText: String): String {
+    private suspend fun createNudge(questionText: String, withFollowUp: Boolean = false): String {
         val useCase = CreateNudgeUseCase(
             repos.nudgeRepo, repos.questionRepo, repos.optionRepo, repos.scheduleRepo, repos.scheduler
         )
+        val followUps = if (withFollowUp) listOf(
+            QuestionRequest(
+                text = "Describe your workout",
+                type = QuestionType.TEXT,
+                triggerAnswerValue = "YES",
+                triggerOperator = com.nudgery.shared.model.TriggerOperator.EQ
+            )
+        ) else emptyList()
         return (useCase.execute(
             CreateNudgeRequest(
                 mainQuestion = QuestionRequest(questionText, QuestionType.YES_NO),
+                followUpQuestions = followUps,
                 schedule = ScheduleRequest(
                     type = ScheduleType.DAILY,
                     timeOfDay = LocalTime(12, 0),

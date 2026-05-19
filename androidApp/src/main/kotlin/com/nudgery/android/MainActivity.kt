@@ -116,8 +116,11 @@ class MainActivity : ComponentActivity() {
                             onEditClick = {
                                 navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId))
                             },
-                            onEditScheduleClick = {
+                            onEditFollowUpsClick = {
                                 navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId, initialStep = 1))
+                            },
+                            onEditScheduleClick = {
+                                navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId, initialStep = 2))
                             },
                             onAnswerNow = {
                                 navController.navigate(NudgeryScreen.AnswerForm.createRoute(nudgeId))

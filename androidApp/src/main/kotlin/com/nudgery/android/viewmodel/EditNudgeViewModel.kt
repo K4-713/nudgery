@@ -3,10 +3,12 @@ package com.nudgery.android.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
+import com.nudgery.shared.usecase.FollowUpReplacement
 import com.nudgery.shared.usecase.UpdateNudgeRequest
 import com.nudgery.shared.usecase.UpdateNudgeResult
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
@@ -27,6 +29,11 @@ data class OptionEditState(
     val isChanged: Boolean get() = text != originalText
 }
 
+data class EditableFollowUp(
+    val questionId: String?,  // null for newly-added follow-ups not yet in DB
+    val formState: QuestionFormState
+)
+
 data class EditNudgeFormState(
     val isLoading: Boolean = true,
     val name: String = "",
@@ -34,7 +41,9 @@ data class EditNudgeFormState(
     val isEnabled: Boolean = false,
     val mainQuestionText: String = "",
     val originalMainQuestionText: String = "",
+    val mainQuestionType: QuestionType = QuestionType.YES_NO,
     val options: List<OptionEditState> = emptyList(),
+    val followUps: List<EditableFollowUp> = emptyList(),
     val schedule: ScheduleFormState = ScheduleFormState(),
     val showSplitDialog: Boolean = false,
     val isSubmitting: Boolean = false,
@@ -63,6 +72,26 @@ class EditNudgeViewModel(
     fun setName(name: String) { _formState.update { it.copy(name = name) } }
     fun setEnabled(isEnabled: Boolean) { _formState.update { it.copy(isEnabled = isEnabled) } }
     fun setSchedule(schedule: ScheduleFormState) { _formState.update { it.copy(schedule = schedule) } }
+
+    fun addFollowUp() {
+        _formState.update { state ->
+            state.copy(followUps = state.followUps + EditableFollowUp(questionId = null, formState = QuestionFormState()))
+        }
+    }
+
+    fun updateFollowUp(index: Int, formState: QuestionFormState) {
+        _formState.update { state ->
+            val updated = state.followUps.toMutableList()
+            if (index in updated.indices) updated[index] = updated[index].copy(formState = formState)
+            state.copy(followUps = updated)
+        }
+    }
+
+    fun removeFollowUp(index: Int) {
+        _formState.update { state ->
+            state.copy(followUps = state.followUps.toMutableList().also { it.removeAt(index) })
+        }
+    }
 
     fun setMainQuestionText(text: String) {
         _formState.update { it.copy(mainQuestionText = text) }
@@ -117,7 +146,10 @@ class EditNudgeViewModel(
                         .filter { it.isChanged }
                         .map { UpdateOptionRequest(it.optionId, it.text) },
                     schedule = state.schedule.toRequest(),
-                    splitEdit = splitEdit
+                    splitEdit = splitEdit,
+                    followUpReplacements = state.followUps.map { ef ->
+                        FollowUpReplacement(questionId = ef.questionId, request = ef.formState.toRequest())
+                    }
                 )
             )
             _formState.update { it.copy(isSubmitting = false, result = result) }
@@ -136,12 +168,41 @@ class EditNudgeViewModel(
         val questions = questionRepository.getByNudgeId(nudgeId)
         val mainQuestion = questions.firstOrNull { it.isMainQuestion }
 
-        val options = if (mainQuestion?.type?.isOptionType == true) {
-            questionOptionRepository.getByQuestionId(mainQuestion.id).map { opt ->
-                OptionEditState(optionId = opt.id, text = opt.text, originalText = opt.text)
-            }
+        val mainOptions = if (mainQuestion?.type?.isOptionType == true) {
+            questionOptionRepository.getByQuestionId(mainQuestion.id).sortedBy { it.orderIndex }
         } else {
             emptyList()
+        }
+        val mainOptionIds = mainOptions.map { it.id }
+        val editableOptions = mainOptions.map { opt ->
+            OptionEditState(optionId = opt.id, text = opt.text, originalText = opt.text)
+        }
+
+        val followUps = questions.filter { !it.isMainQuestion }.map { q ->
+            val followUpOptions = if (q.type.isOptionType) {
+                questionOptionRepository.getByQuestionId(q.id)
+                    .sortedBy { it.orderIndex }
+                    .map { it.text }
+            } else {
+                emptyList()
+            }
+            // Convert stored option UUID back to index for the trigger UI
+            val uiTriggerValue = if (mainQuestion?.type?.isOptionType == true && q.triggerAnswerValue != null) {
+                val idx = mainOptionIds.indexOf(q.triggerAnswerValue)
+                if (idx >= 0) "$idx" else q.triggerAnswerValue
+            } else {
+                q.triggerAnswerValue
+            }
+            EditableFollowUp(
+                questionId = q.id,
+                formState = QuestionFormState(
+                    text = q.text,
+                    type = q.type,
+                    options = followUpOptions,
+                    triggerAnswerValue = uiTriggerValue,
+                    triggerOperator = q.triggerOperator
+                )
+            )
         }
 
         val schedule = scheduleRepository.getByNudgeId(nudgeId)
@@ -155,7 +216,9 @@ class EditNudgeViewModel(
                 isEnabled = nudge.isEnabled,
                 mainQuestionText = mainQuestion?.text ?: "",
                 originalMainQuestionText = mainQuestion?.text ?: "",
-                options = options,
+                mainQuestionType = mainQuestion?.type ?: QuestionType.YES_NO,
+                options = editableOptions,
+                followUps = followUps,
                 schedule = scheduleForm
             )
         }

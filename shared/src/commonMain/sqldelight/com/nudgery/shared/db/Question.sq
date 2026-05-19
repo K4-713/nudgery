@@ -19,5 +19,13 @@ VALUES (:id, :nudgeId, :text, :type, :orderIndex, :triggerAnswerValue, :triggerO
 updateText:
 UPDATE Question SET text = :text WHERE id = :id;
 
+update:
+UPDATE Question
+SET text = :text, type = :type, orderIndex = :orderIndex, triggerAnswerValue = :triggerAnswerValue, triggerOperator = :triggerOperator
+WHERE id = :id;
+
+deleteById:
+DELETE FROM Question WHERE id = :id;
+
 deleteByNudgeId:
 DELETE FROM Question WHERE nudgeId = :nudgeId;

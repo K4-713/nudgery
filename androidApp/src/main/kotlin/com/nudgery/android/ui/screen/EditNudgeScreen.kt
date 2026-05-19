@@ -36,12 +36,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.EditNudgeViewModel
+import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.shared.usecase.UpdateNudgeResult
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-private const val EDIT_WIZARD_STEPS = 2
+private const val EDIT_WIZARD_STEPS = 3
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +113,18 @@ fun EditNudgeScreen(
                             viewModel.updateOption(optionId, text)
                         }
                     )
-                    1 -> ScheduleStep(
+                    1 -> FollowUpStep(
+                        mainQuestion = QuestionFormState(
+                            text = formState.mainQuestionText,
+                            type = formState.mainQuestionType,
+                            options = formState.options.map { it.text }
+                        ),
+                        followUps = formState.followUps.map { it.formState },
+                        onAdd = { viewModel.addFollowUp() },
+                        onUpdate = { index, state -> viewModel.updateFollowUp(index, state) },
+                        onRemove = { index -> viewModel.removeFollowUp(index) }
+                    )
+                    2 -> ScheduleStep(
                         schedule = formState.schedule,
                         isEnabled = formState.isEnabled,
                         onScheduleChange = { viewModel.setSchedule(it) },

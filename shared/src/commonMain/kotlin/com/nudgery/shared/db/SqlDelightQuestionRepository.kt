@@ -29,6 +29,21 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
         database.questionQueries.updateText(text = text, id = questionId)
     }
 
+    override suspend fun update(question: Question) = withContext(Dispatchers.Default) {
+        database.questionQueries.update(
+            id = question.id,
+            text = question.text,
+            type = question.type.name,
+            orderIndex = question.orderIndex.toLong(),
+            triggerAnswerValue = question.triggerAnswerValue,
+            triggerOperator = question.triggerOperator?.name
+        )
+    }
+
+    override suspend fun deleteById(questionId: String) = withContext(Dispatchers.Default) {
+        database.questionQueries.deleteById(questionId)
+    }
+
     override suspend fun deleteByNudgeId(nudgeId: String) = withContext(Dispatchers.Default) {
         database.questionQueries.deleteByNudgeId(nudgeId)
     }

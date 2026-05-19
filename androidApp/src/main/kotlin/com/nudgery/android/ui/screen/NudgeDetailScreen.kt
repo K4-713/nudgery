@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -74,6 +75,7 @@ fun NudgeDetailScreen(
     onBack: () -> Unit,
     onEditClick: () -> Unit,
     onEditScheduleClick: () -> Unit,
+    onEditFollowUpsClick: () -> Unit,
     onAnswerNow: () -> Unit,
     viewModel: NudgeDetailViewModel = koinViewModel(parameters = { parametersOf(nudgeId) })
 ) {
@@ -143,6 +145,29 @@ fun NudgeDetailScreen(
                                 contentDescription = stringResource(R.string.detail_edit_schedule)
                             )
                         }
+                    }
+                }
+            }
+
+            // Follow-up questions row
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (uiState.followUpCount > 0)
+                            stringResource(R.string.detail_followup_count, uiState.followUpCount)
+                        else
+                            stringResource(R.string.detail_followup_questions),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onEditFollowUpsClick) {
+                        Icon(
+                            imageVector = Icons.Outlined.QuestionAnswer,
+                            contentDescription = stringResource(R.string.detail_edit_followups)
+                        )
                     }
                 }
             }

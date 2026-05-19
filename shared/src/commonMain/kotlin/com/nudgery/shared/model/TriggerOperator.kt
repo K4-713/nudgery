@@ -5,5 +5,6 @@ enum class TriggerOperator {
     GT,
     GTE,
     LT,
-    LTE
+    LTE,
+    CONTAINS
 }
