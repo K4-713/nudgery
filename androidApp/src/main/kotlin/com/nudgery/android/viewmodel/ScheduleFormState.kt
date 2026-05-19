@@ -6,6 +6,23 @@ import com.nudgery.shared.usecase.ScheduleRequest
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalTime
 
+private val WEEKDAYS = setOf(
+    DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY
+)
+private val WEEKENDS = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+private val ALL_DAYS = DayOfWeek.entries.toSet()
+
+fun DayOfWeek.toAbbreviation(): String = when (this) {
+    DayOfWeek.MONDAY -> "M"
+    DayOfWeek.TUESDAY -> "Tu"
+    DayOfWeek.WEDNESDAY -> "W"
+    DayOfWeek.THURSDAY -> "Th"
+    DayOfWeek.FRIDAY -> "F"
+    DayOfWeek.SATURDAY -> "Sa"
+    DayOfWeek.SUNDAY -> "Su"
+    else -> name.take(2)
+}
+
 data class ScheduleFormState(
     val type: ScheduleType = ScheduleType.DAILY,
     val timeOfDay: LocalTime = LocalTime(12, 0),
@@ -26,10 +43,13 @@ data class ScheduleFormState(
 
     fun toDescription(): String = when (type) {
         ScheduleType.DAILY -> {
-            val days = activeDaysOfWeek
-                .sortedBy { it.ordinal }
-                .joinToString(", ") { it.name.lowercase().replaceFirstChar { c -> c.uppercase() }.take(3) }
-            "Daily at ${timeOfDay.toDisplayString()}, $days"
+            val daysLabel = when (activeDaysOfWeek) {
+                ALL_DAYS -> "Every Day"
+                WEEKDAYS -> "Weekdays"
+                WEEKENDS -> "Weekends"
+                else -> activeDaysOfWeek.sortedBy { it.ordinal }.joinToString(", ") { it.toAbbreviation() }
+            }
+            "Daily at ${timeOfDay.toDisplayString()}, $daysLabel"
         }
         ScheduleType.WEEKLY -> {
             val day = activeDaysOfWeek.firstOrNull()
@@ -54,10 +74,4 @@ data class ScheduleFormState(
             activeHours = schedule.activeHours ?: (8..20).toSet()
         )
     }
-}
-
-private fun LocalTime.toDisplayString(): String {
-    val h = if (hour % 12 == 0) 12 else hour % 12
-    val period = if (hour < 12) "AM" else "PM"
-    return if (minute == 0) "$h $period" else "$h:%02d $period".format(minute)
 }

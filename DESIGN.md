@@ -134,6 +134,10 @@ Full screen. Launched from a notification or the "Answer Now" button on the deta
 | Option Multi | Checkboxes + "Save Answer" |
 | Text (follow-ups only) | Text field + "Save Answer" |
 
+### Selection Visual Treatment
+
+For Yes/No and Option Single, the selected button renders as a filled `Button` (solid primary background) while unselected options render as `OutlinedButton` at 40% opacity (`UNSELECTED_ALPHA`). For Option Multi, the entire row (checkbox + label) drops to 40% opacity for unchecked items. In all cases, dimming only activates once at least one selection has been made — before any selection, all options display at full opacity.
+
 ### Top Bar
 
 Close (✕) button only — no back arrow. Closing discards the entire session and dismisses the form. The user returns to wherever they were before (home screen, notification shade, or the app).
@@ -161,7 +165,7 @@ Rules:
 Default to Material 3 motion and only deviate with intention. The goal is polish that most users won't consciously register but would notice if absent.
 
 ### Everywhere (subliminal layer)
-- Screen transitions: short crossfade or subtle shared-axis slide (200–250ms)
+- Screen transitions: crossfade at 490ms (`NAV_TRANSITION_DURATION_MS`). The `NavHost` carries `Modifier.background(MaterialTheme.colorScheme.background)` so the blend-through color matches the active theme — dark in dark mode, light in light mode — rather than the Android window background.
 - Button press: Material 3 ripple default — keep as-is
 - Nudge list load: very subtle fade-in stagger — 30–50ms offset per item; the list feels like it arrived rather than popped
 
@@ -194,7 +198,7 @@ Single-stack navigation, no bottom nav bar. Implemented as a single Jetpack Comp
 
 | Screen | Top Bar |
 |---|---|
-| Main list | App name/logo + settings icon (top right) |
+| Main list | App name ("Nudgery") with tagline "Ask Yourself" underneath in `labelSmall` + settings icon (top right) |
 | Nudge detail | Back arrow |
 | Create nudge | Close (✕) — form screen, back is ambiguous |
 | Edit nudge | Close (✕) — form screen, back is ambiguous |
@@ -220,6 +224,32 @@ The app must degrade gracefully at OS-level font sizes up to 2×. Implementation
 - Never give a container a hardcoded height if it contains text — size to content
 - Test `maxLines = 1` truncation explicitly at large font scales; prefer wrapping where possible
 - Maintain Material 3's 48dp minimum touch target regardless of font scale
+
+## Schedule and Time Display
+
+### Schedule Description Abbreviations
+
+When a schedule is abbreviated for display (e.g. in list rows and the detail screen), day sets are collapsed to natural labels before falling back to individual abbreviations:
+
+| Day set | Label |
+|---|---|
+| All 7 days | Every Day |
+| Mon–Fri | Weekdays |
+| Sat–Sun | Weekends |
+| Any other combination | Individual days joined with `, ` |
+
+Individual day abbreviations: **M, Tu, W, Th, F, Sa, Su**.
+
+### Next Fire Time Format
+
+Next fire times are formatted as local device time — no timezone suffix, no UTC notation. Format:
+
+- If the fire date is **tomorrow** (device local date): `"Tomorrow at 2:30 PM"`
+- Otherwise: `"May 20 at 9 AM"` — full month name, day number, no day-of-week, no year
+
+AM/PM time uses no leading zero and omits minutes when on the hour.
+
+---
 
 ## Create / Edit Nudge Wizard
 
@@ -263,8 +293,8 @@ Multiple follow-ups can be added. Follow-ups can be removed or reordered.
 
 Top to bottom:
 
-1. **Main question text**
-2. **Schedule** — inline with a calendar icon; tapping the icon opens schedule editing
+1. **Main question text** — `titleMedium`, `onSurfaceVariant`; shown just below the nudge name
+2. **Schedule** — inline with a calendar (`CalendarMonth`) icon; tapping the icon navigates to `EditNudgeScreen` opened directly on the schedule step (`initialStep = 1`)
 3. **"Answer Now" button** — pill-shaped, prominent
 4. **Main chart** — with a vertical column of icons outside the upper-right corner:
    - Chart type icon (opens chart editor)
@@ -283,7 +313,7 @@ Accessed via the chart type icon. Contains:
 
 ### General Nudge Editing
 
-Pencil icon in the top app bar navigates to the Edit Nudge screen.
+Pencil icon in the top app bar navigates to the Edit Nudge screen (step 0 — question and name). Calendar icon next to the schedule row navigates to the Edit Nudge screen opened directly on the schedule step (step 1). Both routes use the same `EditNudgeScreen` with an `initialStep` parameter.
 
 ## Empty States
 

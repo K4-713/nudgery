@@ -47,12 +47,13 @@ private const val EDIT_WIZARD_STEPS = 2
 @Composable
 fun EditNudgeScreen(
     nudgeId: String,
+    initialStep: Int = 0,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit,
     viewModel: EditNudgeViewModel = koinViewModel(parameters = { parametersOf(nudgeId) })
 ) {
     val formState by viewModel.formState.collectAsState()
-    var currentStep by remember { mutableIntStateOf(0) }
+    var currentStep by remember { mutableIntStateOf(initialStep) }
 
     LaunchedEffect(formState.result) {
         if (formState.result is UpdateNudgeResult.Success) onSuccess()

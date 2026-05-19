@@ -11,15 +11,23 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nudgery.android.ui.nav.ARG_INITIAL_STEP
 import com.nudgery.android.ui.nav.ARG_NUDGE_ID
 import com.nudgery.android.ui.nav.ARG_SCHEDULED_AT
 import com.nudgery.android.ui.nav.NudgeryScreen
@@ -40,6 +48,7 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel as koinActivityViewModel
 
 private const val TAG = "MainActivity"
+private const val NAV_TRANSITION_DURATION_MS = 490
 
 class MainActivity : ComponentActivity() {
 
@@ -65,7 +74,14 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(
                     navController = navController,
-                    startDestination = NudgeryScreen.NudgeList.route
+                    startDestination = NudgeryScreen.NudgeList.route,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    enterTransition = { fadeIn(animationSpec = tween(NAV_TRANSITION_DURATION_MS)) },
+                    exitTransition = { fadeOut(animationSpec = tween(NAV_TRANSITION_DURATION_MS)) },
+                    popEnterTransition = { fadeIn(animationSpec = tween(NAV_TRANSITION_DURATION_MS)) },
+                    popExitTransition = { fadeOut(animationSpec = tween(NAV_TRANSITION_DURATION_MS)) }
                 ) {
                     composable(NudgeryScreen.NudgeList.route) {
                         NudgeListScreen(
@@ -100,16 +116,27 @@ class MainActivity : ComponentActivity() {
                             onEditClick = {
                                 navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId))
                             },
+                            onEditScheduleClick = {
+                                navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId, initialStep = 1))
+                            },
                             onAnswerNow = {
                                 navController.navigate(NudgeryScreen.AnswerForm.createRoute(nudgeId))
                             }
                         )
                     }
 
-                    composable(NudgeryScreen.EditNudge.route) { backStackEntry ->
+                    composable(
+                        route = NudgeryScreen.EditNudge.route,
+                        arguments = listOf(
+                            navArgument(ARG_NUDGE_ID) { type = NavType.StringType },
+                            navArgument(ARG_INITIAL_STEP) { type = NavType.IntType; defaultValue = 0 }
+                        )
+                    ) { backStackEntry ->
                         val nudgeId = backStackEntry.arguments?.getString(ARG_NUDGE_ID) ?: return@composable
+                        val initialStep = backStackEntry.arguments?.getInt(ARG_INITIAL_STEP) ?: 0
                         EditNudgeScreen(
                             nudgeId = nudgeId,
+                            initialStep = initialStep,
                             onDismiss = { navController.popBackStack() },
                             onSuccess = { navController.popBackStack() }
                         )

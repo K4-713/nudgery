@@ -64,7 +64,16 @@ fun NudgeListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.nudge_list_title)) },
+                title = {
+                    Column {
+                        Text(stringResource(R.string.nudge_list_title))
+                        Text(
+                            text = stringResource(R.string.about_tagline),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -175,7 +184,7 @@ private fun NudgeListItem(
                 )
                 nudge.nextFireTime?.let { next ->
                     Text(
-                        text = stringResource(R.string.nudge_next_fire, next.toString()),
+                        text = stringResource(R.string.nudge_next_fire, next),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

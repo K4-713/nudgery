@@ -29,7 +29,7 @@ data class NudgeSummary(
     val nudgeId: String,
     val name: String,
     val scheduleDescription: String,
-    val nextFireTime: Instant?,
+    val nextFireTime: String?,
     val isEnabled: Boolean
 )
 
@@ -67,11 +67,12 @@ class NudgeListViewModel(
     private suspend fun Nudge.toSummary(): NudgeSummary {
         val schedule = scheduleRepository.getByNudgeId(id)
         val nextFire = schedule?.computeNextFire()
+        val tz = TimeZone.currentSystemDefault()
         return NudgeSummary(
             nudgeId = id,
             name = name,
             scheduleDescription = schedule?.let { ScheduleFormState.fromSchedule(it).toDescription() } ?: "",
-            nextFireTime = nextFire,
+            nextFireTime = nextFire?.toLocalDisplayString(tz),
             isEnabled = isEnabled
         )
     }

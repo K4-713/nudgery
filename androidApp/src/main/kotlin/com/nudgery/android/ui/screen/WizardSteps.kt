@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
+import com.nudgery.android.viewmodel.toAbbreviation
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
 import kotlinx.datetime.DayOfWeek
@@ -334,7 +335,7 @@ fun ScheduleStep(
                                 val updated = if (day in current) current - day else current + day
                                 onScheduleChange(schedule.copy(activeDaysOfWeek = updated))
                             },
-                            label = { Text(day.name.take(3).lowercase().replaceFirstChar { it.uppercase() }) }
+                            label = { Text(day.toAbbreviation()) }
                         )
                     }
                 }

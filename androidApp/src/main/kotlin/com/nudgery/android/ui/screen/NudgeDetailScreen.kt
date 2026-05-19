@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.AlertDialog
@@ -72,6 +73,7 @@ fun NudgeDetailScreen(
     nudgeId: String,
     onBack: () -> Unit,
     onEditClick: () -> Unit,
+    onEditScheduleClick: () -> Unit,
     onAnswerNow: () -> Unit,
     viewModel: NudgeDetailViewModel = koinViewModel(parameters = { parametersOf(nudgeId) })
 ) {
@@ -112,6 +114,17 @@ fun NudgeDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
+            // Main question text
+            if (uiState.mainQuestionText.isNotEmpty()) {
+                item {
+                    Text(
+                        text = uiState.mainQuestionText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // Schedule row
             uiState.schedule?.let { schedule ->
                 item {
@@ -124,9 +137,9 @@ fun NudgeDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(onClick = onEditClick) {
+                        IconButton(onClick = onEditScheduleClick) {
                             Icon(
-                                imageVector = Icons.Outlined.Edit,
+                                imageVector = Icons.Outlined.CalendarMonth,
                                 contentDescription = stringResource(R.string.detail_edit_schedule)
                             )
                         }

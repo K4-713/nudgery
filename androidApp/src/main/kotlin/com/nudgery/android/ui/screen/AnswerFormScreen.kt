@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +49,7 @@ import org.koin.core.parameter.parametersOf
 private const val NUMBER_SLIDER_MIN = 0f
 private const val NUMBER_SLIDER_MAX = 10f
 private const val NUMBER_SLIDER_STEPS = 9
+private const val UNSELECTED_ALPHA = 0.4f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,31 +182,48 @@ private fun AnswerStep(
 }
 
 @Composable
+private fun SelectableOptionButton(
+    text: String,
+    selected: Boolean,
+    anySelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (selected) {
+        Button(onClick = onClick, modifier = modifier) {
+            Text(text = text, style = MaterialTheme.typography.titleMedium)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier.alpha(if (anySelected) UNSELECTED_ALPHA else 1f)
+        ) {
+            Text(text = text, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Composable
 private fun YesNoInput(currentAnswer: String, onAnswerChange: (String) -> Unit) {
+    val anySelected = currentAnswer.isNotBlank()
     Row(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        OutlinedButton(
+        SelectableOptionButton(
+            text = stringResource(R.string.answer_yes),
+            selected = currentAnswer == "YES",
+            anySelected = anySelected,
             onClick = { onAnswerChange("YES") },
             modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = stringResource(R.string.answer_yes),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (currentAnswer == "YES") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
-        }
-        OutlinedButton(
+        )
+        SelectableOptionButton(
+            text = stringResource(R.string.answer_no),
+            selected = currentAnswer == "NO",
+            anySelected = anySelected,
             onClick = { onAnswerChange("NO") },
             modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = stringResource(R.string.answer_no),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (currentAnswer == "NO") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
-        }
+        )
     }
 }
 
@@ -241,17 +260,16 @@ private fun OptionSingleInput(
     currentAnswer: String,
     onAnswerChange: (String) -> Unit
 ) {
+    val anySelected = currentAnswer.isNotBlank()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { option ->
-            OutlinedButton(
+            SelectableOptionButton(
+                text = option.text,
+                selected = currentAnswer == option.id,
+                anySelected = anySelected,
                 onClick = { onAnswerChange(option.id) },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = option.text,
-                    color = if (currentAnswer == option.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
+            )
         }
     }
 }
@@ -263,15 +281,19 @@ private fun OptionMultiInput(
     onAnswerChange: (String) -> Unit
 ) {
     val selectedIds = currentAnswer.split(",").filter { it.isNotBlank() }.toMutableSet()
+    val anySelected = selectedIds.isNotEmpty()
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         options.forEach { option ->
+            val isSelected = option.id in selectedIds
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(if (anySelected && !isSelected) UNSELECTED_ALPHA else 1f)
             ) {
                 Checkbox(
-                    checked = option.id in selectedIds,
+                    checked = isSelected,
                     onCheckedChange = { checked ->
                         if (checked) selectedIds.add(option.id) else selectedIds.remove(option.id)
                         onAnswerChange(selectedIds.joinToString(","))

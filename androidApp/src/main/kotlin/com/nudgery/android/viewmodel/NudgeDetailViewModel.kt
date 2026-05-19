@@ -44,6 +44,7 @@ data class AnswerRow(
 data class NudgeDetailUiState(
     val isLoading: Boolean = true,
     val nudgeName: String = "",
+    val mainQuestionText: String = "",
     val isEnabled: Boolean = false,
     val schedule: Schedule? = null,
     val nextFireTime: Instant? = null,
@@ -167,6 +168,7 @@ class NudgeDetailViewModel(
             it.copy(
                 isLoading = false,
                 nudgeName = nudge.name,
+                mainQuestionText = mainQuestion?.text ?: "",
                 isEnabled = nudge.isEnabled,
                 schedule = schedule,
                 nextFireTime = nextFire,

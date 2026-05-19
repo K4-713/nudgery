@@ -80,6 +80,20 @@ class NudgeListViewModelTest {
     }
 
     @Test
+    fun TDD_nextFireTimeIsFormattedAsLocalTimeWithNoTimezoneNotation() = runTest {
+        // Times displayed to the user should be local to the phone — no timezone suffix
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        repos.scheduleRepo.insert(makeDailySchedule("1"))
+        repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
+        advanceUntilIdle()
+
+        val nextFireTime = viewModel.uiState.value.first().nextFireTime ?: error("nextFireTime was null")
+        assertFalse("Next fire time should not contain 'Z' (UTC marker)", nextFireTime.contains("Z"))
+        assertFalse("Next fire time should not contain '+' (offset marker)", nextFireTime.contains("+"))
+        assertTrue("Next fire time should contain 'AM' or 'PM'", nextFireTime.contains("AM") || nextFireTime.contains("PM"))
+    }
+
+    @Test
     fun TDD_nudgeListEntryShowsEnabledStatus() = runTest {
         // README "Setting Up a Nudge": "indicating...whether or not it is enabled"
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }

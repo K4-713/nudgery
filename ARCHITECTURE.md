@@ -85,10 +85,10 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 
 | ViewModel | Responsibility |
 |---|---|
-| `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
+| `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time formatted as `String?` in local time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
 | `CreateNudgeViewModel` | Manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled); calls `CreateNudgeUseCase` on `submit()` |
-| `EditNudgeViewModel` | Pre-populates form from DB; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
-| `NudgeDetailViewModel` | Loads static data on init; live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
+| `EditNudgeViewModel` | Pre-populates form from DB; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()`; accepts `initialStep` to open directly on a specific wizard page |
+| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` for display under the nudge name); live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE); records each answer with its `scheduledAt` time; manages multi-step form progression |
 | `SettingsViewModel` | Combines `themePreference` and `boldText` flows from `AppSettings` (DataStore) into a single `SettingsUiState` |
 
@@ -100,6 +100,15 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 - `ScheduleFormState` and `QuestionFormState` are shared between `CreateNudgeViewModel` and `EditNudgeViewModel`.
 - The edit flow for question/option text uses a `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` pattern, corresponding to the split-or-in-place choice described in the README.
 - ViewModels are registered in `appModule` via Koin `viewModel { }` blocks. Detail and edit ViewModels receive their `nudgeId` via Koin `parametersOf(nudgeId)` at the call site.
+
+### Time Display Formatting
+
+`androidApp/viewmodel/TimeDisplayExtensions.kt` provides two internal extension functions used across ViewModels:
+
+- `LocalTime.toDisplayString()` — formats a time as "9 AM" or "2:30 PM" (no leading zero, no minutes when on the hour)
+- `Instant.toLocalDisplayString(timeZone, now)` — converts an `Instant` to a human-readable local-time string: "Tomorrow at 2:30 PM" if the date is tomorrow in the given timezone, otherwise "May 20 at 9 AM" (full month name, no year, no day-of-week, no timezone notation). `now` defaults to `Clock.System.now()` and can be overridden in tests for deterministic results.
+
+`ScheduleFormState.toDescription()` uses these functions and also applies day-set grouping: all seven days → "Every Day", Mon–Fri → "Weekdays", Sat–Sun → "Weekends", otherwise individual days joined with short abbreviations (M, Tu, W, Th, F, Sa, Su).
 
 ---
 
@@ -209,7 +218,11 @@ The notification's launch `Intent` carries `EXTRA_NUDGE_ID` and `EXTRA_SCHEDULED
 
 ## UI and Navigation
 
-Navigation uses Jetpack Navigation Compose with a single `NavHost` in `MainActivity`. There is no bottom navigation bar; the stack is a single linear back-stack with `popBackStack()` for dismissal. All routes are defined as objects on the `NudgeryScreen` sealed class in `ui/nav/NudgeryNavGraph.kt`.
+Navigation uses Jetpack Navigation Compose with a single `NavHost` in `MainActivity`. There is no bottom navigation bar; the stack is a single linear back-stack with `popBackStack()` for dismissal. All routes and argument constants are defined in `ui/nav/NudgeryNavGraph.kt` — `NudgeryScreen` sealed class for routes, `ARG_NUDGE_ID`, `ARG_SCHEDULED_AT`, and `ARG_INITIAL_STEP` for nav arguments.
+
+The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background)` so that crossfade transitions blend through the correct theme color rather than the window background. Transition duration is controlled by `NAV_TRANSITION_DURATION_MS` (490ms) applied to all four transition lambdas (`enterTransition`, `exitTransition`, `popEnterTransition`, `popExitTransition`).
+
+`ARG_INITIAL_STEP` is an optional integer query parameter on the `EditNudge` route (default 0). It is read by `EditNudgeScreen` to seed `currentStep`, allowing entry points to open directly on the relevant wizard page — e.g. the calendar icon on `NudgeDetailScreen` passes `initialStep = 1` to open on the schedule step.
 
 ### Theme
 
@@ -226,7 +239,7 @@ Navigation uses Jetpack Navigation Compose with a single `NavHost` in `MainActiv
 | `NudgeListScreen` | App launch, back-stack root |
 | `CreateNudgeScreen` | FAB on NudgeList |
 | `NudgeDetailScreen` | Nudge row tap on NudgeList |
-| `EditNudgeScreen` | Edit icon on NudgeDetail |
+| `EditNudgeScreen` | Pencil icon on NudgeDetail top bar (step 0 — question/name); calendar icon next to schedule (step 1 — schedule) |
 | `AnswerFormScreen` | "Answer Now" on NudgeDetail; notification tap |
 | `SettingsScreen` | Settings icon on NudgeList |
 | `AboutScreen` | About link on Settings |
