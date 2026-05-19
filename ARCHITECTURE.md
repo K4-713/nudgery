@@ -43,8 +43,9 @@ nudgery/
 │   │   └── di/              # sharedModule (Koin)
 │   ├── androidMain/         # Android implementations
 │   │   ├── db/              # AndroidSqliteDriver, DatabaseDriverFactory
-│   │   ├── notification/    # NudgeNotificationWorker, NudgeNotificationChannel,
-│   │   │                    #   RescheduleAllNudgesWorker, NotificationWorkerConfig
+│   │   ├── notification/    # NudgeNotificationWorker, NudgeAlarmReceiver,
+│   │   │                    #   NudgeNotificationChannel, RescheduleAllNudgesWorker,
+│   │   │                    #   NotificationWorkerConfig
 │   │   └── scheduler/       # WorkManagerNotificationScheduler
 │   └── iosMain/             # (future) iOS actual implementations
 ├── androidApp/
@@ -192,9 +193,15 @@ interface NotificationScheduler {
 }
 ```
 
-**Android:** Implemented in `shared/androidMain` using WorkManager (`WorkManagerNotificationScheduler`). Rather than `PeriodicWorkRequest`, a self-scheduling `OneTimeWorkRequest` chain is used: `NudgeNotificationWorker` shows the notification and then re-enqueues itself for the next fire time by calling `ComputeNextFireTimeUseCase`. `ExistingWorkPolicy.REPLACE` ensures reschedules are atomic. `RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`) to recompute all pending notification times.
+**Android:** Implemented in `shared/androidMain` using a two-layer approach — `AlarmManager` for precise timing, WorkManager for reliable execution.
 
-The notification's launch `Intent` carries two extras: `EXTRA_NUDGE_ID` (the nudge to answer) and `EXTRA_SCHEDULED_AT` (the nudge's intended fire time as epoch milliseconds). The scheduled time is stored as WorkManager input data when the work is enqueued, so the worker can relay it to the intent without recomputing it. `MainActivity` handles both cold-start taps (via `onCreate` intent) and warm taps (via `onNewIntent`), routing both through `NudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)`. The scheduled time travels through the nav route as a Long argument and is reconstructed as `Instant` before being passed to `AnswerFormViewModel`, ensuring answers record the nudge's fire time rather than the wall-clock time of the tap.
+`WorkManagerNotificationScheduler` uses `AlarmManager.setExactAndAllowWhileIdle()` to schedule each nudge at its exact fire time (`RTC_WAKEUP`, so it wakes the device). If the `SCHEDULE_EXACT_ALARM` permission has been revoked by the user, it falls back gracefully to `setAndAllowWhileIdle()` (inexact). Alarms are deduplicated by request code (`nudgeId.hashCode()`) with `FLAG_UPDATE_CURRENT`, so `reschedule()` atomically replaces any existing alarm.
+
+When an alarm fires, `NudgeAlarmReceiver` (a `BroadcastReceiver`) receives it and immediately enqueues a `NudgeNotificationWorker` job via WorkManager with no delay. This keeps exact timing from AlarmManager while retaining WorkManager's execution guarantees (Doze-aware, survives process death). The worker shows the notification and calls `notificationScheduler.reschedule()` to set the next alarm.
+
+`RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`). It calls `reschedule()` for every enabled nudge, which re-runs the AlarmManager scheduling with freshly computed fire times.
+
+The notification's launch `Intent` carries `EXTRA_NUDGE_ID` and `EXTRA_SCHEDULED_AT` (epoch milliseconds). `MainActivity` is declared `singleTop` and handles both cold-start taps (`onCreate`) and warm taps (`onNewIntent`) via `handleNudgeIntent()`, which routes to `NudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)`. The scheduled time travels through the nav route as a Long argument and is reconstructed as `Instant` before being passed to `AnswerFormViewModel`, ensuring answers record the nudge's fire time rather than the wall-clock time of the tap.
 
 **iOS (future):** Will be implemented using `UNUserNotificationCenter`. The interface contract is identical, so the shared business logic requires no changes.
 

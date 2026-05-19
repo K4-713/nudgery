@@ -1,73 +1,92 @@
 package com.nudgery.android.notification
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
-import androidx.work.testing.WorkManagerTestInitHelper
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.notification.NudgeAlarmReceiver
 import com.nudgery.shared.scheduler.WorkManagerNotificationScheduler
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalTime
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class WorkManagerSchedulerTest {
 
     private lateinit var context: Context
     private lateinit var scheduler: WorkManagerNotificationScheduler
-    private lateinit var workManager: WorkManager
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        WorkManagerTestInitHelper.initializeTestWorkManager(context)
-        workManager = WorkManager.getInstance(context)
         scheduler = WorkManagerNotificationScheduler(context)
     }
 
     @Test
-    fun TDD_scheduleEnqueuesWorkWithCorrectWorkName() {
+    fun TDD_scheduleSetsPendingIntent() {
         // README: "Enabled Nudges will send you notifications when it's time to answer your questions."
-        val nudge = makeTestNudge("nudge-sched-1")
-        scheduler.schedule(nudge, makeAllDayHourlySchedule("nudge-sched-1"))
+        val nudgeId = "nudge-sched-1"
+        scheduler.cancel(nudgeId) // clean up any prior state
 
-        val infos = workManager.getWorkInfosForUniqueWork("nudge_notification_nudge-sched-1").get()
-        assertTrue("schedule() should enqueue a work request for the nudge",
-            infos.any { it.state == WorkInfo.State.ENQUEUED })
+        scheduler.schedule(makeTestNudge(nudgeId), makeAllDayHourlySchedule(nudgeId))
+
+        assertNotNull(
+            "schedule() should register a pending alarm for the nudge",
+            findPendingIntent(nudgeId)
+        )
+
+        scheduler.cancel(nudgeId) // clean up
     }
 
     @Test
-    fun TDD_cancelRemovesScheduledWork() {
+    fun TDD_cancelRemovesPendingIntent() {
         // README: "whether or not it is enabled" — disabling a nudge must stop pending notifications
-        val nudge = makeTestNudge("nudge-cancel-1")
-        scheduler.schedule(nudge, makeAllDayHourlySchedule("nudge-cancel-1"))
-        scheduler.cancel("nudge-cancel-1")
+        val nudgeId = "nudge-cancel-1"
+        scheduler.schedule(makeTestNudge(nudgeId), makeAllDayHourlySchedule(nudgeId))
+        scheduler.cancel(nudgeId)
 
-        val infos = workManager.getWorkInfosForUniqueWork("nudge_notification_nudge-cancel-1").get()
-        assertTrue("cancel() should leave no enqueued work for the nudge",
-            infos.none { it.state == WorkInfo.State.ENQUEUED })
+        assertNull(
+            "cancel() should remove the pending alarm for the nudge",
+            findPendingIntent(nudgeId)
+        )
     }
 
     @Test
-    fun TDD_rescheduleReplacesExistingWorkWithSingleEntry() {
-        // README: editing a nudge's schedule must update the notification without duplicating it
-        val nudge = makeTestNudge("nudge-resched-1")
-        val schedule = makeAllDayHourlySchedule("nudge-resched-1")
+    fun TDD_rescheduleReplacesExistingAlarm() {
+        // README: editing a nudge's schedule must update the notification without duplicating it.
+        // AlarmManager deduplicates by request code (nudgeId.hashCode()) + FLAG_UPDATE_CURRENT,
+        // so two consecutive schedule() calls still result in exactly one live alarm.
+        val nudgeId = "nudge-resched-1"
+        scheduler.cancel(nudgeId) // clean up any prior state
+
+        val schedule = makeAllDayHourlySchedule(nudgeId)
+        val nudge = makeTestNudge(nudgeId)
         scheduler.schedule(nudge, schedule)
         scheduler.reschedule(nudge, schedule)
 
-        val infos = workManager.getWorkInfosForUniqueWork("nudge_notification_nudge-resched-1").get()
-        assertEquals("reschedule() should leave exactly one enqueued work item",
-            1, infos.count { it.state == WorkInfo.State.ENQUEUED })
+        assertNotNull(
+            "reschedule() should leave exactly one pending alarm for the nudge",
+            findPendingIntent(nudgeId)
+        )
+
+        scheduler.cancel(nudgeId) // clean up
     }
+
+    private fun findPendingIntent(nudgeId: String): PendingIntent? =
+        PendingIntent.getBroadcast(
+            context,
+            nudgeId.hashCode(),
+            Intent(context, NudgeAlarmReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
 
     private fun makeTestNudge(id: String) = Nudge(
         id = id,

@@ -7,21 +7,15 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import androidx.work.workDataOf
+import com.nudgery.shared.model.Nudge
+import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
-import com.nudgery.shared.model.Schedule
-import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
+import com.nudgery.shared.scheduler.NotificationScheduler
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.util.concurrent.TimeUnit
 
 private const val TAG = "NudgeNotificationWorker"
 
@@ -33,7 +27,7 @@ class NudgeNotificationWorker(
     private val nudgeRepository: NudgeRepository by inject()
     private val questionRepository: QuestionRepository by inject()
     private val scheduleRepository: ScheduleRepository by inject()
-    private val computeNextFireTime = ComputeNextFireTimeUseCase()
+    private val notificationScheduler: NotificationScheduler by inject()
 
     override suspend fun doWork(): Result {
         val nudgeId = inputData.getString(WORKER_KEY_NUDGE_ID)
@@ -58,12 +52,7 @@ class NudgeNotificationWorker(
         val schedule = scheduleRepository.getByNudgeId(nudgeId)
 
         showNotification(nudgeId, nudge.name, mainQuestion?.text ?: nudge.name, scheduledAtMs)
-
-        if (schedule != null) {
-            scheduleNextFire(nudgeId, schedule)
-        } else {
-            Log.w(TAG, "No schedule found for nudge $nudgeId — notification fired but cannot reschedule")
-        }
+        scheduleNextFire(nudge, schedule)
 
         return Result.success()
     }
@@ -94,27 +83,11 @@ class NudgeNotificationWorker(
         Log.i(TAG, "Notification shown for nudge: $nudgeId")
     }
 
-    private fun scheduleNextFire(nudgeId: String, schedule: Schedule) {
-        val now = Clock.System.now()
-        val nextFireTime = computeNextFireTime.execute(schedule, now, TimeZone.currentSystemDefault())
-        val delayMillis = (nextFireTime - now).inWholeMilliseconds
-
-        if (delayMillis <= 0) {
-            Log.w(TAG, "Computed next fire time is not in the future for nudge $nudgeId — skipping reschedule")
+    private fun scheduleNextFire(nudge: Nudge, schedule: Schedule?) {
+        if (schedule == null) {
+            Log.w(TAG, "No schedule found for nudge ${nudge.id} — notification fired but cannot reschedule")
             return
         }
-
-        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-            nudgeWorkName(nudgeId),
-            ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<NudgeNotificationWorker>()
-                .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
-                .setInputData(workDataOf(
-                    WORKER_KEY_NUDGE_ID to nudgeId,
-                    WORKER_KEY_SCHEDULED_AT to nextFireTime.toEpochMilliseconds()
-                ))
-                .build()
-        )
-        Log.i(TAG, "Next notification for nudge $nudgeId scheduled in ${delayMillis / 1000}s")
+        notificationScheduler.reschedule(nudge, schedule)
     }
 }

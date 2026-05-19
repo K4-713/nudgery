@@ -1,11 +1,12 @@
 package com.nudgery.android.notification
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.ListenableWorker
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import androidx.work.workDataOf
@@ -19,6 +20,7 @@ import com.nudgery.shared.db.SqlDelightQuestionRepository
 import com.nudgery.shared.db.SqlDelightScheduleRepository
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.notification.NudgeAlarmReceiver
 import com.nudgery.shared.notification.NudgeNotificationWorker
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NudgeEditRepository
@@ -38,7 +40,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalTime
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,10 +50,8 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 
-// These mirror internal constants in shared/androidMain — kept as test-local literals to avoid
-// coupling test code to implementation-private symbols.
+// Mirror of the internal constant — kept here to avoid coupling test code to private symbols.
 private const val WORKER_INPUT_KEY_NUDGE_ID = "nudge_id"
-private fun workerUniqueName(nudgeId: String) = "nudge_notification_$nudgeId"
 
 @RunWith(AndroidJUnit4::class)
 class NudgeNotificationWorkerTest {
@@ -60,13 +61,13 @@ class NudgeNotificationWorkerTest {
     private lateinit var questionRepo: SqlDelightQuestionRepository
     private lateinit var optionRepo: SqlDelightQuestionOptionRepository
     private lateinit var scheduleRepo: SqlDelightScheduleRepository
-    private lateinit var workManager: WorkManager
+    private lateinit var alarmManager: AlarmManager
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         WorkManagerTestInitHelper.initializeTestWorkManager(context)
-        workManager = WorkManager.getInstance(context)
+        alarmManager = context.getSystemService(AlarmManager::class.java)
 
         val driver = AndroidSqliteDriver(NudgeryDatabase.Schema, context, null)
         val database = NudgeryDatabase(driver)
@@ -121,9 +122,11 @@ class NudgeNotificationWorkerTest {
     }
 
     @Test
-    fun TDD_workerSkipsNotificationForDisabledNudge() {
-        // README: "Enabled Nudges will send you notifications" — disabled nudges must not fire
+    fun TDD_workerSkipsRescheduleForDisabledNudge() {
+        // README: "Enabled Nudges will send you notifications" — disabled nudges must not reschedule
         val nudgeId = createNudge(isEnabled = false)
+        cancelAlarm(nudgeId) // ensure no alarm exists from creation
+
         val worker = TestListenableWorkerBuilder<NudgeNotificationWorker>(context)
             .setInputData(workDataOf(WORKER_INPUT_KEY_NUDGE_ID to nudgeId))
             .build()
@@ -131,18 +134,17 @@ class NudgeNotificationWorkerTest {
         val result = worker.startWork().get()
 
         assertEquals(ListenableWorker.Result.success(), result)
-        val followUp = workManager.getWorkInfosForUniqueWork(workerUniqueName(nudgeId)).get()
-        assertTrue("Disabled nudge must not cause the worker to enqueue a follow-up notification",
-            followUp.none { it.state == WorkInfo.State.ENQUEUED })
+        assertNull(
+            "Disabled nudge must not cause the worker to schedule a follow-up alarm",
+            findAlarmPendingIntent(nudgeId)
+        )
     }
 
     @Test
-    fun TDD_workerReschedulesNextNotificationForEnabledNudge() {
-        // README: notifications recur on schedule — worker must re-enqueue itself after each fire
+    fun TDD_workerReschedulesNextAlarmForEnabledNudge() {
+        // README: notifications recur on schedule — worker must reschedule itself after each fire
         val nudgeId = createNudge(isEnabled = true)
-        // Cancel the initial scheduled work so the assertion tests only the worker's own reschedule
-        workManager.cancelUniqueWork(workerUniqueName(nudgeId)).result.get()
-        workManager.pruneWork().result.get()
+        cancelAlarm(nudgeId) // remove the alarm set during creation so we test only the worker's reschedule
 
         val worker = TestListenableWorkerBuilder<NudgeNotificationWorker>(context)
             .setInputData(workDataOf(WORKER_INPUT_KEY_NUDGE_ID to nudgeId))
@@ -151,9 +153,27 @@ class NudgeNotificationWorkerTest {
         val result = worker.startWork().get()
 
         assertEquals(ListenableWorker.Result.success(), result)
-        val followUp = workManager.getWorkInfosForUniqueWork(workerUniqueName(nudgeId)).get()
-        assertTrue("Worker must enqueue the next notification after firing",
-            followUp.any { it.state == WorkInfo.State.ENQUEUED })
+        assertNotNull(
+            "Worker must schedule the next alarm after firing",
+            findAlarmPendingIntent(nudgeId)
+        )
+
+        cancelAlarm(nudgeId) // clean up
+    }
+
+    private fun findAlarmPendingIntent(nudgeId: String): PendingIntent? =
+        PendingIntent.getBroadcast(
+            context,
+            nudgeId.hashCode(),
+            Intent(context, NudgeAlarmReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+
+    private fun cancelAlarm(nudgeId: String) {
+        findAlarmPendingIntent(nudgeId)?.let {
+            alarmManager.cancel(it)
+            it.cancel()
+        }
     }
 
     private fun createNudge(isEnabled: Boolean): String = runBlocking {
