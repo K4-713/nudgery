@@ -47,17 +47,13 @@ All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/
 
 ### Remaining Compose UI work
 - **Missed nudge indicator**: jaunty exclamation sticker on `NudgeListItem` when most recent scheduled fire is unanswered — requires `ComputePreviousFireTimeUseCase` (not yet implemented)
-- **Atkinson Hyperlegible Next font**: `AtkinsonHyperlegibleNext` is currently `FontFamily.SansSerif`; bundle the TTF/OTF files in `res/font/` and wire them up in `Type.kt`
 - **Vico chart integration**: chart composables currently show placeholder text summaries; replace with real Vico `CartesianChartHost` / `LineCartesianLayer` / `ColumnCartesianLayer` calls
 - **Chart type picker**: the chart-type icon button in `NudgeDetailScreen` is a no-op TODO
 - **Full-screen chart**: the zoom/expand icon is a no-op TODO
-- **Runtime permissions**: `POST_NOTIFICATIONS` and `SCHEDULE_EXACT_ALARM` flows (see below)
 
 ## Runtime Permissions (`androidApp`)
-These need UI flows — best added alongside the Compose screens:
-- **POST_NOTIFICATIONS** (Android 13+): request at runtime on first launch or when the user creates their first nudge; if denied, nudges silently fail to notify
+- **POST_NOTIFICATIONS** (Android 13+) ✅ DONE — `NotificationPermissionEffect` composable in `MainActivity` requests the permission on first launch; result is logged; degrades gracefully if denied
 - **SCHEDULE_EXACT_ALARM** (Android 12+): users can revoke this in Settings; detect revocation and either fall back to inexact alarms or prompt the user to re-grant it via the system Alarm & Reminder settings screen
-- Both permissions should degrade gracefully if denied rather than crashing or silently breaking
 
 ## App Icon
 - Design an adaptive icon (foreground layer + background layer) for the app — required for Android 8+ and modern Play Store listings

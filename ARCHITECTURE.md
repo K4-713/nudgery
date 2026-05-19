@@ -25,6 +25,8 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Notification scheduling (Android) | WorkManager | Implements shared `NotificationScheduler` interface |
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
+| Settings persistence | DataStore Preferences | Stores `ThemePreference` and bold text toggle; flows observed by `SettingsViewModel` |
+| Typeface | Atkinson Hyperlegible Next | Bundled TTF; all 14 weight/style variants in `res/font/` |
 
 ---
 
@@ -41,14 +43,22 @@ nudgery/
 │   │   └── di/              # sharedModule (Koin)
 │   ├── androidMain/         # Android implementations
 │   │   ├── db/              # AndroidSqliteDriver, DatabaseDriverFactory
-│   │   ├── notification/    # NudgeNotificationWorker, RescheduleAllNudgesWorker, channel setup
+│   │   ├── notification/    # NudgeNotificationWorker, NudgeNotificationChannel,
+│   │   │                    #   RescheduleAllNudgesWorker, NotificationWorkerConfig
 │   │   └── scheduler/       # WorkManagerNotificationScheduler
 │   └── iosMain/             # (future) iOS actual implementations
 ├── androidApp/
 │   ├── di/                  # appModule (Koin) — DatabaseDriverFactory, scheduler, ViewModels
 │   ├── notification/        # BootReceiver, TimezoneChangeReceiver
+│   ├── settings/            # AppSettings (DataStore) — themePreference, boldText
 │   ├── viewmodel/           # AndroidX ViewModels + UiState types + form state helpers
-│   ├── ui/                  # (next) Jetpack Compose screens and components
+│   ├── ui/
+│   │   ├── nav/             # NudgeryScreen sealed class, route/arg constants
+│   │   ├── screen/          # NudgeListScreen, CreateNudgeScreen, EditNudgeScreen,
+│   │   │                    #   NudgeDetailScreen, AnswerFormScreen, SettingsScreen,
+│   │   │                    #   AboutScreen, WizardSteps (shared wizard composables)
+│   │   └── theme/           # NudgeryTheme, Color, Type (Atkinson Hyperlegible Next),
+│   │                        #   nudgeryShapes, nudgeryTypography(bold)
 │   └── MainActivity.kt
 └── iosApp/                  # (future) SwiftUI app target
 ```
@@ -69,6 +79,17 @@ UI (Compose / SwiftUI)
 ```
 
 ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All business logic lives in `shared/commonMain` use cases and repositories, keeping it testable without a device.
+
+### ViewModels
+
+| ViewModel | Responsibility |
+|---|---|
+| `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
+| `CreateNudgeViewModel` | Manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled); calls `CreateNudgeUseCase` on `submit()` |
+| `EditNudgeViewModel` | Pre-populates form from DB; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
+| `NudgeDetailViewModel` | Loads static data on init; live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
+| `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE); records each answer with its `scheduledAt` time; manages multi-step form progression |
+| `SettingsViewModel` | Combines `themePreference` and `boldText` flows from `AppSettings` (DataStore) into a single `SettingsUiState` |
 
 ### ViewModel conventions
 
@@ -171,9 +192,37 @@ interface NotificationScheduler {
 }
 ```
 
-**Android:** Implemented in `shared/androidMain` using WorkManager (`WorkManagerNotificationScheduler`). Rather than `PeriodicWorkRequest`, a self-scheduling `OneTimeWorkRequest` chain is used: `NudgeNotificationWorker` shows the notification and then re-enqueues itself for the next fire time by calling `ComputeNextFireTimeUseCase`. `ExistingWorkPolicy.REPLACE` ensures reschedules are atomic. `RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`) to recompute all pending notification times. The notification's launch `Intent` carries `EXTRA_NUDGE_ID` so the app can navigate directly to the answer form on tap.
+**Android:** Implemented in `shared/androidMain` using WorkManager (`WorkManagerNotificationScheduler`). Rather than `PeriodicWorkRequest`, a self-scheduling `OneTimeWorkRequest` chain is used: `NudgeNotificationWorker` shows the notification and then re-enqueues itself for the next fire time by calling `ComputeNextFireTimeUseCase`. `ExistingWorkPolicy.REPLACE` ensures reschedules are atomic. `RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`) to recompute all pending notification times.
+
+The notification's launch `Intent` carries two extras: `EXTRA_NUDGE_ID` (the nudge to answer) and `EXTRA_SCHEDULED_AT` (the nudge's intended fire time as epoch milliseconds). The scheduled time is stored as WorkManager input data when the work is enqueued, so the worker can relay it to the intent without recomputing it. `MainActivity` handles both cold-start taps (via `onCreate` intent) and warm taps (via `onNewIntent`), routing both through `NudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)`. The scheduled time travels through the nav route as a Long argument and is reconstructed as `Instant` before being passed to `AnswerFormViewModel`, ensuring answers record the nudge's fire time rather than the wall-clock time of the tap.
 
 **iOS (future):** Will be implemented using `UNUserNotificationCenter`. The interface contract is identical, so the shared business logic requires no changes.
+
+---
+
+## UI and Navigation
+
+Navigation uses Jetpack Navigation Compose with a single `NavHost` in `MainActivity`. There is no bottom navigation bar; the stack is a single linear back-stack with `popBackStack()` for dismissal. All routes are defined as objects on the `NudgeryScreen` sealed class in `ui/nav/NudgeryNavGraph.kt`.
+
+### Theme
+
+`NudgeryTheme` wraps `MaterialTheme` with a custom color scheme, typography, and shapes. The user's `ThemePreference` (System/Light/Dark) and bold text toggle are stored in `AppSettings` via DataStore and applied at the `NudgeryTheme` call site in `MainActivity`.
+
+- **Colors**: violet primary, deep teal secondary, golden yellow tertiary. Separate dark and light `ColorScheme` instances; WCAG AA contrast verified on all text/background combinations.
+- **Typography**: Atkinson Hyperlegible Next, bundled as static TTF files in `res/font/` (all 14 weight/style variants). `nudgeryTypography(bold: Boolean)` steps body weight from Normal→Medium and label weight from SemiBold→Bold when the bold toggle is on.
+- **Shapes**: `nudgeryShapes` — extraSmall 4dp through extraLarge 50dp (pill).
+
+### Screens
+
+| Screen | Entry points |
+|---|---|
+| `NudgeListScreen` | App launch, back-stack root |
+| `CreateNudgeScreen` | FAB on NudgeList |
+| `NudgeDetailScreen` | Nudge row tap on NudgeList |
+| `EditNudgeScreen` | Edit icon on NudgeDetail |
+| `AnswerFormScreen` | "Answer Now" on NudgeDetail; notification tap |
+| `SettingsScreen` | Settings icon on NudgeList |
+| `AboutScreen` | About link on Settings |
 
 ---
 
