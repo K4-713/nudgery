@@ -1,5 +1,7 @@
 package com.nudgery.android.ui.screen
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -11,6 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -20,7 +25,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -221,7 +233,7 @@ private fun FollowUpEditor(
 
 // ---- Step 3: Schedule ----
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ScheduleStep(
     schedule: ScheduleFormState,
@@ -257,15 +269,50 @@ fun ScheduleStep(
         }
 
         // Time of day
+        var showTimePicker by remember { mutableStateOf(false) }
+        val timePickerState = rememberTimePickerState(
+            initialHour = schedule.timeOfDay.hour,
+            initialMinute = schedule.timeOfDay.minute,
+            is24Hour = false
+        )
+
+        if (showTimePicker) {
+            AlertDialog(
+                onDismissRequest = { showTimePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onScheduleChange(schedule.copy(
+                            timeOfDay = LocalTime(timePickerState.hour, timePickerState.minute)
+                        ))
+                        showTimePicker = false
+                    }) { Text(stringResource(R.string.action_confirm)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTimePicker = false }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+                text = { TimePicker(state = timePickerState) }
+            )
+        }
+
+        val timeFieldInteraction = remember { MutableInteractionSource() }
+        val timeFieldPressed by timeFieldInteraction.collectIsPressedAsState()
+        LaunchedEffect(timeFieldPressed) {
+            if (timeFieldPressed) showTimePicker = true
+        }
+
         OutlinedTextField(
             value = schedule.timeOfDay.let {
                 val h = if (it.hour % 12 == 0) 12 else it.hour % 12
                 val period = if (it.hour < 12) "AM" else "PM"
                 if (it.minute == 0) "$h $period" else "$h:${it.minute.toString().padStart(2, '0')} $period"
             },
-            onValueChange = { /* time picker would go here */ },
+            onValueChange = {},
             label = { Text(stringResource(R.string.schedule_time_of_day)) },
+            trailingIcon = { Icon(Icons.Outlined.Schedule, contentDescription = null) },
             readOnly = true,
+            interactionSource = timeFieldInteraction,
             modifier = Modifier.fillMaxWidth()
         )
 
