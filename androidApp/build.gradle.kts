@@ -4,6 +4,24 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+val gitVersionCode: Int = try {
+    providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+        workingDir(rootDir)
+    }.standardOutput.asText.get().trim().toIntOrNull() ?: 1
+} catch (e: Exception) {
+    1
+}
+
+val gitVersionName: String = try {
+    providers.exec {
+        commandLine("git", "describe", "--tags", "--always", "--dirty")
+        workingDir(rootDir)
+    }.standardOutput.asText.get().trim().removePrefix("v")
+} catch (e: Exception) {
+    "dev"
+}
+
 android {
     namespace = "com.nudgery.android"
     compileSdk = 35
@@ -12,8 +30,8 @@ android {
         applicationId = "com.nudgery.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = gitVersionCode
+        versionName = gitVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

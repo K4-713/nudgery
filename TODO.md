@@ -76,7 +76,7 @@ Prepare before submitting:
 
 ## applicationId and Versioning
 - Confirm `applicationId = "com.nudgery.android"` is final — it cannot be changed after the first publish without losing all installs and reviews
-- Establish a `versionCode` increment strategy before the first upload (must increase monotonically with every release)
+- **Versioning** ✅ DONE — `versionCode` = `git rev-list --count HEAD` (auto-increments with every commit); `versionName` = `git describe --tags --always --dirty` (e.g. `0.1.0`, `0.1.0-5-gabc1234`, `0.1.0-dirty`); `v0.1.0` tagged on initial commit; to release `0.2.0`, run `git tag v0.2.0`
 - Consider enabling **Play App Signing** (Google holds the upload key; strongly recommended for new apps)
 
 ## Release Build (`androidApp`)
