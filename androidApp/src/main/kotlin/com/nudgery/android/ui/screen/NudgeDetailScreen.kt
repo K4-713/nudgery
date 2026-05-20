@@ -1,5 +1,6 @@
 package com.nudgery.android.ui.screen
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,7 +81,12 @@ import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
 import com.nudgery.shared.model.VisualizationData
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -294,13 +304,60 @@ private fun NudgeryChart(visualization: VisualizationData, modifier: Modifier = 
 
 @Composable
 private fun CalendarHeatMapChart(counts: List<DailyCount>) {
-    // Simple placeholder: show count summary until a full calendar grid is implemented
-    val total = counts.sumOf { it.value }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("${counts.size} days", style = MaterialTheme.typography.bodySmall)
-        Text("%.1f avg".format(if (counts.isEmpty()) 0.0 else total / counts.size),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary)
+    if (counts.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
+        }
+        return
+    }
+
+    val maxValue = remember(counts) { counts.maxOf { it.value }.coerceAtLeast(1.0) }
+    val countByDate = remember(counts) { counts.associate { it.date to it.value } }
+    // List of Monday dates, one per week column in the grid
+    val gridWeeks = remember(counts) {
+        val firstDate = counts.minOf { it.date }
+        val lastDate = counts.maxOf { it.date }
+        // Snap to the Monday of the first and last week
+        val gridStart = firstDate.minus(firstDate.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
+        val gridEnd = lastDate.plus(7 - lastDate.dayOfWeek.isoDayNumber, DateTimeUnit.DAY)
+        val weeks = mutableListOf<LocalDate>()
+        var week = gridStart
+        while (week <= gridEnd) {
+            weeks.add(week)
+            week = week.plus(7, DateTimeUnit.DAY)
+        }
+        weeks.toList()
+    }
+
+    val emptyCellColor = MaterialTheme.colorScheme.surfaceVariant
+    val filledCellColor = MaterialTheme.colorScheme.primary
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val gapPx = 2.dp.toPx()
+        val totalWeeks = gridWeeks.size
+        if (totalWeeks == 0) return@Canvas
+
+        // Scale cell size to fit all weeks horizontally and all 7 days vertically
+        val cellByHeight = (size.height - gapPx * 6) / 7f
+        val cellByWidth = if (totalWeeks > 1)
+            (size.width - gapPx * (totalWeeks - 1)) / totalWeeks.toFloat()
+        else
+            size.width
+        val cellSize = minOf(cellByHeight, cellByWidth)
+
+        gridWeeks.forEachIndexed { weekIdx, weekStart ->
+            for (dayIdx in 0..6) {
+                val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
+                val intensity = ((countByDate[date] ?: 0.0) / maxValue).toFloat().coerceIn(0f, 1f)
+
+                drawRoundRect(
+                    color = lerp(emptyCellColor, filledCellColor, intensity),
+                    topLeft = Offset(weekIdx * (cellSize + gapPx), dayIdx * (cellSize + gapPx)),
+                    size = Size(cellSize, cellSize),
+                    cornerRadius = CornerRadius(cellSize * 0.15f)
+                )
+            }
+        }
     }
 }
 

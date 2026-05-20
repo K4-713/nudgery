@@ -37,7 +37,15 @@ Enabled Nudges will send you notifications when it's time to answer your questio
 From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV/TSV file. There will also be an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately.
 
 The visualizations available for each main question will differ, based on the main question type.
-Available visualizations include calendar heat maps, bar charts, line graphs, column charts, and tag clouds. The timeframe can be switched between weekly, monthly, yearly, and all-time. 
+
+| Question Type | Available Visualizations |
+|---|---|
+| YES_NO | Calendar heat map, line graph (daily yes count), column chart |
+| NUMBER | Line graph, calendar heat map |
+| OPTION_SINGLE | Bar chart, column chart, tag cloud |
+| OPTION_MULTI | Bar chart, tag cloud |
+
+The timeframe can be switched between weekly, monthly, yearly, and all-time.
 
 
 ## Editing Nudges
