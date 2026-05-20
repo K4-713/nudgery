@@ -1,6 +1,7 @@
 package com.nudgery.shared.notification
 
 import android.app.PendingIntent
+import com.nudgery.shared.R
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -72,7 +73,7 @@ class NudgeNotificationWorker(
         )
 
         val notification = NotificationCompat.Builder(applicationContext, NUDGE_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(pendingIntent)

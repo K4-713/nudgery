@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z"
+        android:fillColor="#c8a8f0"/>
+
+    <!-- Radial glow: warm yellow fading from lower-right toward transparent -->
+    <path android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                xmlns:android="http://schemas.android.com/apk/res/android"
+                android:type="radial"
+                android:centerX="85.245537"
+                android:centerY="75.630898"
+                android:gradientRadius="54"
+                android:startColor="#FFFFCC55"
+                android:endColor="#00FFCC55"/>
+        </aapt:attr>
+    </path>
+</vector>

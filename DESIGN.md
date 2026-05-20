@@ -101,6 +101,39 @@ Yellow failing on light surfaces is expected and intentional — see Yellow Usag
 
 Palette was chosen with deuteranopia/protanopia (red-green color blindness) in mind. Violet and golden yellow sit on opposite sides of the color confusion axis and remain clearly distinct under simulation.
 
+## App Icon
+
+### Design
+
+Lavender (`#c8a8f0`) background with a warm golden yellow radial glow (`#ffcc55` → transparent) emanating from the lower-right corner — consistent with the brand palette's violet primary and yellow accent roles. A light purple shadow echo of the squiggle sits behind the mark.
+
+The identifying mark is an organic black squiggle (the "good hand" N-form), centered in the safe zone. It reads as both a gesture and an initial.
+
+Source file: `Nudgery Final.svg` (project root, Inkscape).
+
+### Adaptive Icon Structure (API 26+)
+
+| Layer | File | Contents |
+|---|---|---|
+| Background | `androidApp/.../drawable/ic_launcher_background.xml` | Lavender rect + radial glow gradient |
+| Foreground | `androidApp/.../drawable/ic_launcher_foreground.xml` | Shadow echo + black squiggle |
+| Adaptive icon | `androidApp/.../mipmap-anydpi-v26/ic_launcher.xml` | References background + foreground |
+| Round variant | `androidApp/.../mipmap-anydpi-v26/ic_launcher_round.xml` | Same layers; OS handles the mask |
+
+### Legacy Launcher Icons (pre-API 26 fallback)
+
+Rasterized from `Nudgery Final.svg` via Inkscape. Stored in `mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher.png` (48–192px).
+
+### Notification Badge
+
+`shared/.../res/drawable/ic_notification.xml` — white squiggle on transparent background, 24dp intrinsic size. Android (API 21+) uses only the alpha channel, rendering it white against the notification accent color. The shadow echo is omitted at this size.
+
+### Play Store
+
+512×512 PNG (`play_store_icon.png`, project root). Same full composition as the launcher icon.
+
+---
+
 ## Iconography
 
 Material Symbols Rounded. Outlined by default, filled for active/selected states. This communicates selection without relying on color alone, supporting accessibility.
