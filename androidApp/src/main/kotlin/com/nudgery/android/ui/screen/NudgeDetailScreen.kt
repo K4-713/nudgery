@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -42,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +57,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerRow
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.nudgery.android.viewmodel.NudgeDetailViewModel
 import com.nudgery.shared.model.DailyCount
 import com.nudgery.shared.model.DataPoint
@@ -272,8 +286,8 @@ private fun NudgeryChart(visualization: VisualizationData, modifier: Modifier = 
         when (visualization) {
             is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(visualization.dailyCounts)
             is VisualizationData.LineGraph -> LineGraphChart(visualization.points)
-            is VisualizationData.BarChart -> NamedCountChart(visualization.entries, horizontal = true)
-            is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries, horizontal = false)
+            is VisualizationData.BarChart -> NamedCountChart(visualization.entries)
+            is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
             is VisualizationData.TagCloud -> TagCloudChart(visualization.entries)
         }
     }
@@ -293,39 +307,71 @@ private fun CalendarHeatMapChart(counts: List<DailyCount>) {
 
 @Composable
 private fun LineGraphChart(points: List<DataPoint>) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        if (points.isEmpty()) {
-            Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
-        } else {
-            Text("${points.size} data points", style = MaterialTheme.typography.bodySmall)
-            val latest = points.last().value
-            Text("%.1f".format(latest), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+    if (points.isEmpty()) {
+        Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(points) {
+        modelProducer.runTransaction {
+            lineSeries { series(points.map { it.value }) }
         }
     }
+    val tz = TimeZone.currentSystemDefault()
+    CartesianChartHost(
+        chart = rememberCartesianChart(
+            rememberLineCartesianLayer(),
+            startAxis = VerticalAxis.rememberStart(),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = object : CartesianValueFormatter {
+                    override fun format(
+                        context: CartesianMeasuringContext,
+                        value: Double,
+                        verticalAxisPosition: Axis.Position.Vertical?
+                    ): CharSequence {
+                        val idx = value.toInt().coerceIn(0, points.lastIndex)
+                        val dt = points[idx].at.toLocalDateTime(tz)
+                        return "${dt.monthNumber}/${dt.dayOfMonth}"
+                    }
+                }
+            ),
+        ),
+        modelProducer = modelProducer,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun NamedCountChart(entries: List<NamedCount>, horizontal: Boolean) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-        entries.take(5).forEach { entry ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = entry.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.width(80.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = entry.count.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+private fun NamedCountChart(entries: List<NamedCount>) {
+    if (entries.isEmpty()) {
+        Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(entries) {
+        modelProducer.runTransaction {
+            columnSeries { series(entries.map { it.count }) }
         }
     }
+    CartesianChartHost(
+        chart = rememberCartesianChart(
+            rememberColumnCartesianLayer(),
+            startAxis = VerticalAxis.rememberStart(),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = object : CartesianValueFormatter {
+                    override fun format(
+                        context: CartesianMeasuringContext,
+                        value: Double,
+                        verticalAxisPosition: Axis.Position.Vertical?
+                    ): CharSequence {
+                        return entries.getOrNull(value.toInt())?.label ?: ""
+                    }
+                }
+            ),
+        ),
+        modelProducer = modelProducer,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

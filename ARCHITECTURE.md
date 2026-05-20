@@ -263,7 +263,7 @@ CSV and TSV export logic lives in `shared/commonMain` so it is available to both
 
 ## Visualizations
 
-Charts are rendered in the platform UI layer (not shared), since charting libraries are platform-specific. The shared module exposes pre-aggregated data structures (e.g. `List<DailyCount>`, `List<WeeklyRollup>`) computed from raw `Answer` rows, so the platform layer only handles rendering.
+Charts are rendered in the platform UI layer (not shared), since charting libraries are platform-specific. The shared module exposes pre-aggregated data structures computed from raw `Answer` rows via `GetVisualizationDataUseCase`; the platform layer only handles rendering. Data types: `List<DataPoint>` (Instant + Double) for time-series, `List<NamedCount>` (label + count) for categorical, `List<DailyCount>` (LocalDate + Double) for heat maps.
 
 **Available chart types by QuestionType:**
 
@@ -273,6 +273,19 @@ Charts are rendered in the platform UI layer (not shared), since charting librar
 | NUMBER | Line graph, calendar heat map |
 | OPTION_SINGLE | Bar chart, column chart, tag cloud |
 | OPTION_MULTI | Bar chart, tag cloud |
+
+**Android rendering:**
+
+All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is in `NudgeryChart`, which switches on the `VisualizationData` sealed subtype.
+
+| Chart type | Composable | Rendering |
+|---|---|---|
+| `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at` |
+| `BarChart` / `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label`; both subtypes render as vertical columns (Vico has no horizontal bar layer) |
+| `TagCloud` | `TagCloudChart` | Custom `FlowRow` with `fontSize` scaled proportionally to `NamedCount.count` |
+| `CalendarHeatMap` | `CalendarHeatMapChart` | **Placeholder** — shows day count and average; pending custom Canvas grid implementation |
+
+`CartesianChartModelProducer` is created with `remember` and updated via `LaunchedEffect` on data change. M3 color theming is applied automatically by `vico-compose-m3`.
 
 ---
 
