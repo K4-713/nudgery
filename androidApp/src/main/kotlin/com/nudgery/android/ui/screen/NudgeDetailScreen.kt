@@ -32,6 +32,8 @@ import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -108,6 +111,8 @@ fun NudgeDetailScreen(
     viewModel: NudgeDetailViewModel = koinViewModel(parameters = { parametersOf(nudgeId) })
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedChartIndex by rememberSaveable { mutableStateOf(0) }
+    var showFullScreenChart by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -225,9 +230,12 @@ fun NudgeDetailScreen(
                 item {
                     ChartSection(
                         visualizations = uiState.visualizations,
+                        selectedIndex = selectedChartIndex,
+                        onSelectIndex = { selectedChartIndex = it },
                         selectedTimeframe = uiState.selectedTimeframe,
                         onTimeframeSelect = { viewModel.selectTimeframe(it) },
-                        onExport = { viewModel.exportAnswers(com.nudgery.shared.model.ExportFormat.CSV) }
+                        onExport = { viewModel.exportAnswers(com.nudgery.shared.model.ExportFormat.CSV) },
+                        onExpandChart = { showFullScreenChart = true }
                     )
                 }
             }
@@ -243,22 +251,32 @@ fun NudgeDetailScreen(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
+
+    if (showFullScreenChart && uiState.visualizations.isNotEmpty()) {
+        FullScreenChartDialog(
+            visualizations = uiState.visualizations,
+            selectedIndex = selectedChartIndex,
+            onSelectIndex = { selectedChartIndex = it },
+            selectedTimeframe = uiState.selectedTimeframe,
+            onTimeframeSelect = { viewModel.selectTimeframe(it) },
+            onDismiss = { showFullScreenChart = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun ChartSection(
     visualizations: List<VisualizationData>,
+    selectedIndex: Int,
+    onSelectIndex: (Int) -> Unit,
     selectedTimeframe: Timeframe,
     onTimeframeSelect: (Timeframe) -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onExpandChart: () -> Unit
 ) {
-    var selectedIndex by rememberSaveable { mutableStateOf(0) }
     var showTypePicker by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
 
-    // Clamp in case the list shrinks (e.g. timeframe with no data behaves the same length,
-    // but guard defensively)
     val safeIndex = selectedIndex.coerceAtMost(visualizations.lastIndex)
 
     Card {
@@ -277,7 +295,7 @@ private fun ChartSection(
                     IconButton(onClick = onExport) {
                         Icon(Icons.Outlined.Download, contentDescription = stringResource(R.string.detail_export))
                     }
-                    IconButton(onClick = { /* full screen chart — TODO */ }) {
+                    IconButton(onClick = onExpandChart) {
                         Icon(Icons.Outlined.ZoomIn, contentDescription = stringResource(R.string.detail_expand_chart))
                     }
                 }
@@ -285,63 +303,83 @@ private fun ChartSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Timeframe.entries.forEach { tf ->
-                    NudgeryToggleChip(
-                        selected = selectedTimeframe == tf,
-                        onClick = { onTimeframeSelect(tf) },
-                        label = {
-                            Text(
-                                when (tf) {
-                                    Timeframe.WEEKLY -> stringResource(R.string.timeframe_weekly)
-                                    Timeframe.MONTHLY -> stringResource(R.string.timeframe_monthly)
-                                    Timeframe.YEARLY -> stringResource(R.string.timeframe_yearly)
-                                    Timeframe.ALL_TIME -> stringResource(R.string.timeframe_all_time)
-                                }
-                            )
-                        }
-                    )
-                }
-            }
+            TimeframeSelector(
+                selectedTimeframe = selectedTimeframe,
+                onTimeframeSelect = onTimeframeSelect
+            )
         }
     }
 
     if (showTypePicker) {
-        ModalBottomSheet(
-            onDismissRequest = { showTypePicker = false },
-            sheetState = sheetState
+        ChartTypePickerSheet(
+            visualizations = visualizations,
+            safeIndex = safeIndex,
+            onSelectIndex = onSelectIndex,
+            onDismiss = { showTypePicker = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TimeframeSelector(
+    selectedTimeframe: Timeframe,
+    onTimeframeSelect: (Timeframe) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier) {
+        Timeframe.entries.forEach { tf ->
+            NudgeryToggleChip(
+                selected = selectedTimeframe == tf,
+                onClick = { onTimeframeSelect(tf) },
+                label = {
+                    Text(
+                        when (tf) {
+                            Timeframe.WEEKLY -> stringResource(R.string.timeframe_weekly)
+                            Timeframe.MONTHLY -> stringResource(R.string.timeframe_monthly)
+                            Timeframe.YEARLY -> stringResource(R.string.timeframe_yearly)
+                            Timeframe.ALL_TIME -> stringResource(R.string.timeframe_all_time)
+                        }
+                    )
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun ChartTypePickerSheet(
+    visualizations: List<VisualizationData>,
+    safeIndex: Int,
+    onSelectIndex: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_chart_type_picker_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    visualizations.forEachIndexed { index, visualization ->
-                        NudgeryToggleChip(
-                            selected = index == safeIndex,
-                            onClick = {
-                                selectedIndex = index
-                                showTypePicker = false
-                            },
-                            label = {
-                                Text(
-                                    when (visualization) {
-                                        is VisualizationData.CalendarHeatMap -> stringResource(R.string.chart_type_heat_map)
-                                        is VisualizationData.LineGraph -> stringResource(R.string.chart_type_line_graph)
-                                        is VisualizationData.BarChart -> stringResource(R.string.chart_type_bar_chart)
-                                        is VisualizationData.ColumnChart -> stringResource(R.string.chart_type_column_chart)
-                                        is VisualizationData.TagCloud -> stringResource(R.string.chart_type_tag_cloud)
-                                    }
-                                )
-                            }
-                        )
-                    }
+            Text(
+                text = stringResource(R.string.detail_chart_type_picker_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                visualizations.forEachIndexed { index, visualization ->
+                    NudgeryToggleChip(
+                        selected = index == safeIndex,
+                        onClick = {
+                            onSelectIndex(index)
+                            onDismiss()
+                        },
+                        label = { Text(visualizationLabel(visualization)) }
+                    )
                 }
             }
         }
@@ -349,11 +387,95 @@ private fun ChartSection(
 }
 
 @Composable
-private fun NudgeryChart(visualization: VisualizationData, modifier: Modifier = Modifier) {
+private fun visualizationLabel(visualization: VisualizationData): String = when (visualization) {
+    is VisualizationData.CalendarHeatMap -> stringResource(R.string.chart_type_heat_map)
+    is VisualizationData.LineGraph -> stringResource(R.string.chart_type_line_graph)
+    is VisualizationData.BarChart -> stringResource(R.string.chart_type_bar_chart)
+    is VisualizationData.ColumnChart -> stringResource(R.string.chart_type_column_chart)
+    is VisualizationData.TagCloud -> stringResource(R.string.chart_type_tag_cloud)
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun FullScreenChartDialog(
+    visualizations: List<VisualizationData>,
+    selectedIndex: Int,
+    onSelectIndex: (Int) -> Unit,
+    selectedTimeframe: Timeframe,
+    onTimeframeSelect: (Timeframe) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var showTypePicker by remember { mutableStateOf(false) }
+    val safeIndex = selectedIndex.coerceAtMost(visualizations.lastIndex)
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(visualizationLabel(visualizations[safeIndex])) },
+                        navigationIcon = {
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.nav_back))
+                            }
+                        },
+                        actions = {
+                            if (visualizations.size > 1) {
+                                IconButton(onClick = { showTypePicker = true }) {
+                                    Icon(Icons.Outlined.BarChart, contentDescription = stringResource(R.string.detail_edit_chart_type))
+                                }
+                            }
+                        }
+                    )
+                }
+            ) { innerPadding ->
+                Column(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()
+                ) {
+                    NudgeryChart(
+                        visualization = visualizations[safeIndex],
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TimeframeSelector(
+                        selectedTimeframe = selectedTimeframe,
+                        onTimeframeSelect = onTimeframeSelect,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showTypePicker) {
+        ChartTypePickerSheet(
+            visualizations = visualizations,
+            safeIndex = safeIndex,
+            onSelectIndex = onSelectIndex,
+            onDismiss = { showTypePicker = false }
+        )
+    }
+}
+
+@Composable
+private fun NudgeryChart(
+    visualization: VisualizationData,
+    modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+) {
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(16f / 9f)
             .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
             .padding(8.dp),
         contentAlignment = Alignment.Center
