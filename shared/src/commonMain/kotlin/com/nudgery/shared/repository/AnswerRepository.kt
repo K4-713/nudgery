@@ -11,4 +11,6 @@ interface AnswerRepository {
     suspend fun getVisibleByNudgeIdSince(nudgeId: String, since: Instant): List<Answer>
     suspend fun insert(answer: Answer)
     suspend fun setHidden(answerId: String, isHidden: Boolean)
+    suspend fun getMostRecentAnsweredAtByNudgeId(nudgeId: String): Instant?
+    fun observeAll(): Flow<List<Answer>>
 }

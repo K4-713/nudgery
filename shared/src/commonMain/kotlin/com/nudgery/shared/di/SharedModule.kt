@@ -3,12 +3,14 @@ package com.nudgery.shared.di
 import com.nudgery.shared.db.DatabaseDriverFactory
 import com.nudgery.shared.db.NudgeryDatabase
 import com.nudgery.shared.db.SqlDelightAnswerRepository
+import com.nudgery.shared.db.SqlDelightNotificationFireRepository
 import com.nudgery.shared.db.SqlDelightNudgeEditRepository
 import com.nudgery.shared.db.SqlDelightNudgeRepository
 import com.nudgery.shared.db.SqlDelightQuestionOptionRepository
 import com.nudgery.shared.db.SqlDelightQuestionRepository
 import com.nudgery.shared.db.SqlDelightScheduleRepository
 import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
@@ -33,6 +35,7 @@ val sharedModule = module {
     single<ScheduleRepository> { SqlDelightScheduleRepository(get()) }
     single<AnswerRepository> { SqlDelightAnswerRepository(get()) }
     single<NudgeEditRepository> { SqlDelightNudgeEditRepository(get()) }
+    single<NotificationFireRepository> { SqlDelightNotificationFireRepository(get()) }
 
     factory { CreateNudgeUseCase(get(), get(), get(), get(), get()) }
     factory { UpdateNudgeUseCase(get(), get(), get(), get(), get(), get()) }

@@ -1,12 +1,14 @@
 package com.nudgery.android.util
 
 import com.nudgery.shared.model.Answer
+import com.nudgery.shared.model.NotificationFire
 import com.nudgery.shared.model.NudgeEdit
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
@@ -113,6 +115,20 @@ class FakeAnswerRepository : AnswerRepository {
             list.map { if (it.id == answerId) it.copy(isHidden = isHidden) else it }
         }
     }
+    override suspend fun getMostRecentAnsweredAtByNudgeId(nudgeId: String): Instant? =
+        _answers.value.filter { it.nudgeId == nudgeId && !it.isHidden }.maxOfOrNull { it.answeredAt }
+    override fun observeAll(): Flow<List<Answer>> = _answers
+}
+
+class FakeNotificationFireRepository : NotificationFireRepository {
+    private val _fires = MutableStateFlow<List<NotificationFire>>(emptyList())
+
+    override suspend fun insert(fire: NotificationFire) { _fires.update { it + fire } }
+    override suspend fun getMostRecentByNudgeId(nudgeId: String): NotificationFire? =
+        _fires.value.filter { it.nudgeId == nudgeId }.maxByOrNull { it.firedAt }
+    override fun observeMostRecentByNudgeId(nudgeId: String): Flow<NotificationFire?> =
+        _fires.map { it.filter { f -> f.nudgeId == nudgeId }.maxByOrNull { f -> f.firedAt } }
+    override fun observeAll(): Flow<List<NotificationFire>> = _fires
 }
 
 class FakeNudgeEditRepository : NudgeEditRepository {
@@ -143,6 +159,7 @@ class TestViewModelRepositories {
     val scheduleRepo = FakeScheduleRepository()
     val answerRepo = FakeAnswerRepository()
     val nudgeEditRepo = FakeNudgeEditRepository()
+    val notificationFireRepo = FakeNotificationFireRepository()
     val scheduler = FakeNotificationScheduler()
 
     fun createNudgeUseCase() =

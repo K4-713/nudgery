@@ -22,7 +22,7 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Async / concurrency | kotlinx.coroutines | Shared across platforms |
 | Date / time | kotlinx.datetime | Shared across platforms; avoids `java.time` Android API level issues |
 | Dependency injection | Koin | KMP-compatible; Hilt is Android-only and therefore excluded |
-| Notification scheduling (Android) | WorkManager | Implements shared `NotificationScheduler` interface |
+| Notification scheduling (Android) | AlarmManager + WorkManager | AlarmManager provides precise timing; WorkManager handles reliable execution. Implements shared `NotificationScheduler` interface. |
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
 | Settings persistence | DataStore Preferences | Stores `ThemePreference` and bold text toggle; flows observed by `SettingsViewModel` |
@@ -180,6 +180,15 @@ One row per question answered per notification event.
 | answeredAt | Instant | When the user actually submitted the answer; kept for transparency and auditing |
 | isHidden | Boolean | Hidden rows excluded from visualizations |
 
+### NotificationFire
+Written by `NudgeNotificationWorker` at the moment a notification is actually delivered (not the scheduled time). Used to determine whether a notification has been sent but not yet answered, driving the missed-nudge indicator in the UI.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | |
+| nudgeId | UUID | FK → Nudge (cascade delete) |
+| firedAt | Instant | `Clock.System.now()` at delivery, not the scheduled time |
+
 ### NudgeEdit
 Audit record written when a nudge's question or option text is edited in-place (non-split).
 
@@ -269,7 +278,7 @@ Charts are rendered in the platform UI layer (not shared), since charting librar
 
 | QuestionType | Available Visualizations |
 |---|---|
-| YES_NO | Calendar heat map, column chart |
+| YES_NO | Calendar heat map, line graph (daily yes count), column chart |
 | NUMBER | Line graph, calendar heat map |
 | OPTION_SINGLE | Bar chart, column chart, tag cloud |
 | OPTION_MULTI | Bar chart, tag cloud |
@@ -281,9 +290,10 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 | Chart type | Composable | Rendering |
 |---|---|---|
 | `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at` |
-| `BarChart` / `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label`; both subtypes render as vertical columns (Vico has no horizontal bar layer) |
+| `BarChart` | `HorizontalBarChart` | Custom Compose `Column`/`Row` layout; proportional `Box` fills with `primary` color; label truncated to 80dp |
+| `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label` |
 | `TagCloud` | `TagCloudChart` | Custom `FlowRow` with `fontSize` scaled proportionally to `NamedCount.count` |
-| `CalendarHeatMap` | `CalendarHeatMapChart` | **Placeholder** — shows day count and average; pending custom Canvas grid implementation |
+| `CalendarHeatMap` | `CalendarHeatMapChart` | Custom Canvas grid; Monday-anchored week columns × 7 rows; cell color interpolated from `surfaceVariant` → `primary` by intensity |
 
 `CartesianChartModelProducer` is created with `remember` and updated via `LaunchedEffect` on data change. M3 color theming is applied automatically by `vico-compose-m3`.
 

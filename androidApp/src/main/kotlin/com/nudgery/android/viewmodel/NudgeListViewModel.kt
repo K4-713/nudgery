@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Schedule
+import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
@@ -14,7 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -30,19 +32,29 @@ data class NudgeSummary(
     val name: String,
     val scheduleDescription: String,
     val nextFireTime: String?,
-    val isEnabled: Boolean
+    val isEnabled: Boolean,
+    val hasMissedNotification: Boolean = false
 )
 
 class NudgeListViewModel(
     private val nudgeRepository: NudgeRepository,
     private val scheduleRepository: ScheduleRepository,
+    private val answerRepository: AnswerRepository,
+    private val notificationFireRepository: NotificationFireRepository,
     private val computeNextFireTime: ComputeNextFireTimeUseCase,
     private val updateNudge: UpdateNudgeUseCase
 ) : ViewModel() {
 
-    val uiState: StateFlow<List<NudgeSummary>> = nudgeRepository.observeAll()
-        .map { nudges -> nudges.map { it.toSummary() } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    // Combine nudges, notification fires, and answers so the list refreshes reactively
+    // when any of the three tables change (e.g. notification fires while list is visible,
+    // or user answers a nudge and returns to the list).
+    val uiState: StateFlow<List<NudgeSummary>> = combine(
+        nudgeRepository.observeAll(),
+        notificationFireRepository.observeAll(),
+        answerRepository.observeAll()
+    ) { nudges, _, _ ->
+        nudges.map { it.toSummary() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _pendingAnswer = MutableStateFlow<PendingAnswerNavigation?>(null)
     val pendingAnswer: StateFlow<PendingAnswerNavigation?> = _pendingAnswer.asStateFlow()
@@ -68,12 +80,17 @@ class NudgeListViewModel(
         val schedule = scheduleRepository.getByNudgeId(id)
         val nextFire = schedule?.computeNextFire()
         val tz = TimeZone.currentSystemDefault()
+        val recentFire = notificationFireRepository.getMostRecentByNudgeId(id)
+        val recentAnsweredAt = answerRepository.getMostRecentAnsweredAtByNudgeId(id)
+        val hasMissed = recentFire != null &&
+            (recentAnsweredAt == null || recentAnsweredAt < recentFire.firedAt)
         return NudgeSummary(
             nudgeId = id,
             name = name,
             scheduleDescription = schedule?.let { ScheduleFormState.fromSchedule(it).toDescription() } ?: "",
             nextFireTime = nextFire?.toLocalDisplayString(tz),
-            isEnabled = isEnabled
+            isEnabled = isEnabled,
+            hasMissedNotification = hasMissed
         )
     }
 

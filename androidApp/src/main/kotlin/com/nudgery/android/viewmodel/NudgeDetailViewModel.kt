@@ -10,6 +10,7 @@ import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.Timeframe
 import com.nudgery.shared.model.VisualizationData
 import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
@@ -51,6 +52,7 @@ data class NudgeDetailUiState(
     val mainQuestionId: String? = null,
     val followUpCount: Int = 0,
     val answers: List<AnswerRow> = emptyList(),
+    val hasMissedNotification: Boolean = false,
     val visualizations: List<VisualizationData> = emptyList(),
     val selectedTimeframe: Timeframe = Timeframe.WEEKLY,
     val exportContent: String? = null,
@@ -64,6 +66,7 @@ class NudgeDetailViewModel(
     private val questionOptionRepository: QuestionOptionRepository,
     private val scheduleRepository: ScheduleRepository,
     private val answerRepository: AnswerRepository,
+    private val notificationFireRepository: NotificationFireRepository,
     private val computeNextFireTime: ComputeNextFireTimeUseCase,
     private val getVisualizationData: GetVisualizationDataUseCase,
     private val setAnswerHidden: SetAnswerHiddenUseCase,
@@ -85,9 +88,10 @@ class NudgeDetailViewModel(
             combine(
                 answerRepository.observeByNudgeId(nudgeId),
                 _questionMap,
-                _optionTextMap
-            ) { answers, questions, optionTexts ->
-                answers.map { answer ->
+                _optionTextMap,
+                notificationFireRepository.observeMostRecentByNudgeId(nudgeId)
+            ) { answers, questions, optionTexts, recentFire ->
+                val rows = answers.map { answer ->
                     val question = questions[answer.questionId]
                     AnswerRow(
                         answerId = answer.id,
@@ -98,8 +102,12 @@ class NudgeDetailViewModel(
                         isHidden = answer.isHidden
                     )
                 }
-            }.collect { rows ->
-                _uiState.update { it.copy(answers = rows) }
+                val mostRecentAnsweredAt = answers.filter { !it.isHidden }.maxOfOrNull { it.answeredAt }
+                val hasMissed = recentFire != null &&
+                    (mostRecentAnsweredAt == null || mostRecentAnsweredAt < recentFire.firedAt)
+                Pair(rows, hasMissed)
+            }.collect { (rows, hasMissed) ->
+                _uiState.update { it.copy(answers = rows, hasMissedNotification = hasMissed) }
             }
         }
     }

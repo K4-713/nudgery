@@ -9,12 +9,16 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.nudgery.shared.model.NotificationFire
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Schedule
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.scheduler.NotificationScheduler
+import com.nudgery.shared.util.generateUuid
+import kotlinx.datetime.Clock
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -29,6 +33,7 @@ class NudgeNotificationWorker(
     private val questionRepository: QuestionRepository by inject()
     private val scheduleRepository: ScheduleRepository by inject()
     private val notificationScheduler: NotificationScheduler by inject()
+    private val notificationFireRepository: NotificationFireRepository by inject()
 
     override suspend fun doWork(): Result {
         val nudgeId = inputData.getString(WORKER_KEY_NUDGE_ID)
@@ -52,7 +57,10 @@ class NudgeNotificationWorker(
         val mainQuestion = questions.firstOrNull { it.isMainQuestion }
         val schedule = scheduleRepository.getByNudgeId(nudgeId)
 
+        val firedAt = Clock.System.now()
         showNotification(nudgeId, nudge.name, mainQuestion?.text ?: nudge.name, scheduledAtMs)
+        notificationFireRepository.insert(NotificationFire(generateUuid(), nudgeId, firedAt))
+        Log.i(TAG, "Recorded notification fire for nudge $nudgeId at $firedAt")
         scheduleNextFire(nudge, schedule)
 
         return Result.success()

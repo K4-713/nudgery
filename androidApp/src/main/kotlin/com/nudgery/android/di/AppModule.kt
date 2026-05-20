@@ -10,6 +10,8 @@ import com.nudgery.android.viewmodel.SettingsViewModel
 import com.nudgery.shared.db.DatabaseDriverFactory
 import com.nudgery.shared.scheduler.NotificationScheduler
 import com.nudgery.shared.scheduler.WorkManagerNotificationScheduler
+import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
@@ -30,6 +32,8 @@ val appModule = module {
         NudgeListViewModel(
             nudgeRepository = get(),
             scheduleRepository = get(),
+            answerRepository = get<AnswerRepository>(),
+            notificationFireRepository = get<NotificationFireRepository>(),
             computeNextFireTime = get<ComputeNextFireTimeUseCase>(),
             updateNudge = get<UpdateNudgeUseCase>()
         )
@@ -47,6 +51,7 @@ val appModule = module {
             questionOptionRepository = get(),
             scheduleRepository = get(),
             answerRepository = get(),
+            notificationFireRepository = get<NotificationFireRepository>(),
             computeNextFireTime = get<ComputeNextFireTimeUseCase>(),
             getVisualizationData = get<GetVisualizationDataUseCase>(),
             setAnswerHidden = get<SetAnswerHiddenUseCase>(),

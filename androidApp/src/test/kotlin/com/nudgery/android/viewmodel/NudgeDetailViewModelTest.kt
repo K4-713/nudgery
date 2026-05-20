@@ -3,6 +3,7 @@ package com.nudgery.android.viewmodel
 import com.nudgery.android.util.TestViewModelRepositories
 import com.nudgery.shared.model.Answer
 import com.nudgery.shared.model.ExportFormat
+import com.nudgery.shared.model.NotificationFire
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
@@ -132,6 +133,41 @@ class NudgeDetailViewModelTest {
         assertTrue(viewModel.uiState.value.exportContent!!.contains("nudge_name"))
     }
 
+    @Test
+    fun TDD_detailMissedIndicatorSetWhenFireHasNoAnswer() = runTest {
+        // README "Viewing Nudges": missed indicator on the Answer Now button
+        val nudgeId = createNudge("Did you exercise?")
+        repos.notificationFireRepo.insert(NotificationFire("fire-1", nudgeId, Clock.System.now()))
+        val viewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        assertTrue(
+            "hasMissedNotification should be true when a fire has no subsequent answer",
+            viewModel.uiState.value.hasMissedNotification
+        )
+    }
+
+    @Test
+    fun TDD_detailMissedIndicatorClearedAfterAnswer() = runTest {
+        val nudgeId = createNudge("Did you exercise?")
+        val questions = repos.questionRepo.getByNudgeId(nudgeId)
+        val fireTime = Clock.System.now()
+        repos.notificationFireRepo.insert(NotificationFire("fire-1", nudgeId, fireTime))
+        val viewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.hasMissedNotification)
+
+        repos.answerRepo.insert(makeAnswer(nudgeId, questions.first().id, "YES"))
+        advanceUntilIdle()
+
+        assertFalse(
+            "hasMissedNotification should clear once an answer is recorded after the fire",
+            viewModel.uiState.value.hasMissedNotification
+        )
+    }
+
     private fun buildViewModel(nudgeId: String) = NudgeDetailViewModel(
         nudgeId = nudgeId,
         nudgeRepository = repos.nudgeRepo,
@@ -139,6 +175,7 @@ class NudgeDetailViewModelTest {
         questionOptionRepository = repos.optionRepo,
         scheduleRepository = repos.scheduleRepo,
         answerRepository = repos.answerRepo,
+        notificationFireRepository = repos.notificationFireRepo,
         computeNextFireTime = ComputeNextFireTimeUseCase(),
         getVisualizationData = repos.getVisualizationDataUseCase(),
         setAnswerHidden = repos.setAnswerHiddenUseCase(),

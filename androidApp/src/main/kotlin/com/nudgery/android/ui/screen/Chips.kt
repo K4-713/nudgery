@@ -1,13 +1,33 @@
 package com.nudgery.android.ui.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.nudgery.android.R
+
+/** Small amber dot used to signal a missed (unanswered) notification. */
+@Composable
+internal fun MissedDot(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.nudge_missed_indicator)
+    Box(
+        modifier = modifier
+            .size(8.dp)
+            .background(Color(0xFFFFC107), CircleShape)
+            .semantics { contentDescription = description }
+    )
+}
 
 /**
  * Toggle chip used throughout the app for mutually-exclusive and multi-select choices

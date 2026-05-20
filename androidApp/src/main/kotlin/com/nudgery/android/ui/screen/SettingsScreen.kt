@@ -1,5 +1,10 @@
 package com.nudgery.android.ui.screen
 
+import android.app.AlarmManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,13 +27,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.nudgery.android.R
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.viewmodel.SettingsViewModel
@@ -106,6 +119,10 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+            ExactAlarmDiagnosticRow()
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
             TextButton(
                 onClick = onAboutClick,
                 modifier = Modifier
@@ -119,6 +136,66 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun ExactAlarmDiagnosticRow() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val alarmManager = context.getSystemService(AlarmManager::class.java)
+        var state by remember { mutableStateOf(alarmManager.canScheduleExactAlarms()) }
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    state = alarmManager.canScheduleExactAlarms()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+        state
+    } else {
+        true // Exact alarms were always permitted before Android 12
+    }
+
+    SettingsSectionLabel(stringResource(R.string.settings_diagnostics))
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_exact_alarm),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = if (granted)
+                    stringResource(R.string.settings_exact_alarm_granted)
+                else
+                    stringResource(R.string.settings_exact_alarm_not_granted),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (granted)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        }
+        if (!granted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            TextButton(onClick = {
+                context.startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                        .setData(Uri.parse("package:${context.packageName}"))
+                )
+            }) {
+                Text(stringResource(R.string.settings_exact_alarm_open_settings))
+            }
         }
     }
 }

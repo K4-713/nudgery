@@ -1,0 +1,25 @@
+CREATE TABLE NotificationFire (
+    id TEXT NOT NULL PRIMARY KEY,
+    nudgeId TEXT NOT NULL,
+    firedAt TEXT NOT NULL,
+    FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE
+);
+
+insertFire:
+INSERT INTO NotificationFire (id, nudgeId, firedAt)
+VALUES (:id, :nudgeId, :firedAt);
+
+selectMostRecentByNudgeId:
+SELECT * FROM NotificationFire
+WHERE nudgeId = :nudgeId
+ORDER BY firedAt DESC
+LIMIT 1;
+
+observeMostRecentByNudgeId:
+SELECT * FROM NotificationFire
+WHERE nudgeId = :nudgeId
+ORDER BY firedAt DESC
+LIMIT 1;
+
+observeAll:
+SELECT * FROM NotificationFire;

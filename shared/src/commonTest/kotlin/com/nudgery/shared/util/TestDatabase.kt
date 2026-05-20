@@ -3,12 +3,14 @@ package com.nudgery.shared.util
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.nudgery.shared.db.NudgeryDatabase
 import com.nudgery.shared.db.SqlDelightAnswerRepository
+import com.nudgery.shared.db.SqlDelightNotificationFireRepository
 import com.nudgery.shared.db.SqlDelightNudgeEditRepository
 import com.nudgery.shared.db.SqlDelightNudgeRepository
 import com.nudgery.shared.db.SqlDelightQuestionOptionRepository
 import com.nudgery.shared.db.SqlDelightQuestionRepository
 import com.nudgery.shared.db.SqlDelightScheduleRepository
 import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
@@ -21,7 +23,8 @@ data class TestRepositories(
     val questionOptionRepository: QuestionOptionRepository,
     val scheduleRepository: ScheduleRepository,
     val answerRepository: AnswerRepository,
-    val nudgeEditRepository: NudgeEditRepository
+    val nudgeEditRepository: NudgeEditRepository,
+    val notificationFireRepository: NotificationFireRepository
 )
 
 fun createTestRepositories(): TestRepositories {
@@ -34,6 +37,7 @@ fun createTestRepositories(): TestRepositories {
         questionOptionRepository = SqlDelightQuestionOptionRepository(database),
         scheduleRepository = SqlDelightScheduleRepository(database),
         answerRepository = SqlDelightAnswerRepository(database),
-        nudgeEditRepository = SqlDelightNudgeEditRepository(database)
+        nudgeEditRepository = SqlDelightNudgeEditRepository(database),
+        notificationFireRepository = SqlDelightNotificationFireRepository(database)
     )
 }

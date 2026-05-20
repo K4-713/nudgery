@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -166,14 +167,17 @@ private fun NudgeListItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = nudge.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    // TODO: missed nudge indicator — requires ComputePreviousFireTimeUseCase
-                    // When implemented: show a small golden-yellow exclamation badge rotated 32°
+                    Box {
+                        Text(
+                            text = nudge.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (nudge.hasMissedNotification) {
+                            MissedDot(modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp))
+                        }
+                    }
                 }
                 Text(
                     text = nudge.scheduleDescription,

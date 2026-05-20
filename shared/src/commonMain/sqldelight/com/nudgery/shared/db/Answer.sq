@@ -27,3 +27,11 @@ VALUES (:id, :nudgeId, :questionId, :value, :scheduledAt, :answeredAt, :isHidden
 
 setHidden:
 UPDATE Answer SET isHidden = :isHidden WHERE id = :id;
+
+selectMostRecentAnsweredAtByNudgeId:
+SELECT MAX(answeredAt) AS mostRecentAnsweredAt
+FROM Answer
+WHERE nudgeId = :nudgeId AND isHidden = 0;
+
+observeAll:
+SELECT * FROM Answer;

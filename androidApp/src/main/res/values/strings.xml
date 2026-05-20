@@ -129,6 +129,12 @@
     <string name="settings_bold_text">Bold text</string>
     <string name="settings_bold_text_description">Increase font weight throughout the app</string>
     <string name="settings_about">About Nudgery</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_exact_alarm">Exact alarm scheduling</string>
+    <string name="settings_exact_alarm_description">Required for on-time notifications</string>
+    <string name="settings_exact_alarm_granted">Granted</string>
+    <string name="settings_exact_alarm_not_granted">Not granted — notifications may be delayed</string>
+    <string name="settings_exact_alarm_open_settings">Open Settings</string>
 
     <!-- About screen -->
     <string name="about_title">About Nudgery</string>

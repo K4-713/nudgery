@@ -2,6 +2,8 @@ package com.nudgery.android
 
 import com.nudgery.android.util.TestViewModelRepositories
 import com.nudgery.android.viewmodel.NudgeListViewModel
+import com.nudgery.shared.model.Answer
+import com.nudgery.shared.model.NotificationFire
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.ScheduleType
@@ -40,6 +42,8 @@ class NudgeListViewModelTest {
         viewModel = NudgeListViewModel(
             nudgeRepository = repos.nudgeRepo,
             scheduleRepository = repos.scheduleRepo,
+            answerRepository = repos.answerRepo,
+            notificationFireRepository = repos.notificationFireRepo,
             computeNextFireTime = ComputeNextFireTimeUseCase(),
             updateNudge = repos.updateNudgeUseCase()
         )
@@ -131,6 +135,63 @@ class NudgeListViewModelTest {
 
         assertEquals("nudge-abc", viewModel.pendingAnswer.value?.nudgeId)
     }
+
+    @Test
+    fun TDD_missedDotShownWhenNotificationFiredButNotAnswered() = runTest {
+        // README "Viewing Nudges": indicator when a notification was sent but not answered
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
+        val fireTime = Clock.System.now()
+        repos.notificationFireRepo.insert(NotificationFire("fire-1", "1", fireTime))
+        advanceUntilIdle()
+
+        assertTrue(
+            "Missed dot should show when a notification was fired with no subsequent answer",
+            viewModel.uiState.value.first().hasMissedNotification
+        )
+    }
+
+    @Test
+    fun TDD_missedDotClearedAfterAnswerRecorded() = runTest {
+        // README "Viewing Nudges": indicator clears once the user has answered
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
+        val fireTime = Clock.System.now()
+        repos.notificationFireRepo.insert(NotificationFire("fire-1", "1", fireTime))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.first().hasMissedNotification)
+
+        repos.answerRepo.insert(makeAnswer("1", "q-1", fireTime + kotlin.time.Duration.parse("PT1M")))
+        advanceUntilIdle()
+
+        assertFalse(
+            "Missed dot should clear once an answer is recorded after the notification",
+            viewModel.uiState.value.first().hasMissedNotification
+        )
+    }
+
+    @Test
+    fun TDD_missedDotNotShownWithoutAnyNotificationFire() = runTest {
+        // No fire recorded — dot must never appear (avoids false positives on new nudges)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
+        advanceUntilIdle()
+
+        assertFalse(
+            "Missed dot must not appear when no notification has fired",
+            viewModel.uiState.value.first().hasMissedNotification
+        )
+    }
+
+    private fun makeAnswer(nudgeId: String, questionId: String, answeredAt: kotlinx.datetime.Instant) = Answer(
+        id = "ans-${System.nanoTime()}",
+        nudgeId = nudgeId,
+        questionId = questionId,
+        value = "YES",
+        scheduledAt = answeredAt,
+        answeredAt = answeredAt,
+        isHidden = false
+    )
 
     private fun makeNudge(id: String, name: String, isEnabled: Boolean = true) = Nudge(
         id = id, name = name, isEnabled = isEnabled,

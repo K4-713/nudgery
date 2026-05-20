@@ -55,6 +55,21 @@ class SqlDelightAnswerRepository(private val database: NudgeryDatabase) : Answer
         )
     }
 
+    override suspend fun getMostRecentAnsweredAtByNudgeId(nudgeId: String): Instant? =
+        withContext(Dispatchers.Default) {
+            database.answerQueries
+                .selectMostRecentAnsweredAtByNudgeId(nudgeId)
+                .executeAsOneOrNull()
+                ?.mostRecentAnsweredAt
+                ?.let { Instant.parse(it) }
+        }
+
+    override fun observeAll(): Flow<List<Answer>> =
+        database.answerQueries.observeAll()
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows -> rows.map { it.toDomain() } }
+
     private fun com.nudgery.shared.db.Answer.toDomain() = Answer(
         id = id,
         nudgeId = nudgeId,
