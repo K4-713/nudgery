@@ -64,11 +64,14 @@ class GetVisualizationDataUseCase(
             }
             .sortedBy { it.date }
 
+        val dailyYesPoints = dailyCounts.map { DataPoint(it.date.atStartOfDayIn(timeZone), it.value) }
+
         val totalYes = answers.count { it.value.uppercase() == "YES" }
         val totalNo = answers.count { it.value.uppercase() == "NO" }
 
         return listOf(
             VisualizationData.CalendarHeatMap(dailyCounts),
+            VisualizationData.LineGraph(dailyYesPoints),
             VisualizationData.ColumnChart(listOf(NamedCount("YES", totalYes), NamedCount("NO", totalNo)))
         )
     }

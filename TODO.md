@@ -47,10 +47,11 @@ All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/
 
 ### Remaining Compose UI work
 - **Missed nudge indicator**: jaunty exclamation sticker on `NudgeListItem` when most recent scheduled fire is unanswered — requires `ComputePreviousFireTimeUseCase` (not yet implemented)
-- **Vico chart integration** (partial):
+- **Vico chart integration** ✅ DONE:
   - ✅ `LineGraphChart` — `CartesianChartHost` + `LineCartesianLayer`; x-axis shows `month/day` from `DataPoint.at`
-  - ✅ `NamedCountChart` (used for both `BarChart` and `ColumnChart`) — `CartesianChartHost` + `ColumnCartesianLayer`; x-axis shows `NamedCount.label`; both `BarChart` and `ColumnChart` render as vertical columns (Vico has no horizontal bar layer)
-  - 🔲 `CalendarHeatMapChart` — still shows placeholder text summary; needs a custom Canvas-based week×N grid (no Vico equivalent)
+  - ✅ `NamedCountChart` (used for `ColumnChart`) — `CartesianChartHost` + `ColumnCartesianLayer`; x-axis shows `NamedCount.label`
+  - ✅ `HorizontalBarChart` (used for `BarChart`) — custom Canvas-free `Column`/`Row` layout with proportional filled tracks; label left, count right
+  - ✅ `CalendarHeatMapChart` — custom Canvas-based week×N grid; cell intensity = daily yes-count / max, lerped surfaceVariant→primary
   - ✅ `TagCloudChart` — custom `FlowRow`-based implementation; no Vico layer needed
 - **Chart type picker**: the chart-type icon button in `NudgeDetailScreen` is a no-op TODO; needs a bottom sheet or dialog filtered to chart types valid for the current `VisualizationData` subtype
 - **Full-screen chart**: the zoom/expand icon is a no-op TODO

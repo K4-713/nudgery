@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -295,7 +297,7 @@ private fun NudgeryChart(visualization: VisualizationData, modifier: Modifier = 
         when (visualization) {
             is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(visualization.dailyCounts)
             is VisualizationData.LineGraph -> LineGraphChart(visualization.points)
-            is VisualizationData.BarChart -> NamedCountChart(visualization.entries)
+            is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
             is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
             is VisualizationData.TagCloud -> TagCloudChart(visualization.entries)
         }
@@ -395,6 +397,67 @@ private fun LineGraphChart(points: List<DataPoint>) {
         modelProducer = modelProducer,
         modifier = Modifier.fillMaxSize(),
     )
+}
+
+@Composable
+private fun HorizontalBarChart(entries: List<NamedCount>) {
+    if (entries.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
+        }
+        return
+    }
+
+    val maxCount = remember(entries) { entries.maxOf { it.count }.coerceAtLeast(1) }
+    val barColor = MaterialTheme.colorScheme.primary
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        entries.forEach { entry ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = entry.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = labelColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.width(80.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                // Bar track with filled bar overlaid
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(0.65f)
+                        .background(trackColor, MaterialTheme.shapes.extraSmall)
+                ) {
+                    if (entry.count > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(entry.count.toFloat() / maxCount)
+                                .fillMaxHeight()
+                                .background(barColor, MaterialTheme.shapes.extraSmall)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = entry.count.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = labelColor
+                )
+            }
+        }
+    }
 }
 
 @Composable

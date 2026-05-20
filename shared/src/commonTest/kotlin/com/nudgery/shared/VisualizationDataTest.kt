@@ -86,7 +86,7 @@ class VisualizationDataTest {
 
     @Test
     fun TDD_yesNoQuestionProvidesCalendarHeatMapData() = runTest {
-        // README "Viewing Nudges": "YES_NO | Calendar heat map, column chart"
+        // README "Viewing Nudges": "YES_NO | Calendar heat map, line graph (daily yes count), column chart"
         val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
 
@@ -95,8 +95,20 @@ class VisualizationDataTest {
     }
 
     @Test
+    fun TDD_yesNoQuestionProvidesLineGraphData() = runTest {
+        // README "Viewing Nudges": "YES_NO | Calendar heat map, line graph (daily yes count), column chart"
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")
+        val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+
+        assertTrue(charts.any { it is VisualizationData.LineGraph },
+            "YES_NO should provide a LineGraph")
+        val lineGraph = charts.filterIsInstance<VisualizationData.LineGraph>().first()
+        assertEquals(1.0, lineGraph.points.sumOf { it.value }, "Line graph point value should be the daily yes count")
+    }
+
+    @Test
     fun TDD_yesNoQuestionProvidesColumnChartData() = runTest {
-        // README "Viewing Nudges": "YES_NO | Calendar heat map, column chart"
+        // README "Viewing Nudges": "YES_NO | Calendar heat map, line graph (daily yes count), column chart"
         val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
 
