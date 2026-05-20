@@ -38,10 +38,12 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -233,7 +235,7 @@ fun NudgeDetailScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun ChartSection(
     visualizations: List<VisualizationData>,
@@ -241,14 +243,25 @@ private fun ChartSection(
     onTimeframeSelect: (Timeframe) -> Unit,
     onExport: () -> Unit
 ) {
+    var selectedIndex by rememberSaveable { mutableStateOf(0) }
+    var showTypePicker by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    // Clamp in case the list shrinks (e.g. timeframe with no data behaves the same length,
+    // but guard defensively)
+    val safeIndex = selectedIndex.coerceAtMost(visualizations.lastIndex)
+
     Card {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(modifier = Modifier.weight(1f)) {
-                    NudgeryChart(visualization = visualizations.first())
+                    NudgeryChart(visualization = visualizations[safeIndex])
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = { /* chart type selector — TODO */ }) {
+                    IconButton(
+                        onClick = { showTypePicker = true },
+                        enabled = visualizations.size > 1
+                    ) {
                         Icon(Icons.Outlined.BarChart, contentDescription = stringResource(R.string.detail_edit_chart_type))
                     }
                     IconButton(onClick = onExport) {
@@ -278,6 +291,47 @@ private fun ChartSection(
                             )
                         }
                     )
+                }
+            }
+        }
+    }
+
+    if (showTypePicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showTypePicker = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.detail_chart_type_picker_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    visualizations.forEachIndexed { index, visualization ->
+                        NudgeryToggleChip(
+                            selected = index == safeIndex,
+                            onClick = {
+                                selectedIndex = index
+                                showTypePicker = false
+                            },
+                            label = {
+                                Text(
+                                    when (visualization) {
+                                        is VisualizationData.CalendarHeatMap -> stringResource(R.string.chart_type_heat_map)
+                                        is VisualizationData.LineGraph -> stringResource(R.string.chart_type_line_graph)
+                                        is VisualizationData.BarChart -> stringResource(R.string.chart_type_bar_chart)
+                                        is VisualizationData.ColumnChart -> stringResource(R.string.chart_type_column_chart)
+                                        is VisualizationData.TagCloud -> stringResource(R.string.chart_type_tag_cloud)
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }

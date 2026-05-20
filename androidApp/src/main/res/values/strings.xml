@@ -79,6 +79,12 @@
     <string name="detail_edit_followups">Edit follow-up questions</string>
     <string name="detail_followup_count">%1$d follow-up question(s)</string>
     <string name="detail_edit_chart_type">Change chart type</string>
+    <string name="detail_chart_type_picker_title">Chart Type</string>
+    <string name="chart_type_heat_map">Heat Map</string>
+    <string name="chart_type_line_graph">Line Graph</string>
+    <string name="chart_type_bar_chart">Bar Chart</string>
+    <string name="chart_type_column_chart">Column Chart</string>
+    <string name="chart_type_tag_cloud">Tag Cloud</string>
     <string name="detail_export">Export data</string>
     <string name="detail_expand_chart">Expand chart</string>
     <string name="detail_answers_header">%1$d answers</string>

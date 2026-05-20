@@ -53,7 +53,7 @@ All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/
   - ✅ `HorizontalBarChart` (used for `BarChart`) — custom Canvas-free `Column`/`Row` layout with proportional filled tracks; label left, count right
   - ✅ `CalendarHeatMapChart` — custom Canvas-based week×N grid; cell intensity = daily yes-count / max, lerped surfaceVariant→primary
   - ✅ `TagCloudChart` — custom `FlowRow`-based implementation; no Vico layer needed
-- **Chart type picker**: the chart-type icon button in `NudgeDetailScreen` is a no-op TODO; needs a bottom sheet or dialog filtered to chart types valid for the current `VisualizationData` subtype
+- **Chart type picker**: ✅ DONE — `ModalBottomSheet` with `NudgeryToggleChip` per available chart type; icon button disabled when only one chart is available; selection persists across timeframe changes
 - **Full-screen chart**: the zoom/expand icon is a no-op TODO
 
 ## Runtime Permissions (`androidApp`)
