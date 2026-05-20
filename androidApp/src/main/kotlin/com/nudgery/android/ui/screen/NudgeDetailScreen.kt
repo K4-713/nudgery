@@ -31,7 +31,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -253,7 +252,7 @@ private fun ChartSection(
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Timeframe.entries.forEach { tf ->
-                    FilterChip(
+                    NudgeryToggleChip(
                         selected = selectedTimeframe == tf,
                         onClick = { onTimeframeSelect(tf) },
                         label = {

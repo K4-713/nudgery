@@ -138,6 +138,24 @@ Rasterized from `Nudgery Final.svg` via Inkscape. Stored in `mipmap-{mdpi,hdpi,x
 
 Material Symbols Rounded. Outlined by default, filled for active/selected states. This communicates selection without relying on color alone, supporting accessibility.
 
+## Selection Chips
+
+All selectable chip groups throughout the app (schedule type, day of week, answer type, trigger operators, timeframe picker) use a custom `NudgeryToggleChip` component rather than M3 `FilterChip` defaults. M3's default selected state maps to `secondaryContainer`, which in this palette is the same tone as `surface`, making selected and unselected states nearly indistinguishable. The custom chip corrects this with explicit per-state colors.
+
+**Selected state:**
+- Container: `colorScheme.background` — the darkest surface in dark mode (`#141218`), the lightest in light mode (`#f5f0ff`)
+- Text: `colorScheme.onBackground` — near-white in dark mode, near-black in light mode; full opacity
+- Border: 1.5dp stroke in `colorScheme.primary` (violet) — the outline signals the active state without relying on fill color alone
+
+**Unselected state:**
+- Container: `colorScheme.surface` — one step lighter than background in dark mode (`#1e1b24`), one step more saturated in light mode (`#ede8f5`)
+- Text: `colorScheme.onSurface` at 38% alpha — visibly dimmed against the slightly elevated background
+- Border: none
+
+The contrast pattern between states is deliberate: the selected chip uses the *darkest* background available in dark mode (and lightest in light mode), so it reads as "pressed in" or grounded. The unselected chip uses a slightly elevated surface and dim text, making it read as receded or inactive. The combination of background tone + text brightness + border presence gives three simultaneous signals of selection, which is accessible without color alone.
+
+38% alpha for unselected text is M3's standard disabled-state alpha, appropriate here because unselected options are intentionally de-emphasized rather than permanently unavailable.
+
 ## Internationalization (i18n)
 
 All user-visible strings must go through Android's built-in `strings.xml` / `res/values/` system. No hardcoded strings anywhere in Compose code.
@@ -207,7 +225,8 @@ Default to Material 3 motion and only deviate with intention. The goal is polish
 - "Save Answer" confirmation: brief checkmark or pulse before advancing (300ms)
 
 ### Detail Screen
-- Charts animate in on load — Vico handles this natively, keep it
+- Charts animate in on load — Vico's built-in entry animation applies to both `LineCartesianLayer` (line graphs) and `ColumnCartesianLayer` (bar and column charts); do not suppress it
+- Calendar heat map has no Vico equivalent and will use a custom Canvas composable; its entry animation should match Vico's timing
 - Answer submission from the detail screen gets the most expressive treatment — golden yellow accent plays here
 
 ## Shape Language

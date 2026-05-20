@@ -26,7 +26,7 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
 | Settings persistence | DataStore Preferences | Stores `ThemePreference` and bold text toggle; flows observed by `SettingsViewModel` |
-| Typeface | Atkinson Hyperlegible Next | Bundled TTF; all 14 weight/style variants in `res/font/` |
+| Typeface | Atkinson Hyperlegible Next | All 14 weight/style variants bundled as TTF in `androidApp/src/main/res/font/`; wired into `nudgeryTypography()` in `Type.kt` |
 
 ---
 

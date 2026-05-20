@@ -16,7 +16,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -124,7 +123,7 @@ private fun AnswerTypeSelector(
                 add(QuestionType.OPTION_MULTI to R.string.answer_type_option_multi)
                 if (includeText) add(QuestionType.TEXT to R.string.answer_type_text)
             }.forEach { (type, labelRes) ->
-                FilterChip(
+                NudgeryToggleChip(
                     selected = selected == type,
                     onClick = { onSelect(type) },
                     label = { Text(stringResource(labelRes)) }
@@ -272,7 +271,7 @@ private fun YesNoTrigger(followUp: QuestionFormState, onUpdate: (QuestionFormSta
             "YES" to R.string.answer_yes,
             "NO" to R.string.answer_no
         ).forEach { (value, labelRes) ->
-            FilterChip(
+            NudgeryToggleChip(
                 selected = followUp.triggerAnswerValue == value,
                 onClick = { onUpdate(followUp.copy(triggerAnswerValue = value, triggerOperator = TriggerOperator.EQ)) },
                 label = { Text(stringResource(labelRes)) }
@@ -294,7 +293,7 @@ private fun NumberTrigger(followUp: QuestionFormState, onUpdate: (QuestionFormSt
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             operators.forEach { (op, labelRes) ->
-                FilterChip(
+                NudgeryToggleChip(
                     selected = followUp.triggerOperator == op,
                     onClick = { onUpdate(followUp.copy(triggerOperator = op)) },
                     label = { Text(stringResource(labelRes)) }
@@ -334,7 +333,7 @@ private fun OptionTrigger(
     val operator = if (containsOnSelect) TriggerOperator.CONTAINS else TriggerOperator.EQ
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEachIndexed { index, optionText ->
-            FilterChip(
+            NudgeryToggleChip(
                 selected = selectedIndex == index,
                 onClick = { onUpdate(followUp.copy(triggerAnswerValue = "$index", triggerOperator = operator)) },
                 label = { Text(optionText) }
@@ -371,7 +370,7 @@ fun ScheduleStep(
                     ScheduleType.MONTHLY to R.string.schedule_type_monthly,
                     ScheduleType.HOURLY to R.string.schedule_type_hourly,
                 ).forEach { (type, labelRes) ->
-                    FilterChip(
+                    NudgeryToggleChip(
                         selected = schedule.type == type,
                         onClick = { onScheduleChange(schedule.copy(type = type)) },
                         label = { Text(stringResource(labelRes)) }
@@ -439,7 +438,7 @@ fun ScheduleStep(
                 Spacer(modifier = Modifier.height(4.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DayOfWeek.entries.forEach { day ->
-                        FilterChip(
+                        NudgeryToggleChip(
                             selected = day in (schedule.activeDaysOfWeek ?: emptySet()),
                             onClick = {
                                 val current = schedule.activeDaysOfWeek ?: emptySet()
