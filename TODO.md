@@ -54,19 +54,18 @@ All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/
   - ✅ `CalendarHeatMapChart` — custom Canvas-based week×N grid; cell intensity = daily yes-count / max, lerped surfaceVariant→primary
   - ✅ `TagCloudChart` — custom `FlowRow`-based implementation; no Vico layer needed
 - **Chart type picker**: ✅ DONE — `ModalBottomSheet` with `NudgeryToggleChip` per available chart type; icon button disabled when only one chart is available; selection persists across timeframe changes
-- **Full-screen chart**: the zoom/expand icon is a no-op TODO
+- **Full-screen chart**: ✅ DONE — `FullScreenChartDialog` composable via `Dialog(usePlatformDefaultWidth = false)` + `Surface(fillMaxSize)`; `TopAppBar` with back arrow and optional chart type picker; timeframe chips at bottom; chart type selection hoisted to `NudgeDetailScreen` so it persists across open/close
 
 ## Runtime Permissions (`androidApp`)
 - **POST_NOTIFICATIONS** (Android 13+) ✅ DONE — `NotificationPermissionEffect` composable in `MainActivity` requests the permission on first launch; result is logged; degrades gracefully if denied
 - **SCHEDULE_EXACT_ALARM** (Android 12+): users can revoke this in Settings; detect revocation and either fall back to inexact alarms or prompt the user to re-grant it via the system Alarm & Reminder settings screen
 
-## App Icon
-- Design an adaptive icon (foreground layer + background layer) for the app — required for Android 8+ and modern Play Store listings
-- Export a 512×512 PNG for the Play Store store listing
-- Replace the current Android Studio placeholder icon in `androidApp/src/main/res/`
+## App Icon ✅ DONE
+Custom adaptive icon: vector foreground (squiggle) + styled background (purple with warm yellow radial glow); `mipmap-anydpi-v26/ic_launcher.xml` for Android 8+; legacy PNGs at mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi for older devices.
 
 ## Play Store Listing Materials
 Prepare before submitting:
+- Export a 512×512 PNG icon for the Play Store store listing
 - Short description (max 80 characters)
 - Full description (max 4000 characters)
 - At least 2 phone screenshots (additional tablet/foldable screenshots improve ranking)
