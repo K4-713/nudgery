@@ -1,0 +1,13 @@
+CREATE TABLE TimezoneChangeEvent (
+    id TEXT NOT NULL PRIMARY KEY,
+    changedAt TEXT NOT NULL,
+    fromTimezone TEXT NOT NULL,
+    toTimezone TEXT NOT NULL
+);
+
+insert:
+INSERT INTO TimezoneChangeEvent (id, changedAt, fromTimezone, toTimezone)
+VALUES (:id, :changedAt, :fromTimezone, :toTimezone);
+
+selectAll:
+SELECT * FROM TimezoneChangeEvent ORDER BY changedAt DESC;

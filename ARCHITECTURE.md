@@ -189,6 +189,18 @@ Written by `NudgeNotificationWorker` at the moment a notification is actually de
 | nudgeId | UUID | FK → Nudge (cascade delete) |
 | firedAt | Instant | `Clock.System.now()` at delivery, not the scheduled time |
 
+### TimezoneChangeEvent
+Audit record written by `RescheduleAllNudgesWorker` each time the device timezone changes. Provides a history of when changes occurred and between which zones, useful for debugging unexpected notification timing.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | |
+| changedAt | Instant | Wall-clock time at which the change was processed |
+| fromTimezone | String | IANA timezone ID before the change (e.g. `America/New_York`) |
+| toTimezone | String | IANA timezone ID after the change |
+
+The previous timezone is tracked in `SharedPreferences` (file `nudgery_system`, key `last_known_timezone`) because `ACTION_TIMEZONE_CHANGED` arrives after the system has already applied the new timezone, making `TimeZone.currentSystemDefault()` return the new value. `NudgeryApplication` seeds this key on first launch.
+
 ### NudgeEdit
 Audit record written when a nudge's question or option text is edited in-place (non-split).
 
@@ -220,7 +232,13 @@ interface NotificationScheduler {
 
 When an alarm fires, `NudgeAlarmReceiver` (a `BroadcastReceiver`) receives it and immediately enqueues a `NudgeNotificationWorker` job via WorkManager with no delay. This keeps exact timing from AlarmManager while retaining WorkManager's execution guarantees (Doze-aware, survives process death). The worker shows the notification and calls `notificationScheduler.reschedule()` to set the next alarm.
 
-`RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`). It calls `reschedule()` for every enabled nudge, which re-runs the AlarmManager scheduling with freshly computed fire times.
+`RescheduleAllNudgesWorker` is triggered on boot (`BootReceiver`) and timezone change (`TimezoneChangeReceiver`). The boot path sets a `catch_up_missed=true` input flag; the timezone-change path does not.
+
+When `catch_up_missed` is true, the worker runs `CatchUpMissedFiresUseCase` for each enabled nudge before rescheduling. The use case walks forward from the nudge's last `NotificationFire.firedAt` (falling back to `nudge.createdAt` if no fires have ever been recorded), advancing one fire time at a time until it reaches a time that is in the future. If any past fire times are found, the most recent one is returned as a missed fire; all older ones are silently abandoned. When a miss is detected, the worker enqueues an immediate `NudgeNotificationWorker` for that nudge (which shows the notification, records the fire, and reschedules the next alarm) instead of calling `schedule()` directly. If no miss is detected, `schedule()` is called as normal.
+
+Both the boot path and the **timezone-change path** pass `catch_up_missed=true`. This means that when the clock jumps forward (traveling east), a nudge whose scheduled time has already passed in the new timezone is caught up immediately — the user is still asked. When the clock jumps back (traveling west), `CatchUpMissedFiresUseCase` sees that the next scheduled fire in the new timezone is still in the future and returns `ScheduleNext`, so the alarm fires at the correct local time and the user receives a second nudge for that day, which is the preferred behavior.
+
+When the timezone changes, `TimezoneChangeReceiver` reads the previous timezone from `SharedPreferences` (key `last_known_timezone`, file `nudgery_system`; seeded at first launch by `NudgeryApplication`), writes the new timezone, and passes both in the worker input data (`timezone_from`, `timezone_to`). The worker records a `TimezoneChangeEvent` when `from ≠ to`, creating an audit trail of when timezone changes occurred and between which zones.
 
 The notification's launch `Intent` carries `EXTRA_NUDGE_ID` and `EXTRA_SCHEDULED_AT` (epoch milliseconds). `MainActivity` is declared `singleTop` and handles both cold-start taps (`onCreate`) and warm taps (`onNewIntent`) via `handleNudgeIntent()`, which routes to `NudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)`. The scheduled time travels through the nav route as a Long argument and is reconstructed as `Instant` before being passed to `AnswerFormViewModel`, ensuring answers record the nudge's fire time rather than the wall-clock time of the tap.
 

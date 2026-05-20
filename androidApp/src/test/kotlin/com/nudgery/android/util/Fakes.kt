@@ -7,6 +7,7 @@ import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.model.Schedule
+import com.nudgery.shared.model.TimezoneChangeEvent
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
@@ -14,6 +15,7 @@ import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
+import com.nudgery.shared.repository.TimezoneChangeEventRepository
 import com.nudgery.shared.scheduler.NotificationScheduler
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
@@ -129,6 +131,13 @@ class FakeNotificationFireRepository : NotificationFireRepository {
     override fun observeMostRecentByNudgeId(nudgeId: String): Flow<NotificationFire?> =
         _fires.map { it.filter { f -> f.nudgeId == nudgeId }.maxByOrNull { f -> f.firedAt } }
     override fun observeAll(): Flow<List<NotificationFire>> = _fires
+}
+
+class FakeTimezoneChangeEventRepository : TimezoneChangeEventRepository {
+    private val events = mutableListOf<TimezoneChangeEvent>()
+
+    override suspend fun insert(event: TimezoneChangeEvent) { events.add(event) }
+    override suspend fun getAll(): List<TimezoneChangeEvent> = events.toList()
 }
 
 class FakeNudgeEditRepository : NudgeEditRepository {

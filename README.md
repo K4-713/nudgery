@@ -54,3 +54,8 @@ Nudge configuration be edited, except for the base type of the main question. If
 * If the change to the question is not significant (like a typo change), or if you just don't care (also totally valid), choose not to split the Nudge. The old data will be kept with the new question text, and a note recording the date/time and contents of the edit will be saved with the Nudge.
 
 While you cannot edit Nudge answer data once entered, you can select individual answers and tag them as hidden. Hidden rows no longer appear in the data visualization.
+
+
+# Fabricated Questions
+## What happens to my nudge schedule when I change timezones?
+Your nudge will fire on schedule, local to whatever your phone's time is. If you want to be asked a question at 9am, you will be asked at 9am wherever you are.
