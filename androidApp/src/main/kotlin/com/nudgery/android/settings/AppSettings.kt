@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.nudgery.android.ui.theme.ChartPalettePreference
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -16,6 +17,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 private val KEY_THEME = stringPreferencesKey("theme_preference")
 private val KEY_BOLD_TEXT = booleanPreferencesKey("bold_text")
+private val KEY_CHART_PALETTE = stringPreferencesKey("chart_palette")
 
 class AppSettings(private val context: Context) {
 
@@ -31,11 +33,23 @@ class AppSettings(private val context: Context) {
         prefs[KEY_BOLD_TEXT] ?: false
     }
 
+    val chartPalette: Flow<ChartPalettePreference> = context.dataStore.data.map { prefs ->
+        when (prefs[KEY_CHART_PALETTE]) {
+            "HORIZON" -> ChartPalettePreference.HORIZON
+            "EMBER" -> ChartPalettePreference.EMBER
+            else -> ChartPalettePreference.SPECTRUM
+        }
+    }
+
     suspend fun setThemePreference(pref: ThemePreference) {
         context.dataStore.edit { prefs -> prefs[KEY_THEME] = pref.name }
     }
 
     suspend fun setBoldText(bold: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_BOLD_TEXT] = bold }
+    }
+
+    suspend fun setChartPalette(palette: ChartPalettePreference) {
+        context.dataStore.edit { prefs -> prefs[KEY_CHART_PALETTE] = palette.name }
     }
 }

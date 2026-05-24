@@ -156,6 +156,15 @@
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
 
+    <!-- Settings: chart palette -->
+    <string name="settings_charts">Charts</string>
+    <string name="settings_palette_spectrum">Full spectrum</string>
+    <string name="settings_palette_spectrum_description">ROYGBV gradient</string>
+    <string name="settings_palette_horizon">Blue to orange</string>
+    <string name="settings_palette_horizon_description">Recommended for deuteranopia / protanopia</string>
+    <string name="settings_palette_ember">Purple to red</string>
+    <string name="settings_palette_ember_description">Recommended for tritanopia</string>
+
     <!-- Heat map legend -->
     <string name="heatmap_legend_day">1 square = 1 day</string>
     <string name="heatmap_legend_week">1 square = 1 week</string>

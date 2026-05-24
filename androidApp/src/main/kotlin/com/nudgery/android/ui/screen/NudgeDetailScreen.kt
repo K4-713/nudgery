@@ -66,9 +66,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -93,6 +94,9 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.nudgery.android.viewmodel.NudgeDetailViewModel
+import com.nudgery.android.ui.theme.ChartPalettePreference
+import com.nudgery.android.ui.theme.paletteStops
+import com.nudgery.android.viewmodel.SettingsViewModel
 import com.nudgery.shared.model.DailyCount
 import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.HeatMapGranularity
@@ -123,9 +127,12 @@ fun NudgeDetailScreen(
     onEditScheduleClick: () -> Unit,
     onEditFollowUpsClick: () -> Unit,
     onAnswerNow: () -> Unit,
-    viewModel: NudgeDetailViewModel = koinViewModel(parameters = { parametersOf(nudgeId) })
+    viewModel: NudgeDetailViewModel = koinViewModel(parameters = { parametersOf(nudgeId) }),
+    settingsViewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsState()
+    val chartPalette = settingsState.chartPalette
     val context = LocalContext.current
     var selectedChartIndex by rememberSaveable { mutableStateOf(0) }
     var showFullScreenChart by remember { mutableStateOf(false) }
@@ -289,7 +296,8 @@ fun NudgeDetailScreen(
                         selectedTimeframe = uiState.selectedTimeframe,
                         onTimeframeSelect = { viewModel.selectTimeframe(it) },
                         onExport = { viewModel.exportAnswers(com.nudgery.shared.model.ExportFormat.CSV) },
-                        onExpandChart = { showFullScreenChart = true }
+                        onExpandChart = { showFullScreenChart = true },
+                        chartPalette = chartPalette
                     )
                 }
             }
@@ -336,7 +344,8 @@ fun NudgeDetailScreen(
             onSelectIndex = { selectedChartIndex = it },
             selectedTimeframe = uiState.selectedTimeframe,
             onTimeframeSelect = { viewModel.selectTimeframe(it) },
-            onDismiss = { showFullScreenChart = false }
+            onDismiss = { showFullScreenChart = false },
+            chartPalette = chartPalette
         )
     }
 }
@@ -350,7 +359,8 @@ private fun ChartSection(
     selectedTimeframe: Timeframe,
     onTimeframeSelect: (Timeframe) -> Unit,
     onExport: () -> Unit,
-    onExpandChart: () -> Unit
+    onExpandChart: () -> Unit,
+    chartPalette: ChartPalettePreference
 ) {
     var showTypePicker by remember { mutableStateOf(false) }
 
@@ -360,7 +370,7 @@ private fun ChartSection(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(modifier = Modifier.weight(1f)) {
-                    NudgeryChart(visualization = visualizations[safeIndex])
+                    NudgeryChart(visualization = visualizations[safeIndex], chartPalette = chartPalette)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
@@ -480,7 +490,8 @@ private fun FullScreenChartDialog(
     onSelectIndex: (Int) -> Unit,
     selectedTimeframe: Timeframe,
     onTimeframeSelect: (Timeframe) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    chartPalette: ChartPalettePreference
 ) {
     var showTypePicker by remember { mutableStateOf(false) }
     val safeIndex = selectedIndex.coerceAtMost(visualizations.lastIndex)
@@ -519,6 +530,7 @@ private fun FullScreenChartDialog(
                 ) {
                     NudgeryChart(
                         visualization = visualizations[safeIndex],
+                        chartPalette = chartPalette,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -550,6 +562,7 @@ private fun FullScreenChartDialog(
 @Composable
 private fun NudgeryChart(
     visualization: VisualizationData,
+    chartPalette: ChartPalettePreference,
     modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
 ) {
     Box(
@@ -564,7 +577,8 @@ private fun NudgeryChart(
                     counts = visualization.dailyCounts,
                     windowStart = visualization.windowStart,
                     windowEnd = visualization.windowEnd,
-                    granularity = visualization.granularity
+                    granularity = visualization.granularity,
+                    palette = chartPalette
                 )
                 is VisualizationData.LineGraph -> LineGraphChart(
                     points = visualization.points,
@@ -584,12 +598,14 @@ private fun CalendarHeatMapChart(
     counts: List<DailyCount>,
     windowStart: LocalDate,
     windowEnd: LocalDate,
-    granularity: HeatMapGranularity
+    granularity: HeatMapGranularity,
+    palette: ChartPalettePreference
 ) {
     val textMeasurer = rememberTextMeasurer()
     val emptyCellColor = MaterialTheme.colorScheme.surfaceVariant
-    val filledCellColor = MaterialTheme.colorScheme.primary
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val paletteStops = palette.paletteStops
 
     val countByDate = remember(counts) { counts.associate { it.date to it.value } }
 
@@ -650,9 +666,11 @@ private fun CalendarHeatMapChart(
                         }
                         for (dayIdx in 0..6) {
                             val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
-                            val intensity = ((countByDate[date] ?: 0.0) / maxValue).toFloat().coerceIn(0f, 1f)
+                            val rawCount = countByDate[date] ?: 0.0
+                            val intensity = (rawCount / maxValue).toFloat().coerceIn(0f, 1f)
                             drawRoundRect(
-                                color = lerp(emptyCellColor, filledCellColor, intensity),
+                                color = if (intensity <= 0f) emptyCellColor
+                                        else paletteStops.colorAt(intensity, isDark),
                                 topLeft = Offset(weekX, labelAreaHeight + dayIdx * (cellSize + gapPx)),
                                 size = Size(cellSize, cellSize),
                                 cornerRadius = CornerRadius(cellSize * 0.15f)
@@ -681,7 +699,8 @@ private fun CalendarHeatMapChart(
                         }
                         val intensity = (value / maxValue).toFloat().coerceIn(0f, 1f)
                         drawRoundRect(
-                            color = lerp(emptyCellColor, filledCellColor, intensity),
+                            color = if (intensity <= 0f) emptyCellColor
+                                    else paletteStops.colorAt(intensity, isDark),
                             topLeft = Offset(x, labelAreaHeight),
                             size = Size(cellSize, cellSize),
                             cornerRadius = CornerRadius(cellSize * 0.15f)
@@ -710,7 +729,8 @@ private fun CalendarHeatMapChart(
                         }
                         val intensity = (value / maxValue).toFloat().coerceIn(0f, 1f)
                         drawRoundRect(
-                            color = lerp(emptyCellColor, filledCellColor, intensity),
+                            color = if (intensity <= 0f) emptyCellColor
+                                    else paletteStops.colorAt(intensity, isDark),
                             topLeft = Offset(x, labelAreaHeight),
                             size = Size(cellSize, cellSize),
                             cornerRadius = CornerRadius(cellSize * 0.15f)

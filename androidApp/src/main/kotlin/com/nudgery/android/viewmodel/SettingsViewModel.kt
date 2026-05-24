@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.android.settings.AppSettings
 import com.nudgery.android.settings.ThemePreference
+import com.nudgery.android.ui.theme.ChartPalettePreference
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -12,15 +13,17 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
-    val boldText: Boolean = false
+    val boldText: Boolean = false,
+    val chartPalette: ChartPalettePreference = ChartPalettePreference.SPECTRUM
 )
 
 class SettingsViewModel(private val appSettings: AppSettings) : ViewModel() {
 
     val uiState: StateFlow<SettingsUiState> = combine(
         appSettings.themePreference,
-        appSettings.boldText
-    ) { theme, bold -> SettingsUiState(theme, bold) }
+        appSettings.boldText,
+        appSettings.chartPalette
+    ) { theme, bold, palette -> SettingsUiState(theme, bold, palette) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setTheme(pref: ThemePreference) {
@@ -29,5 +32,9 @@ class SettingsViewModel(private val appSettings: AppSettings) : ViewModel() {
 
     fun setBoldText(bold: Boolean) {
         viewModelScope.launch { appSettings.setBoldText(bold) }
+    }
+
+    fun setChartPalette(palette: ChartPalettePreference) {
+        viewModelScope.launch { appSettings.setChartPalette(palette) }
     }
 }

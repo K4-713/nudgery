@@ -101,6 +101,55 @@ Yellow failing on light surfaces is expected and intentional — see Yellow Usag
 
 Palette was chosen with deuteranopia/protanopia (red-green color blindness) in mind. Violet and golden yellow sit on opposite sides of the color confusion axis and remain clearly distinct under simulation.
 
+### Chart Palettes
+
+Three heat map palettes are available and user-selectable from Settings. All three are designed as smooth cold-to-hot scales that read naturally without any accessibility accommodation — the colorblind variants are not degraded versions, just axes chosen to remain distinguishable under specific simulations.
+
+Each palette defines seven evenly-spaced color stops for both dark and light mode. Intensity is interpolated linearly between adjacent stops. Empty cells (no data) always use `surfaceVariant` from the active Material 3 theme, keeping them visually distinct from low-intensity data rather than blending in.
+
+**Validation:** Adjacent stops in each palette are tested against Viénot 1999 colorblind simulation matrices (deuteranopia, protanopia, and tritanopia) applied in sRGB space. Separation is measured as Euclidean distance in sRGB. The general-purpose SPECTRUM palette requires ≥ 0.06 minimum distance; the purpose-built colorblind palettes (HORIZON, EMBER) require ≥ 0.10 (or ≥ 0.08 for Ember light under tritanopia). These thresholds are enforced by automated tests.
+
+#### SPECTRUM — Full ROYGBV gradient (default)
+
+Violet → Blue → Teal → Green → Yellow → Orange → Red. The brand colors serve as natural anchors: violet primary at the cold end, teal secondary in the middle, golden yellow accent near the hot end.
+
+- **Blue stop**: `#1840E0` (dark) / `#2050C0` (light) — deliberately shifted toward pure blue rather than a standard ROYGBV blue. A more teal-adjacent blue (e.g. `#4060D0`) loses adequate perceptual distance from the adjacent teal stop under deuteranopia simulation.
+- **Amber stop (light mode)**: `#A87800` rather than pure yellow — yellow (`#FFCC55`) fails WCAG on light backgrounds and reads as near-white. Dark amber preserves the warm-middle anchor while maintaining contrast.
+- **Orange stop (light mode)**: `#D86020` — brighter than the naive choice (`#C05010`) to maintain sufficient luminance separation from the adjacent amber under deuteranopia simulation, where the green channel is lost and similar warm tones collapse together.
+
+Safe for most viewers. Not specifically optimized for any form of color blindness — use HORIZON or EMBER for that.
+
+#### HORIZON — Blue to orange (deuteranopia / protanopia safe)
+
+Navy → Blue → Teal-blue → Light teal → Amber → Orange → Dark orange. Spans the blue-to-orange axis, which is the hue dimension most robustly preserved under red-green color blindness simulations. Avoids green entirely.
+
+- **Light mode orange stop**: `#E08020` — the naive stop (`#C06010`) fell too close to the adjacent amber (`#A87000`) under deuteranopia; increasing luminance at the warm end restores separation.
+- Reads as a natural "twilight" or "sunset" scale for viewers without color blindness.
+
+Minimum separation threshold: 0.10 (deuteranopia and protanopia). These are higher than SPECTRUM's 0.06 to reflect that HORIZON is advertised as specifically colorblind-safe.
+
+#### EMBER — Purple to red (tritanopia safe)
+
+Deep plum → Purple → Hot pink/magenta → Red → Coral/rust → Dark red. Progresses through the magenta-red axis, avoiding the blue-yellow axis where tritanopia (blue-yellow color blindness) causes confusion.
+
+Tritanopia collapses green and blue channels together — under simulation, the only reliable axis of distinction is the red channel. The light mode stops are therefore designed with a **monotonically varying R channel** across all seven stops:
+
+| Stop | Hex | R value |
+|---|---|---|
+| 0 (cold) | `#6838A8` | 0.408 |
+| 1 | `#881868` | 0.533 |
+| 2 | `#B01850` | 0.690 |
+| 3 | `#C02030` | 0.753 |
+| 4 | `#B81010` | 0.722 |
+| 5 | `#980C0C` | 0.596 |
+| 6 (hot) | `#700808` | 0.439 |
+
+Steps 3–6 invert direction (decreasing R), but maintain sufficient inter-stop distance because they are converging from the peak toward very dark values — the drop in overall luminance distinguishes them even as R decreases. The overall cold-to-hot narrative reads as purple → red → near-black red, which is visually coherent on a light background (darker = more intense).
+
+Dark mode ends at warm peach (`#FAD090`) — the brightest, most saturated stop represents maximum intensity on a dark background.
+
+Minimum separation threshold: 0.10 (dark mode), 0.08 (light mode) under tritanopia simulation.
+
 ## App Icon
 
 ### Design
@@ -396,5 +445,8 @@ To be defined during implementation as needed.
 |---|---|---|
 | Theme | Three-option toggle: System / Light / Dark | System |
 | Bold text | Toggle | Off |
+| Chart palette | Three-option radio: Full spectrum / Blue to orange / Purple to red | Full spectrum |
 
 Bold text toggle swaps Regular → Medium and SemiBold → Bold throughout the theme's `Typography` object.
+
+Each chart palette option shows a small gradient swatch (64×12dp, rounded corners) so the user can preview the scale before selecting it. The swatch adapts to the current dark/light mode, reflecting exactly how the palette will render in charts. Palette descriptions note the colorblind use case: "Recommended for deuteranopia / protanopia" (HORIZON) and "Recommended for tritanopia" (EMBER). SPECTRUM is labeled "ROYGBV gradient" without a colorblind recommendation since it is the default general-purpose option.
