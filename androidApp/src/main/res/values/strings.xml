@@ -26,10 +26,14 @@
 
     <!-- Wizard step 1 — Question -->
     <string name="step_question_title">The Question</string>
-    <string name="field_nudge_name">Nudge name (optional)</string>
-    <string name="field_nudge_name_hint">e.g. Migraine tracker</string>
+    <string name="field_nudge_name">Nudge name</string>
     <string name="field_question_text">Question</string>
-    <string name="field_question_text_hint">e.g. Did you have a headache today?</string>
+    <string-array name="question_text_hints">
+        <item>e.g. Did you see any cool birds today?</item>
+        <item>e.g. Did anything surprise you today?</item>
+        <item>e.g. How mad are you right now?</item>
+        <item>e.g. Which of the neighborhood cats did you see today?</item>
+    </string-array>
     <string name="field_answer_type">Answer type</string>
     <string name="answer_type_yes_no">Yes / No</string>
     <string name="answer_type_number">Number</string>

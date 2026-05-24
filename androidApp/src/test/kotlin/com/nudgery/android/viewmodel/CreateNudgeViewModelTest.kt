@@ -1,9 +1,11 @@
 package com.nudgery.android.viewmodel
 
 import com.nudgery.android.util.TestViewModelRepositories
+import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
 import com.nudgery.shared.usecase.CreateNudgeResult
+import kotlinx.datetime.Clock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -32,7 +34,7 @@ class CreateNudgeViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repos = TestViewModelRepositories()
-        viewModel = CreateNudgeViewModel(createNudge = repos.createNudgeUseCase())
+        viewModel = CreateNudgeViewModel(createNudge = repos.createNudgeUseCase(), nudgeRepository = repos.nudgeRepo)
     }
 
     @After
@@ -131,6 +133,51 @@ class CreateNudgeViewModelTest {
         advanceUntilIdle()
 
         assertTrue("Disabled nudge must not enqueue notifications", repos.scheduler.scheduled.isEmpty())
+    }
+
+    @Test
+    fun TDD_defaultNudgeName_noExistingNudges_isNudge1() = runTest {
+        // New users with no nudges should start at "Nudge #1"
+        assertEquals("Nudge #1", viewModel.formState.value.nudgeName)
+    }
+
+    @Test
+    fun TDD_defaultNudgeName_withExistingDefaultNudges_incrementsHighest() = runTest {
+        // If "Nudge #1" and "Nudge #2" exist, next default should be "Nudge #3"
+        val now = Clock.System.now()
+        repos.nudgeRepo.insert(Nudge(id = "a", name = "Nudge #1", isEnabled = true, createdAt = now, updatedAt = now))
+        repos.nudgeRepo.insert(Nudge(id = "b", name = "Nudge #2", isEnabled = true, createdAt = now, updatedAt = now))
+        val vm = CreateNudgeViewModel(createNudge = repos.createNudgeUseCase(), nudgeRepository = repos.nudgeRepo)
+        assertEquals("Nudge #3", vm.formState.value.nudgeName)
+    }
+
+    @Test
+    fun TDD_defaultNudgeName_withCustomNamedNudges_countsDriveNumber() = runTest {
+        // Custom-named nudges count toward the total, so "Nudge #N" stays ahead of the total nudge count
+        val now = Clock.System.now()
+        repos.nudgeRepo.insert(Nudge(id = "a", name = "Bird watching", isEnabled = true, createdAt = now, updatedAt = now))
+        val vm = CreateNudgeViewModel(createNudge = repos.createNudgeUseCase(), nudgeRepository = repos.nudgeRepo)
+        assertEquals("Nudge #2", vm.formState.value.nudgeName)
+    }
+
+    @Test
+    fun TDD_defaultNudgeName_withGapInSequence_usesHighestPlusOne() = runTest {
+        // Pattern number (highest existing +1) wins over total count when it's higher
+        val now = Clock.System.now()
+        repos.nudgeRepo.insert(Nudge(id = "a", name = "Nudge #1", isEnabled = true, createdAt = now, updatedAt = now))
+        repos.nudgeRepo.insert(Nudge(id = "b", name = "Nudge #3", isEnabled = true, createdAt = now, updatedAt = now))
+        val vm = CreateNudgeViewModel(createNudge = repos.createNudgeUseCase(), nudgeRepository = repos.nudgeRepo)
+        assertEquals("Nudge #4", vm.formState.value.nudgeName)
+    }
+
+    @Test
+    fun TDD_defaultNudgeName_highPatternNumberOverridesTotalCount() = runTest {
+        // If "Nudge #10" exists among only 2 nudges, pattern number wins
+        val now = Clock.System.now()
+        repos.nudgeRepo.insert(Nudge(id = "a", name = "Bird watching", isEnabled = true, createdAt = now, updatedAt = now))
+        repos.nudgeRepo.insert(Nudge(id = "b", name = "Nudge #10", isEnabled = true, createdAt = now, updatedAt = now))
+        val vm = CreateNudgeViewModel(createNudge = repos.createNudgeUseCase(), nudgeRepository = repos.nudgeRepo)
+        assertEquals("Nudge #11", vm.formState.value.nudgeName)
     }
 
     private fun dailyScheduleForm() = ScheduleFormState(

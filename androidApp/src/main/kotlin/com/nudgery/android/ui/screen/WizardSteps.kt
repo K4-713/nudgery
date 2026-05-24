@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
@@ -65,7 +66,6 @@ fun QuestionStep(
             value = nudgeName,
             onValueChange = onNameChange,
             label = { Text(stringResource(R.string.field_nudge_name)) },
-            placeholder = { Text(stringResource(R.string.field_nudge_name_hint)) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -73,7 +73,11 @@ fun QuestionStep(
             value = question.text,
             onValueChange = { onQuestionChange(question.copy(text = it)) },
             label = { Text(stringResource(R.string.field_question_text)) },
-            placeholder = { Text(stringResource(R.string.field_question_text_hint)) },
+            placeholder = {
+                val hints = stringArrayResource(R.array.question_text_hints)
+                val hint = remember(hints) { hints.random() }
+                Text(hint)
+            },
             minLines = 2,
             modifier = Modifier.fillMaxWidth()
         )

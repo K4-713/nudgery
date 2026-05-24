@@ -40,7 +40,7 @@ val appModule = module {
     }
 
     viewModel {
-        CreateNudgeViewModel(createNudge = get())
+        CreateNudgeViewModel(createNudge = get(), nudgeRepository = get())
     }
 
     viewModel { (nudgeId: String) ->
