@@ -77,8 +77,15 @@ class TimeDisplayExtensionsTest {
     }
 
     @Test
+    fun TDD_nextFireTime_today_showsToday() {
+        // Times today (local) should display as "Today at ..."
+        val laterToday = instantAt(today, LocalTime(20, 0))
+        val result = laterToday.toLocalDisplayString(tz, now)
+        assertEquals("Today at 8 PM", result)
+    }
+
+    @Test
     fun TDD_nextFireTime_today_notLabelledTomorrow() {
-        // "Today" is not in scope, but it definitely shouldn't say "Tomorrow"
         val laterToday = instantAt(today, LocalTime(20, 0))
         val result = laterToday.toLocalDisplayString(tz, now)
         assertFalse("Should not say 'Tomorrow' for today, got: $result", result.contains("Tomorrow"))

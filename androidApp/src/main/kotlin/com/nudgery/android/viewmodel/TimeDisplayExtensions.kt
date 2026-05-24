@@ -23,10 +23,12 @@ internal fun Instant.toLocalDisplayString(
     val tomorrow = today.plus(1, DateTimeUnit.DAY)
     val timeStr = local.time.toDisplayString()
 
-    return if (local.date == tomorrow) {
-        "Tomorrow at $timeStr"
-    } else {
-        val monthName = local.month.name.lowercase().replaceFirstChar { it.uppercase() }
-        "$monthName ${local.dayOfMonth} at $timeStr"
+    return when (local.date) {
+        today -> "Today at $timeStr"
+        tomorrow -> "Tomorrow at $timeStr"
+        else -> {
+            val monthName = local.month.name.lowercase().replaceFirstChar { it.uppercase() }
+            "$monthName ${local.dayOfMonth} at $timeStr"
+        }
     }
 }
