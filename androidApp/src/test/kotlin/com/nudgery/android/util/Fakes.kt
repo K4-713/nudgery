@@ -180,7 +180,7 @@ class TestViewModelRepositories {
     fun updateNudgeUseCase() =
         UpdateNudgeUseCase(nudgeRepo, questionRepo, optionRepo, scheduleRepo, nudgeEditRepo, scheduler)
     fun setAnswerHiddenUseCase() = SetAnswerHiddenUseCase(answerRepo)
-    fun exportAnswersUseCase() = ExportAnswersUseCase(nudgeRepo, questionRepo, optionRepo, answerRepo)
+    fun exportAnswersUseCase() = ExportAnswersUseCase(nudgeRepo, questionRepo, optionRepo, answerRepo, scheduleRepo)
     fun getVisualizationDataUseCase() = GetVisualizationDataUseCase(answerRepo, questionRepo, optionRepo)
     fun recordAnswerUseCase() = RecordAnswerUseCase(answerRepo)
 }

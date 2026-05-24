@@ -229,7 +229,8 @@ Full screen. Launched from a notification or the "Answer Now" button on the deta
 | Type | Control |
 |---|---|
 | Yes / No | Two large full-width tappable buttons + "Save Answer" |
-| Number | Integer slider with snap + "Save Answer" |
+| Scale | Integer slider with snap + "Save Answer" |
+| Number | Decimal number text field + "Save Answer" |
 | Option Single | Large tappable list items + "Save Answer" |
 | Option Multi | Checkboxes + "Save Answer" |
 | Text (follow-ups only) | Text field + "Save Answer" |
@@ -363,7 +364,7 @@ Bottom of screen: Back and Next buttons. Final step has a Save button in place o
 
 - Nudge name (text field)
 - Main question text (text field)
-- Answer type selector: Yes/No, Number, Option Single, Option Multi
+- Answer type selector: Yes/No, Scale, Number, Option Single, Option Multi
 - If Option Single or Option Multi: option builder (add/remove/reorder up to 16 options)
 
 **Answer type change warning:** If the user changes answer type after follow-up questions have been defined in step 2, or after options have been defined for an Option type, warn them that the change will discard their follow-up configuration and give them the option to cancel the type change. No warning if no follow-ups or options have been defined yet. Changing between Option Single and Option Multi is never destructive — no warning.
@@ -405,7 +406,7 @@ Top to bottom:
 4. **"Answer Now" button** — pill-shaped, prominent
 5. **Main chart** — with a vertical column of icons outside the upper-right corner:
    - Chart type icon (opens chart editor)
-   - Download icon (exports CSV)
+   - Download icon (opens export menu: Export data (CSV), Export data (TSV), Back up nudge (JSON))
    - Magnifying glass (opens expanded chart view)
    - Icons are visually small but maintain 48dp touch targets
 6. **Timeframe picker** — row of chips just below the chart; changes the current view but does not persist. Persistent default is set inside the chart editor.
@@ -479,6 +480,7 @@ To be defined during implementation as needed.
 | Theme | Three-option toggle: System / Light / Dark | System |
 | Bold text | Toggle | Off |
 | Chart palette | Three-option radio: Full spectrum / Blue to orange / Purple to red | Full spectrum |
+| Import | Button: "Import Nudge from Backup" (opens file picker for `.json` backup files) | — |
 
 Bold text toggle swaps Regular → Medium and SemiBold → Bold throughout the theme's `Typography` object.
 

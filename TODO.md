@@ -1,75 +1,10 @@
 # Next Steps
 
-## Use Cases (`shared/commonMain`) ✅ DONE
-All 7 use cases implemented in `shared/src/commonMain/kotlin/com/nudgery/shared/usecase/`:
-- `CreateNudgeUseCase`, `UpdateNudgeUseCase`, `RecordAnswerUseCase`, `SetAnswerHiddenUseCase`
-- `ComputeNextFireTimeUseCase`, `ExportAnswersUseCase`, `GetVisualizationDataUseCase`
-Supporting types: `NudgeRequest.kt`, `Timeframe`, `ExportFormat`, `VisualizationData` (with `DailyCount`, `DataPoint`, `NamedCount`).
-
-## TDD Tests (`shared/commonTest`, `androidApp/test`) ✅ DONE
-All 8 shared test files filled in with real assertions against in-memory SQLite (74 tests, 0 failures).
-Test utilities: `TestDatabase.kt` (in-memory repo factory), `FakeNotificationScheduler`.
-ViewModel tests added alongside the ViewModel implementation (see below); 96 total tests, 0 failures.
-
-## Android Notification Scheduling (`shared/androidMain`) ✅ DONE
-- `WorkManagerNotificationScheduler` in `shared/androidMain/scheduler/` — schedules `OneTimeWorkRequest` chains per nudge using `ComputeNextFireTimeUseCase`; `ExistingWorkPolicy.REPLACE` for atomic reschedule
-- `NudgeNotificationWorker` — shows notification, then re-enqueues the next fire (self-scheduling pattern)
-- `RescheduleAllNudgesWorker` — rescheduled all enabled nudges; triggered on boot and timezone change
-- `NudgeNotificationChannel` — creates the `nudge_prompts` notification channel on app startup
-- `BootReceiver` and `TimezoneChangeReceiver` registered in `AndroidManifest.xml`
-- `AppModule` provides `WorkManagerNotificationScheduler` as the `NotificationScheduler` singleton
-- Instrumented tests: `WorkManagerSchedulerTest` (3 tests) and `NudgeNotificationWorkerTest` (4 tests) in `androidApp/src/androidTest/`; test manifest removes WorkManager auto-init so `WorkManagerTestInitHelper` controls initialization per test
-
-## ViewModels (`androidApp`) ✅ DONE
-All 4 ViewModels in `androidApp/src/main/kotlin/com/nudgery/android/viewmodel/`:
-- `NudgeListViewModel` — observes nudge list, builds `NudgeSummary` (name, schedule description, next fire time, enabled), exposes `toggleEnabled()` and `handleNotificationIntent()` for notification-tap navigation
-- `CreateNudgeViewModel` — manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled), calls `CreateNudgeUseCase` on `submit()`
-- `NudgeDetailViewModel` — loads static data on init, live-observes answers (joined with question/option text via `combine`), loads visualizations per timeframe, exposes `setAnswerHidden()`, `exportAnswers()`, `updateEnabled()`
-- `EditNudgeViewModel` — pre-populates form from DB, detects question/option text changes, uses `submit()` → split dialog → `submitWithSplit()` / `submitInPlace()` flow
-- Shared form types: `QuestionFormState`, `ScheduleFormState` (with `toRequest()`, `fromSchedule()`, `toDescription()`)
-- All 4 ViewModels registered in `AppModule` via Koin `viewModel { }` blocks; detail/edit receive `nudgeId` via `parametersOf()`
-- 22 new ViewModel unit tests in `androidApp/src/test/` using fake repositories and `UnconfinedTestDispatcher`
-
-## Compose UI (`androidApp`) ✅ DONE
-All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/`:
-- `NudgeListScreen` — list with empty-state oversized FAB; `NudgeListItem` with schedule info and enable toggle
-- `CreateNudgeScreen` — 3-step wizard (question/follow-ups/schedule) with shared `WizardNavBar` and `WizardSteps.kt`
-- `EditNudgeScreen` — 2-step wizard (question/schedule); split-vs-in-place dialog when question text changes
-- `NudgeDetailScreen` — schedule row, Answer Now button, chart section with timeframe chips, answer table with per-row hide/confirm
-- `AnswerFormScreen` — animated step-by-step multi-question form; input widgets: YesNo, Number (slider), OptionSingle, OptionMulti, Text
-- `SettingsScreen` — theme radio buttons (System/Light/Dark), bold text toggle, About link
-- `AboutScreen` — app description and version from BuildConfig
-- Theme: `NudgeryTheme` (dark/light palettes, violet/teal/yellow), `nudgeryTypography(bold)`, `nudgeryShapes`
-- `AppSettings` (DataStore): `themePreference` + `boldText` flows; `SettingsViewModel` combines both
-- `AnswerFormViewModel` — loads questions, evaluates follow-up triggers (EQ/GT/GTE/LT/LTE), records answer with `scheduledAt`
-- `NudgeryScreen` sealed class + `ARG_NUDGE_ID` in `ui/nav/NudgeryNavGraph.kt`
-- Full `NavHost` in `MainActivity` with all 7 destinations; notification intent handled via `onNewIntent`
-
-### Remaining Compose UI work
-- **Missed nudge indicator**: jaunty exclamation sticker on `NudgeListItem` when most recent scheduled fire is unanswered — requires `ComputePreviousFireTimeUseCase` (not yet implemented)
-- **Vico chart integration** ✅ DONE:
-  - ✅ `LineGraphChart` — `CartesianChartHost` + `LineCartesianLayer`; x-axis shows `month/day` from `DataPoint.at`
-  - ✅ `NamedCountChart` (used for `ColumnChart`) — `CartesianChartHost` + `ColumnCartesianLayer`; x-axis shows `NamedCount.label`
-  - ✅ `HorizontalBarChart` (used for `BarChart`) — custom Canvas-free `Column`/`Row` layout with proportional filled tracks; label left, count right
-  - ✅ `CalendarHeatMapChart` — custom Canvas-based week×N grid; cell intensity = daily yes-count / max, lerped surfaceVariant→primary
-  - ✅ `TagCloudChart` — custom `FlowRow`-based implementation; no Vico layer needed
-- **Chart type picker**: ✅ DONE — `ModalBottomSheet` with `NudgeryToggleChip` per available chart type; icon button disabled when only one chart is available; selection persists across timeframe changes
-- **Full-screen chart**: ✅ DONE — `FullScreenChartDialog` composable via `Dialog(usePlatformDefaultWidth = false)` + `Surface(fillMaxSize)`; `TopAppBar` with back arrow and optional chart type picker; timeframe chips at bottom; chart type selection hoisted to `NudgeDetailScreen` so it persists across open/close
-
-## Runtime Permissions (`androidApp`)
-- **POST_NOTIFICATIONS** (Android 13+) ✅ DONE — `NotificationPermissionEffect` composable in `MainActivity` requests the permission on first launch; result is logged; degrades gracefully if denied
-- **Exact alarm permission** — two-branch strategy (see ARCHITECTURE.md for full detail):
-  - **API 33+ (Android 13+):** Declare `USE_EXACT_ALARM` in `AndroidManifest.xml`. Auto-granted by the Play Store for reminder/scheduling apps — no user action needed in production. Assumed to be approved; no special justification workflow is planned.
-  - **API 31–32 (Android 12):** `SCHEDULE_EXACT_ALARM` requires a manual user grant via system settings. Always requires the first-launch prompt in both testing and production.
-  - **Fallback** ✅ DONE — `WorkManagerNotificationScheduler` already falls back from `setExactAndAllowWhileIdle()` to `setAndAllowWhileIdle()` when the permission is absent or revoked. Notifications become less punctual but no data is lost. Settings diagnostic row shows grant status and offers a re-grant shortcut.
-  - **`USE_EXACT_ALARM` manifest declaration** ✅ DONE — declared in `AndroidManifest.xml` alongside `SCHEDULE_EXACT_ALARM` (effective on API 33+ Play Store installs only; harmless on older APIs)
-  - **First-launch prompt** ✅ DONE — `ExactAlarmRationaleEffect` in `PermissionHelpers.kt` shows a one-time dialog on API 31+ when the permission is not granted. Tracks shown state in SharedPreferences (`nudgery_system` / `exact_alarm_rationale_shown`). Invoked from `MainActivity`.
-  - **`rememberExactAlarmGranted()` composable helper** ✅ DONE — `PermissionHelpers.kt`; re-evaluates on `ON_RESUME` via `LifecycleEventObserver`. Used by `NudgeListScreen`, `ExactAlarmRationaleEffect`, and `ExactAlarmDiagnosticRow`.
-  - **Approximate next-fire-time indicators** ✅ DONE — when `rememberExactAlarmGranted()` returns false, nudge list items display `nextFireTimeApproximate` (separator ", around " instead of " at ") in `colorScheme.tertiary` (golden yellow). Tapping opens the explanation dialog.
-  - **Approximate scheduling explanation dialog** ✅ DONE — tapping an approximate time on the nudge list shows a dialog with "Open Settings" and "Dismiss" actions. Strings in `strings.xml`.
-
-## App Icon ✅ DONE
-Custom adaptive icon: vector foreground (squiggle) + styled background (purple with warm yellow radial glow); `mipmap-anydpi-v26/ic_launcher.xml` for Android 8+; legacy PNGs at mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi for older devices.
+## Detail Screen: Default Timeframe
+The chart editor (opened via the chart type icon on the detail screen) should include a **default timeframe selector** that persists the user's chosen timeframe across app sessions for that nudge. Currently the timeframe picker changes the active view but resets to Weekly on every launch.
+- Store the default timeframe preference per nudge (e.g. in DataStore keyed by nudge ID, or as a nudge-level field)
+- Pre-populate the timeframe picker from the stored default on screen open
+- Write TDD tests first
 
 ## Play Store Listing Materials
 Prepare before submitting:

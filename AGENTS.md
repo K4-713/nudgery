@@ -71,3 +71,15 @@ Project requirements are defined by the end-user documentation. To implement the
 * Refactoring should be targeted, with individual refactoring commits confined to one or two improvements
 * When refactoring, first make sure the targeted code has thorough test coverage for all expected behavior in that part of the system. After the refactor, reuse those tests to verify that the refactor does not change any expected system behavior
   * It is not unusual to uncover and fix pre-existing bugs as part of this process. These should be documented in the commit message
+
+# Tagging a new release
+Prior to tagging a new release, ensure that we are adhering to our own rules. Make and work through tasks to do the following:
+* Look through the README.md file and compare the contents to the current code.
+  * Identify areas of the code that need more end-user documentation
+  * Identify parts of README.md that need to be corrected
+  * Leave descriptive placeholders in square brackets in the README file, containing a short description of the fixes or undocumented behaviors that must be addressed.
+  * Code behaviors that are currently tested in the TDDs without related information in the README.md should be prioritized.
+  * Wait for the user to fix README.md before continuing to the next step.
+* Have a look through the ARCHITECTURE.md, DESIGN.md, and TODO.md files, and call out any places where the documentation doesn't match the code. Decide interactively with the user which side is more correct in each mismatch case, and change the other side to match.
+* If there are any substantial items in the README.md, DESIGN.md, or ARCHITECTURE.md docs that don't have TDD tests, write and run those tests which verify accuracy of the documentation.
+* Remove completely finished sections from TODO.md. Leave only sections that still have unfinished pieces.

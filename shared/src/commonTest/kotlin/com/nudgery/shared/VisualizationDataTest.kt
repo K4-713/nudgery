@@ -138,6 +138,28 @@ class VisualizationDataTest {
             "NUMBER should provide a CalendarHeatMap")
     }
 
+    // --- SCALE ---
+
+    @Test
+    fun TDD_scaleQuestionProvidesLineGraphData() = runTest {
+        // README "Viewing Nudges": "SCALE | Line graph, calendar heat map (daily average)"
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.SCALE, answerValue = "7")
+        val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+
+        assertTrue(charts.any { it is VisualizationData.LineGraph },
+            "SCALE should provide a LineGraph")
+    }
+
+    @Test
+    fun TDD_scaleQuestionProvidesCalendarHeatMapData() = runTest {
+        // README "Viewing Nudges": "SCALE | Line graph, calendar heat map (daily average)"
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.SCALE, answerValue = "7")
+        val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+
+        assertTrue(charts.any { it is VisualizationData.CalendarHeatMap },
+            "SCALE should provide a CalendarHeatMap")
+    }
+
     // --- OPTION_SINGLE ---
 
     @Test

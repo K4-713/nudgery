@@ -49,6 +49,11 @@ class AnswerFormViewModel(
     private var allQuestions: List<Question> = emptyList()
     private var optionsByQuestion: Map<String, List<QuestionOption>> = emptyMap()
 
+    // Answers are buffered until the session completes. If the form is dismissed mid-session,
+    // the buffer is discarded and nothing is written to the database.
+    private data class BufferedAnswer(val questionId: String, val value: String, val scheduledAt: Instant)
+    private val pendingAnswers = mutableListOf<BufferedAnswer>()
+
     init {
         viewModelScope.launch { loadQuestions() }
     }
@@ -92,8 +97,8 @@ class AnswerFormViewModel(
 
         viewModelScope.launch {
             val effectiveScheduledAt = scheduledAt ?: Clock.System.now()
-            recordAnswer.execute(nudgeId, currentQuestion.question.id, answer, effectiveScheduledAt)
-            Log.i(TAG, "Recorded answer for question ${currentQuestion.question.id}: $answer")
+            pendingAnswers.add(BufferedAnswer(currentQuestion.question.id, answer, effectiveScheduledAt))
+            Log.d(TAG, "Buffered answer for question ${currentQuestion.question.id}: $answer")
 
             val updatedQuestions = if (currentQuestion.question.isMainQuestion) {
                 val triggeredFollowUps = allQuestions
@@ -107,6 +112,7 @@ class AnswerFormViewModel(
 
             val nextStep = state.currentStepIndex + 1
             if (nextStep >= updatedQuestions.size) {
+                commitPendingAnswers()
                 _uiState.update { it.copy(isSubmitting = false, questions = updatedQuestions, isDismissed = true) }
             } else {
                 _uiState.update {
@@ -122,7 +128,16 @@ class AnswerFormViewModel(
     }
 
     fun dismiss() {
+        pendingAnswers.clear()
         _uiState.update { it.copy(isDismissed = true) }
+    }
+
+    private suspend fun commitPendingAnswers() {
+        for (pending in pendingAnswers) {
+            recordAnswer.execute(nudgeId, pending.questionId, pending.value, pending.scheduledAt)
+            Log.i(TAG, "Committed answer for question ${pending.questionId}: ${pending.value}")
+        }
+        pendingAnswers.clear()
     }
 
     private fun isTriggerSatisfied(question: Question, mainAnswer: String): Boolean {

@@ -25,7 +25,7 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Notification scheduling (Android) | AlarmManager + WorkManager | AlarmManager provides precise timing; WorkManager handles reliable execution. Implements shared `NotificationScheduler` interface. |
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
-| Settings persistence | DataStore Preferences | Stores `ThemePreference` and bold text toggle; flows observed by `SettingsViewModel` |
+| Settings persistence | DataStore Preferences | Stores `ThemePreference`, bold text toggle, and `ChartPalette`; flows observed by `SettingsViewModel` |
 | Typeface | Atkinson Hyperlegible Next | All 14 weight/style variants bundled as TTF in `androidApp/src/main/res/font/`; wired into `nudgeryTypography()` in `Type.kt` |
 
 ---
@@ -50,8 +50,9 @@ nudgery/
 │   └── iosMain/             # (future) iOS actual implementations
 ├── androidApp/
 │   ├── di/                  # appModule (Koin) — DatabaseDriverFactory, scheduler, ViewModels
+│   ├── backup/              # NudgeBackupParser (org.json — Android SDK built-in)
 │   ├── notification/        # BootReceiver, TimezoneChangeReceiver
-│   ├── settings/            # AppSettings (DataStore) — themePreference, boldText
+│   ├── settings/            # AppSettings (DataStore) — themePreference, boldText, chartPalette
 │   ├── viewmodel/           # AndroidX ViewModels + UiState types + form state helpers
 │   ├── ui/
 │   │   ├── nav/             # NudgeryScreen sealed class, route/arg constants
@@ -90,7 +91,7 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 | `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId`); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
 | `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
-| `SettingsViewModel` | Combines `themePreference` and `boldText` flows from `AppSettings` (DataStore) into a single `SettingsUiState` |
+| `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for the import-from-backup feature |
 
 ### ViewModel conventions
 
@@ -137,9 +138,11 @@ Belongs to a `Nudge`. The first question (orderIndex 0) is the main question; su
 | orderIndex | Int | 0 = main question |
 | triggerAnswerValue | String? | Null for main question; defines which answer on the parent question triggers this follow-up |
 | triggerOperator | TriggerOperator? | EQ, GTE, LTE, etc. Allows range-based follow-up triggers (e.g. score ≥ 7) |
+| scaleMin | Int? | Null unless `type = SCALE`; lower bound of the slider range |
+| scaleMax | Int? | Null unless `type = SCALE`; upper bound of the slider range |
 
-**QuestionType** enum: `YES_NO`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`
-`TEXT` is only valid for follow-up questions (`isValidForMainQuestion` is false for `TEXT`).
+**QuestionType** enum: `YES_NO`, `SCALE`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`
+`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `TEXT` is only valid for follow-up questions (`isValidForMainQuestion` is false for `TEXT`).
 
 **TriggerOperator** enum: `EQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`
 `CONTAINS` is used for `OPTION_MULTI` follow-ups: the trigger fires when the stored option ID appears anywhere in the comma-separated multi-select answer string.
@@ -316,7 +319,7 @@ The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background
 
 ## Data Export
 
-CSV and TSV export logic lives in `shared/commonMain` so it is available to both platforms without duplication. Export produces one row per `Answer`, joined with its `Question`, `Nudge`, and any relevant `QuestionOption` text.
+CSV, TSV, and JSON backup export logic lives in `shared/commonMain` so it is available to both platforms without duplication. CSV and TSV export produces one row per `Answer`, joined with its `Question`, `Nudge`, and any relevant `QuestionOption` text. JSON backup (`ExportFormat.JSON_BACKUP`) serializes the complete nudge — questions, options, schedule, and all answer history — for round-trip import via `ImportNudgeUseCase`.
 
 ---
 
@@ -329,7 +332,8 @@ Charts are rendered in the platform UI layer (not shared), since charting librar
 | QuestionType | Available Visualizations |
 |---|---|
 | YES_NO | Calendar heat map, line graph (daily yes count), column chart |
-| NUMBER | Line graph, calendar heat map |
+| SCALE | Line graph, calendar heat map (daily average) |
+| NUMBER | Line graph, calendar heat map (daily average) |
 | OPTION_SINGLE | Bar chart, column chart, tag cloud |
 | OPTION_MULTI | Bar chart, tag cloud |
 
