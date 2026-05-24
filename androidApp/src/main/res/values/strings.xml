@@ -56,11 +56,11 @@
     <string name="followup_add">Add follow-up question</string>
     <string name="followup_remove">Remove follow-up</string>
     <string name="followup_trigger_label">Show this follow-up when the answer is…</string>
-    <string name="trigger_op_eq">=</string>
-    <string name="trigger_op_gt">&gt;</string>
-    <string name="trigger_op_gte">≥</string>
-    <string name="trigger_op_lt">&lt;</string>
-    <string name="trigger_op_lte">≤</string>
+    <string name="trigger_op_eq">Equal to</string>
+    <string name="trigger_op_gt">Greater than</string>
+    <string name="trigger_op_gte">At least</string>
+    <string name="trigger_op_lt">Less than</string>
+    <string name="trigger_op_lte">At most</string>
     <string name="trigger_number_value">Value</string>
     <string name="trigger_no_options">Add answer options to the main question first</string>
 
