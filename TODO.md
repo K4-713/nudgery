@@ -58,7 +58,15 @@ All 7 screens implemented in `androidApp/src/main/kotlin/com/nudgery/android/ui/
 
 ## Runtime Permissions (`androidApp`)
 - **POST_NOTIFICATIONS** (Android 13+) ✅ DONE — `NotificationPermissionEffect` composable in `MainActivity` requests the permission on first launch; result is logged; degrades gracefully if denied
-- **SCHEDULE_EXACT_ALARM** (Android 12+): users can revoke this in Settings; detect revocation and either fall back to inexact alarms or prompt the user to re-grant it via the system Alarm & Reminder settings screen
+- **Exact alarm permission** — two-branch strategy (see ARCHITECTURE.md for full detail):
+  - **API 33+ (Android 13+):** Declare `USE_EXACT_ALARM` in `AndroidManifest.xml`. Auto-granted by the Play Store for reminder/scheduling apps — no user action needed in production. Assumed to be approved; no special justification workflow is planned.
+  - **API 31–32 (Android 12):** `SCHEDULE_EXACT_ALARM` requires a manual user grant via system settings. Always requires the first-launch prompt in both testing and production.
+  - **Fallback** ✅ DONE — `WorkManagerNotificationScheduler` already falls back from `setExactAndAllowWhileIdle()` to `setAndAllowWhileIdle()` when the permission is absent or revoked. Notifications become less punctual but no data is lost. Settings diagnostic row shows grant status and offers a re-grant shortcut.
+  - **`USE_EXACT_ALARM` manifest declaration** ✅ DONE — declared in `AndroidManifest.xml` alongside `SCHEDULE_EXACT_ALARM` (effective on API 33+ Play Store installs only; harmless on older APIs)
+  - **First-launch prompt** ✅ DONE — `ExactAlarmRationaleEffect` in `PermissionHelpers.kt` shows a one-time dialog on API 31+ when the permission is not granted. Tracks shown state in SharedPreferences (`nudgery_system` / `exact_alarm_rationale_shown`). Invoked from `MainActivity`.
+  - **`rememberExactAlarmGranted()` composable helper** ✅ DONE — `PermissionHelpers.kt`; re-evaluates on `ON_RESUME` via `LifecycleEventObserver`. Used by `NudgeListScreen`, `ExactAlarmRationaleEffect`, and `ExactAlarmDiagnosticRow`.
+  - **Approximate next-fire-time indicators** ✅ DONE — when `rememberExactAlarmGranted()` returns false, nudge list items display `nextFireTimeApproximate` (separator ", around " instead of " at ") in `colorScheme.tertiary` (golden yellow). Tapping opens the explanation dialog.
+  - **Approximate scheduling explanation dialog** ✅ DONE — tapping an approximate time on the nudge list shows a dialog with "Open Settings" and "Dismiss" actions. Strings in `strings.xml`.
 
 ## App Icon ✅ DONE
 Custom adaptive icon: vector foreground (squiggle) + styled background (purple with warm yellow radial glow); `mipmap-anydpi-v26/ic_launcher.xml` for Android 8+; legacy PNGs at mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi for older devices.
@@ -85,4 +93,4 @@ Prepare before submitting:
 - Verify ProGuard/R8 rules don't strip needed classes — check SQLDelight generated code, Koin reflection, WorkManager, and Vico; add keep rules to `proguard-rules.pro` as needed
 - Run `./gradlew :androidApp:bundleRelease` to produce an AAB for Play Store submission (AAB is required; APK is not accepted for new apps)
 - Test the release build on a physical device before submitting
-- Be prepared to justify `SCHEDULE_EXACT_ALARM` use during Play Store review — the justification is user-configured reminder schedules
+- The app declares `USE_EXACT_ALARM` (API 33+) rather than `SCHEDULE_EXACT_ALARM`; Play Store review for this permission is approval-based for reminder/scheduling apps. No special justification workflow is planned — approval is assumed.

@@ -427,6 +427,39 @@ All three entry points on the detail screen navigate to the same `EditNudgeScree
 | Follow-up icon (follow-up row) | 1 | Follow-up questions |
 | Calendar icon (schedule row) | 2 | Schedule |
 
+## Approximate Scheduling Indicators
+
+When the exact alarm permission is not held (see ARCHITECTURE.md — *Exact Alarm Permission Strategy*), nudge notifications will still fire but may be delayed by several minutes or more. The app surfaces this degraded state visibly rather than silently.
+
+### Affected API levels
+
+This indicator is only ever shown on API 31+ (Android 12 and above). On earlier API levels, exact alarms are always permitted and no indicator appears.
+
+### Next fire time treatment on the nudge list
+
+Each nudge list item displays the next scheduled fire time (e.g. "Next: Tomorrow at 9 AM"). When exact scheduling is not available, two changes apply to this text:
+
+- **"Around" qualifier on the time** — "around" is inserted before the time portion only, not the full string. The date/time separator changes from " at " to ", around ", giving e.g. "Next: Tomorrow, around 9 AM" or "Next: May 20, around 9 AM". The date anchor stays authoritative; only the specific time is marked approximate.
+- **Golden yellow color** — the text is rendered in `colorScheme.tertiary` (golden yellow) rather than the default `onSurfaceVariant`. Golden yellow is used instead of `colorScheme.error` (red) because the situation is recoverable and informational — nudges will still fire, just less punctually. Red would imply a system failure; yellow implies "attention needed, but things are still working."
+
+Nudges with no schedule, or with scheduling disabled, show neither the time nor the indicator.
+
+### Explanation pathway
+
+The approximate next fire time text is tappable. Tapping it opens an inline dialog that:
+
+- Explains in plain language that exact notification scheduling is not enabled
+- States the practical consequence: notifications will still arrive but may be a few minutes late
+- Offers two actions:
+  - **"Open Settings"** — fires `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`, taking the user directly to the system Alarm & Reminder settings page for Nudgery. When the user toggles the permission on and returns to the app, the indicator clears.
+  - **"Dismiss"** — closes the dialog without action; the indicator remains until the permission is granted
+
+The same explanation and "Open Settings" path is also available via the diagnostic row in the Settings screen, which is the recovery path for users who dismiss the dialog without acting.
+
+### Indicator lifecycle
+
+The granted/not-granted state is re-evaluated on every `ON_RESUME` lifecycle event so the indicator clears immediately when the user returns from system settings having granted the permission — without requiring an app restart.
+
 ## Empty States
 
 ### Main List (no nudges yet)

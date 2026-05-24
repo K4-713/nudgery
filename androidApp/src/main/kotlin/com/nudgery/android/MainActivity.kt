@@ -35,6 +35,7 @@ import com.nudgery.android.ui.screen.AboutScreen
 import com.nudgery.android.ui.screen.AnswerFormScreen
 import com.nudgery.android.ui.screen.CreateNudgeScreen
 import com.nudgery.android.ui.screen.EditNudgeScreen
+import com.nudgery.android.ui.screen.ExactAlarmRationaleEffect
 import com.nudgery.android.ui.screen.NudgeDetailScreen
 import com.nudgery.android.ui.screen.NudgeListScreen
 import com.nudgery.android.ui.screen.SettingsScreen
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
                 boldText = settingsState.boldText
             ) {
                 NotificationPermissionEffect()
+                ExactAlarmRationaleEffect()
 
                 val navController = rememberNavController()
 

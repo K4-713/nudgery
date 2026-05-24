@@ -98,4 +98,28 @@ class TimeDisplayExtensionsTest {
         assertFalse("Only tomorrow should say 'Tomorrow', got: $result", result.contains("Tomorrow"))
         assertEquals("May 21 at 10 AM", result)
     }
+
+    // ── Approximate format (inexact alarm scheduling) ────────────────────────────────────────────
+
+    @Test
+    fun TDD_approximateNextFireTime_today_usesAroundSeparator() {
+        // Documents: approximate=true changes " at " to ", around " so date stays authoritative
+        val laterToday = instantAt(today, LocalTime(20, 0))
+        val result = laterToday.toLocalDisplayString(tz, now, approximate = true)
+        assertEquals("Today, around 8 PM", result)
+    }
+
+    @Test
+    fun TDD_approximateNextFireTime_tomorrow_usesAroundSeparator() {
+        val tomorrow = instantAt(LocalDate(2026, 5, 20), LocalTime(14, 30))
+        val result = tomorrow.toLocalDisplayString(tz, now, approximate = true)
+        assertEquals("Tomorrow, around 2:30 PM", result)
+    }
+
+    @Test
+    fun TDD_approximateNextFireTime_otherDay_usesAroundSeparator() {
+        val nextWeek = instantAt(LocalDate(2026, 5, 26), LocalTime(9, 0))
+        val result = nextWeek.toLocalDisplayString(tz, now, approximate = true)
+        assertEquals("May 26, around 9 AM", result)
+    }
 }

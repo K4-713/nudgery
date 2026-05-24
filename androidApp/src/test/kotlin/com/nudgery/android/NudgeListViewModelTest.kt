@@ -98,6 +98,39 @@ class NudgeListViewModelTest {
     }
 
     @Test
+    fun TDD_nextFireTimeApproximate_usesAroundSeparator() = runTest {
+        // When exact alarm permission is absent, the list shows nextFireTimeApproximate
+        // which uses ", around " instead of " at " so the date stays authoritative
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        repos.scheduleRepo.insert(makeDailySchedule("1"))
+        repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
+        advanceUntilIdle()
+
+        val summary = viewModel.uiState.value.first()
+        val approx = summary.nextFireTimeApproximate ?: error("nextFireTimeApproximate was null")
+        assertTrue("Approximate time should use ', around ' separator", approx.contains(", around "))
+        assertFalse("Approximate time should not use ' at ' separator", approx.contains(" at "))
+    }
+
+    @Test
+    fun TDD_nextFireTimeApproximate_andNextFireTime_showSameDateDifferentSeparator() = runTest {
+        // Both fields are derived from the same instant — only the separator differs.
+        // This ensures the date label (Today/Tomorrow/month-day) is identical in both.
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        repos.scheduleRepo.insert(makeDailySchedule("1"))
+        repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
+        advanceUntilIdle()
+
+        val summary = viewModel.uiState.value.first()
+        val exact = summary.nextFireTime ?: error("nextFireTime was null")
+        val approx = summary.nextFireTimeApproximate ?: error("nextFireTimeApproximate was null")
+        val exactDatePart = exact.substringBefore(" at ")
+        val approxDatePart = approx.substringBefore(", around ")
+        assertEquals("Both fields should show the same date label", exactDatePart, approxDatePart)
+        assertTrue("Exact time should use ' at ' separator", exact.contains(" at "))
+    }
+
+    @Test
     fun TDD_nudgeListEntryShowsEnabledStatus() = runTest {
         // README "Setting Up a Nudge": "indicating...whether or not it is enabled"
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }

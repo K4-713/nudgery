@@ -3,6 +3,9 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- API 33+: auto-granted by Play Store for reminder/scheduling apps; no user action needed in production -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- API 31–32: requires manual user grant via system settings -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application

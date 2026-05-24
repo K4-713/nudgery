@@ -32,6 +32,7 @@ data class NudgeSummary(
     val name: String,
     val scheduleDescription: String,
     val nextFireTime: String?,
+    val nextFireTimeApproximate: String?,
     val isEnabled: Boolean,
     val hasMissedNotification: Boolean = false
 )
@@ -89,6 +90,7 @@ class NudgeListViewModel(
             name = name,
             scheduleDescription = schedule?.let { ScheduleFormState.fromSchedule(it).toDescription() } ?: "",
             nextFireTime = nextFire?.toLocalDisplayString(tz),
+            nextFireTimeApproximate = nextFire?.toLocalDisplayString(tz, approximate = true),
             isEnabled = isEnabled,
             hasMissedNotification = hasMissed
         )

@@ -228,7 +228,7 @@ interface NotificationScheduler {
 
 **Android:** Implemented in `shared/androidMain` using a two-layer approach — `AlarmManager` for precise timing, WorkManager for reliable execution.
 
-`WorkManagerNotificationScheduler` uses `AlarmManager.setExactAndAllowWhileIdle()` to schedule each nudge at its exact fire time (`RTC_WAKEUP`, so it wakes the device). If the `SCHEDULE_EXACT_ALARM` permission has been revoked by the user, it falls back gracefully to `setAndAllowWhileIdle()` (inexact). Alarms are deduplicated by request code (`nudgeId.hashCode()`) with `FLAG_UPDATE_CURRENT`, so `reschedule()` atomically replaces any existing alarm.
+`WorkManagerNotificationScheduler` uses `AlarmManager.setExactAndAllowWhileIdle()` to schedule each nudge at its exact fire time (`RTC_WAKEUP`, so it wakes the device). If the exact alarm permission is not held (see *Exact Alarm Permission Strategy* below), it falls back gracefully to `setAndAllowWhileIdle()` (inexact). Alarms are deduplicated by request code (`nudgeId.hashCode()`) with `FLAG_UPDATE_CURRENT`, so `reschedule()` atomically replaces any existing alarm.
 
 When an alarm fires, `NudgeAlarmReceiver` (a `BroadcastReceiver`) receives it and immediately enqueues a `NudgeNotificationWorker` job via WorkManager with no delay. This keeps exact timing from AlarmManager while retaining WorkManager's execution guarantees (Doze-aware, survives process death). The worker shows the notification and calls `notificationScheduler.reschedule()` to set the next alarm.
 
@@ -243,6 +243,38 @@ When the timezone changes, `TimezoneChangeReceiver` reads the previous timezone 
 The notification's launch `Intent` carries `EXTRA_NUDGE_ID` and `EXTRA_SCHEDULED_AT` (epoch milliseconds). `MainActivity` is declared `singleTop` and handles both cold-start taps (`onCreate`) and warm taps (`onNewIntent`) via `handleNudgeIntent()`, which routes to `NudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)`. The scheduled time travels through the nav route as a Long argument and is reconstructed as `Instant` before being passed to `AnswerFormViewModel`, ensuring answers record the nudge's fire time rather than the wall-clock time of the tap.
 
 **iOS (future):** Will be implemented using `UNUserNotificationCenter`. The interface contract is identical, so the shared business logic requires no changes.
+
+### Exact Alarm Permission Strategy
+
+Android's exact alarm permission system differs by API level. Nudgery targets each level differently.
+
+**API < 31 (Android 11 and below):** No permission required. Exact alarms are always permitted. No action needed.
+
+**API 31–32 (Android 12):** `SCHEDULE_EXACT_ALARM` — a user-controlled special app access permission. It cannot be requested via `requestPermissions()`; the only path is firing `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`, which opens the system settings page for the app directly. The user must toggle it on manually. This applies in both testing and production.
+
+**API 33+ (Android 13+):** Two mechanisms are available:
+
+- `USE_EXACT_ALARM` — declared in `AndroidManifest.xml`; **automatically granted by the Play Store** for approved app categories (alarms, reminders, calendars). Nudgery is a scheduling/reminder app and is assumed to qualify. No user action is required. **This does not apply to sideloaded builds** — the auto-grant only happens through Play Store distribution.
+- `SCHEDULE_EXACT_ALARM` — the user-controlled fallback, used when `USE_EXACT_ALARM` is not in effect (i.e. during pre-release testing via sideloaded APKs).
+
+**How permission is obtained, by context:**
+
+| Context | API level | Mechanism | User action required? |
+|---|---|---|---|
+| Play Store install | < 31 | None needed | No |
+| Play Store install | 31–32 | `SCHEDULE_EXACT_ALARM` first-launch prompt | Yes — one-time system settings toggle |
+| Play Store install | 33+ | `USE_EXACT_ALARM` auto-granted | No |
+| Sideloaded (testing) | < 31 | None needed | No |
+| Sideloaded (testing) | 31–32 | `SCHEDULE_EXACT_ALARM` first-launch prompt | Yes |
+| Sideloaded (testing) | 33+ | `SCHEDULE_EXACT_ALARM` first-launch prompt | Yes |
+
+The first-launch prompt (shown on API 31+ when the permission is not already granted) is a dialog explaining that on-time notifications require the permission, with a single "Open Settings" button that fires `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`. This prompt exists primarily for pre-release testers and Android 12 production users; the majority of production users on Android 13+ will never see it.
+
+**Fallback behavior (permission absent or revoked):**
+
+`WorkManagerNotificationScheduler` already falls back from `setExactAndAllowWhileIdle()` to `setAndAllowWhileIdle()` when the exact alarm permission is not held. With inexact scheduling, the OS delivers notifications within a batch window — typically a few minutes late, but potentially longer under Doze mode. No nudge data is lost; notifications simply become less punctual until the permission is re-granted.
+
+The Settings screen includes a diagnostic row showing the current exact alarm grant status. If not granted, it provides a button to navigate directly to the system settings page to re-grant it. This row is always visible and is the recovery path for any user who missed the first-launch prompt or later revoked the permission.
 
 ---
 

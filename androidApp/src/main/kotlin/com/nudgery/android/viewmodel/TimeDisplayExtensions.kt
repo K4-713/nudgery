@@ -16,19 +16,21 @@ internal fun LocalTime.toDisplayString(): String {
 
 internal fun Instant.toLocalDisplayString(
     timeZone: TimeZone,
-    now: Instant = Clock.System.now()
+    now: Instant = Clock.System.now(),
+    approximate: Boolean = false
 ): String {
     val local = toLocalDateTime(timeZone)
     val today = now.toLocalDateTime(timeZone).date
     val tomorrow = today.plus(1, DateTimeUnit.DAY)
     val timeStr = local.time.toDisplayString()
+    val separator = if (approximate) ", around " else " at "
 
     return when (local.date) {
-        today -> "Today at $timeStr"
-        tomorrow -> "Tomorrow at $timeStr"
+        today -> "Today${separator}$timeStr"
+        tomorrow -> "Tomorrow${separator}$timeStr"
         else -> {
             val monthName = local.month.name.lowercase().replaceFirstChar { it.uppercase() }
-            "$monthName ${local.dayOfMonth} at $timeStr"
+            "$monthName ${local.dayOfMonth}${separator}$timeStr"
         }
     }
 }

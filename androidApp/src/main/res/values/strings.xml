@@ -159,6 +159,14 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <!-- Exact alarm permission dialogs -->
+    <string name="permission_exact_alarm_rationale_title">Schedule notifications on time?</string>
+    <string name="permission_exact_alarm_rationale_body">Nudgery works best when it can deliver nudges at the exact time you choose. Without this permission, nudges will still arrive but may be a few minutes late.</string>
+    <string name="permission_not_now">Not now</string>
+    <string name="permission_approximate_time_title">Notifications may be delayed</string>
+    <string name="permission_approximate_time_body">Exact notification scheduling isn\'t enabled. Nudges will still arrive, but may be a few minutes late.\n\nTap \"Open Settings\" to grant this permission and restore on-time delivery.</string>
 
     <!-- Settings: chart palette -->
     <string name="settings_charts">Charts</string>
