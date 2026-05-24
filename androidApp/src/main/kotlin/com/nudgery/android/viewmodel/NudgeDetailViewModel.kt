@@ -16,6 +16,7 @@ import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
+import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
@@ -56,7 +57,8 @@ data class NudgeDetailUiState(
     val visualizations: List<VisualizationData> = emptyList(),
     val selectedTimeframe: Timeframe = Timeframe.WEEKLY,
     val exportContent: String? = null,
-    val isExporting: Boolean = false
+    val isExporting: Boolean = false,
+    val isDeleted: Boolean = false
 )
 
 class NudgeDetailViewModel(
@@ -71,7 +73,8 @@ class NudgeDetailViewModel(
     private val getVisualizationData: GetVisualizationDataUseCase,
     private val setAnswerHidden: SetAnswerHiddenUseCase,
     private val exportAnswers: ExportAnswersUseCase,
-    private val updateNudge: UpdateNudgeUseCase
+    private val updateNudge: UpdateNudgeUseCase,
+    private val deleteNudge: DeleteNudgeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NudgeDetailUiState())
@@ -138,6 +141,14 @@ class NudgeDetailViewModel(
             updateNudge.execute(UpdateNudgeRequest(nudgeId = nudgeId, isEnabled = isEnabled))
             _uiState.update { it.copy(isEnabled = isEnabled) }
             Log.i(TAG, "Nudge $nudgeId enabled=$isEnabled")
+        }
+    }
+
+    fun deleteNudge() {
+        viewModelScope.launch {
+            deleteNudge.execute(nudgeId)
+            _uiState.update { it.copy(isDeleted = true) }
+            Log.i(TAG, "Deleted nudge $nudgeId")
         }
     }
 

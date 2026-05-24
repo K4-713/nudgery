@@ -18,6 +18,7 @@ import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.repository.TimezoneChangeEventRepository
 import com.nudgery.shared.scheduler.NotificationScheduler
 import com.nudgery.shared.usecase.CreateNudgeUseCase
+import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
@@ -173,6 +174,8 @@ class TestViewModelRepositories {
 
     fun createNudgeUseCase() =
         CreateNudgeUseCase(nudgeRepo, questionRepo, optionRepo, scheduleRepo, scheduler)
+    fun deleteNudgeUseCase() =
+        DeleteNudgeUseCase(nudgeRepo, scheduler)
     fun updateNudgeUseCase() =
         UpdateNudgeUseCase(nudgeRepo, questionRepo, optionRepo, scheduleRepo, nudgeEditRepo, scheduler)
     fun setAnswerHiddenUseCase() = SetAnswerHiddenUseCase(answerRepo)

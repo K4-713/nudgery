@@ -13,6 +13,7 @@ import com.nudgery.shared.scheduler.WorkManagerNotificationScheduler
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
+import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
@@ -56,7 +57,8 @@ val appModule = module {
             getVisualizationData = get<GetVisualizationDataUseCase>(),
             setAnswerHidden = get<SetAnswerHiddenUseCase>(),
             exportAnswers = get<ExportAnswersUseCase>(),
-            updateNudge = get<UpdateNudgeUseCase>()
+            updateNudge = get<UpdateNudgeUseCase>(),
+            deleteNudge = get<DeleteNudgeUseCase>()
         )
     }
 

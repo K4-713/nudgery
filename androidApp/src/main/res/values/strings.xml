@@ -99,6 +99,9 @@
     <string name="detail_hide_confirm_body">Hidden answers are excluded from charts and counts. You can unhide them later.</string>
     <string name="detail_hide_confirm_action">Hide</string>
     <string name="detail_cancel">Cancel</string>
+    <string name="detail_delete_nudge">Delete nudge</string>
+    <string name="detail_delete_confirm_title">Delete this nudge?</string>
+    <string name="detail_delete_confirm_body">This will permanently delete this nudge, all of its questions, and every recorded answer. This cannot be undone.</string>
     <string name="detail_export_csv">Export as CSV</string>
     <string name="detail_export_tsv">Export as TSV</string>
     <string name="detail_followup_questions">Follow-up questions</string>

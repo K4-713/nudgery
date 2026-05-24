@@ -19,6 +19,7 @@ import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.usecase.CatchUpMissedFiresUseCase
+import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
@@ -42,6 +43,7 @@ val sharedModule = module {
     single<TimezoneChangeEventRepository> { SqlDelightTimezoneChangeEventRepository(get()) }
 
     factory { CreateNudgeUseCase(get(), get(), get(), get(), get()) }
+    factory { DeleteNudgeUseCase(get(), get()) }
     factory { UpdateNudgeUseCase(get(), get(), get(), get(), get(), get()) }
     factory { RecordAnswerUseCase(get()) }
     factory { SetAnswerHiddenUseCase(get()) }

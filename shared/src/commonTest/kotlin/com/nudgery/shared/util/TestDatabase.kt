@@ -33,6 +33,7 @@ data class TestRepositories(
 fun createTestRepositories(): TestRepositories {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     NudgeryDatabase.Schema.create(driver)
+    driver.execute(null, "PRAGMA foreign_keys = ON", 0)
     val database = NudgeryDatabase(driver)
     return TestRepositories(
         nudgeRepository = SqlDelightNudgeRepository(database),

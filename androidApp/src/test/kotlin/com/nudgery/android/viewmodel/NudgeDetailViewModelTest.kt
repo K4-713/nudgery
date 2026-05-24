@@ -168,6 +168,33 @@ class NudgeDetailViewModelTest {
         )
     }
 
+    @Test
+    fun TDD_deleteNudge_setsIsDeleted() = runTest {
+        // Deleting a nudge must signal the UI to navigate away
+        val nudgeId = createNudge("Did you see any cool birds today?")
+        val viewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.deleteNudge()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isDeleted)
+    }
+
+    @Test
+    fun TDD_deleteNudge_cancelsNotifications() = runTest {
+        // Deleting a nudge must cancel its scheduled notifications
+        val nudgeId = createNudge("Did you see any cool birds today?")
+        repos.scheduler.reset()
+        val viewModel = buildViewModel(nudgeId)
+
+        viewModel.deleteNudge()
+        advanceUntilIdle()
+
+        assertTrue(repos.scheduler.cancelled.contains(nudgeId))
+    }
+
     private fun buildViewModel(nudgeId: String) = NudgeDetailViewModel(
         nudgeId = nudgeId,
         nudgeRepository = repos.nudgeRepo,
@@ -180,7 +207,8 @@ class NudgeDetailViewModelTest {
         getVisualizationData = repos.getVisualizationDataUseCase(),
         setAnswerHidden = repos.setAnswerHiddenUseCase(),
         exportAnswers = repos.exportAnswersUseCase(),
-        updateNudge = repos.updateNudgeUseCase()
+        updateNudge = repos.updateNudgeUseCase(),
+        deleteNudge = repos.deleteNudgeUseCase()
     )
 
     private suspend fun createNudge(
