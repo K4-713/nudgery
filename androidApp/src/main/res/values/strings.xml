@@ -16,10 +16,14 @@
     <string name="nudge_no_schedule">No schedule</string>
     <string name="nudge_missed_indicator">Missed answer</string>
 
-    <!-- Create / Edit nudge wizard -->
+    <!-- Create nudge wizard -->
     <string name="create_nudge_title">New Nudge</string>
-    <string name="edit_nudge_title">Edit Nudge</string>
     <string name="wizard_step_of">Step %1$d of %2$d</string>
+
+    <!-- Edit nudge screens (single-section, not wizard) -->
+    <string name="edit_question_title">Edit Question</string>
+    <string name="edit_followups_title">Edit Follow-ups</string>
+    <string name="edit_schedule_title">Edit Schedule</string>
     <string name="wizard_back">Back</string>
     <string name="wizard_next">Next</string>
     <string name="wizard_save">Save Nudge</string>
