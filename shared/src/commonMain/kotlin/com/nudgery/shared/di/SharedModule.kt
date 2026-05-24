@@ -24,6 +24,7 @@ import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
+import com.nudgery.shared.usecase.ImportNudgeUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
@@ -49,6 +50,7 @@ val sharedModule = module {
     factory { SetAnswerHiddenUseCase(get()) }
     factory { ComputeNextFireTimeUseCase() }
     factory { CatchUpMissedFiresUseCase(get(), get()) }
-    factory { ExportAnswersUseCase(get(), get(), get(), get()) }
+    factory { ExportAnswersUseCase(get(), get(), get(), get(), get()) }
+    factory { ImportNudgeUseCase(get(), get(), get(), get(), get(), get()) }
     factory { GetVisualizationDataUseCase(get(), get(), get()) }
 }

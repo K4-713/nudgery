@@ -1,6 +1,9 @@
 package com.nudgery.android.ui.screen
 
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -22,13 +25,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +48,7 @@ import com.nudgery.android.R
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.android.ui.theme.paletteStops
+import com.nudgery.android.viewmodel.ImportStatus
 import com.nudgery.android.viewmodel.SettingsViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -52,6 +60,41 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val importSuccessMessage = stringResource(R.string.settings_import_success)
+    val importStatus = uiState.importStatus
+    val importFailureMessage = if (importStatus is ImportStatus.Failure)
+        stringResource(R.string.settings_import_failure, importStatus.message)
+    else null
+
+    LaunchedEffect(importStatus) {
+        when (importStatus) {
+            is ImportStatus.Success -> {
+                snackbarHostState.showSnackbar(importSuccessMessage)
+                viewModel.clearImportStatus()
+            }
+            is ImportStatus.Failure -> {
+                if (importFailureMessage != null) {
+                    snackbarHostState.showSnackbar(importFailureMessage)
+                }
+                viewModel.clearImportStatus()
+            }
+            else -> Unit
+        }
+    }
+
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
+            if (content != null) {
+                viewModel.importNudgeFromBackup(content)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -66,7 +109,8 @@ fun SettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         val systemIsDark = isSystemInDarkTheme()
         val isDark = when (uiState.themePreference) {
@@ -155,6 +199,27 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             ExactAlarmDiagnosticRow()
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            SettingsSectionLabel(stringResource(R.string.settings_import))
+
+            val isImporting = uiState.importStatus is ImportStatus.InProgress
+            TextButton(
+                onClick = { filePicker.launch("application/json") },
+                enabled = !isImporting,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = if (isImporting)
+                        stringResource(R.string.settings_import_in_progress)
+                    else
+                        stringResource(R.string.settings_import_button),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

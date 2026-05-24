@@ -4,6 +4,7 @@ import com.nudgery.shared.model.Answer
 import com.nudgery.shared.model.ExportFormat
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.usecase.CreateNudgeRequest
 import com.nudgery.shared.usecase.CreateNudgeResult
 import com.nudgery.shared.usecase.CreateNudgeUseCase
@@ -38,7 +39,7 @@ class DataExportTest {
         )
         exportAnswers = ExportAnswersUseCase(
             repos.nudgeRepository, repos.questionRepository,
-            repos.questionOptionRepository, repos.answerRepository
+            repos.questionOptionRepository, repos.answerRepository, repos.scheduleRepository
         )
     }
 
@@ -164,6 +165,181 @@ class DataExportTest {
 
         val csv = exportAnswers.execute(nudgeId, ExportFormat.CSV)
         assertTrue(csv.contains("Good"), "Export should include the resolved option text")
+    }
+
+    // ── JSON full-backup export ──────────────────────────────────────────────────────────────────
+
+    @Test
+    fun TDD_jsonExport_includesNudgeName() = runTest {
+        // JSON backup must contain the nudge name so it can be reconstructed on import
+        val (nudgeId, _, _) = createNudgeWithAnswer(nudgeName = "Mood Tracker")
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("Mood Tracker"), "JSON backup should include the nudge name")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesScheduleType() = runTest {
+        // Schedule type is needed to reconstruct the notification cadence
+        val (nudgeId, _, _) = createNudgeWithAnswer()
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("DAILY"), "JSON backup should include the schedule type")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesScheduleTimeOfDay() = runTest {
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How are you?", QuestionType.YES_NO),
+                schedule = ScheduleRequest(
+                    type = ScheduleType.DAILY,
+                    timeOfDay = LocalTime(14, 30),
+                    activeDaysOfWeek = setOf(DayOfWeek.MONDAY)
+                ),
+                name = "Afternoon Check"
+            )
+        ) as CreateNudgeResult.Success
+        val json = exportAnswers.execute(result.nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("14:30"), "JSON backup should include the schedule time of day")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesScheduleActiveDays() = runTest {
+        val (nudgeId, _, _) = createNudgeWithAnswer()
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("MONDAY"), "JSON backup should include active days of week")
+        assertTrue(json.contains("WEDNESDAY"), "JSON backup should include all active days")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesQuestionText() = runTest {
+        val (nudgeId, _, _) = createNudgeWithAnswer(questionText = "Did you meditate?")
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("Did you meditate?"), "JSON backup should include question text")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesQuestionType() = runTest {
+        val (nudgeId, _, _) = createNudgeWithAnswer(questionType = QuestionType.YES_NO)
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("YES_NO"), "JSON backup should include question type")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesScaleBoundsForScaleQuestions() = runTest {
+        // SCALE questions carry a user-defined range; both bounds must appear in the backup
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Rate your energy?", QuestionType.SCALE, scaleMin = 1, scaleMax = 5),
+                schedule = dailySchedule(),
+                name = "Energy"
+            )
+        ) as CreateNudgeResult.Success
+        val json = exportAnswers.execute(result.nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("\"scaleMin\""), "JSON backup should include scaleMin field")
+        assertTrue(json.contains("\"scaleMax\""), "JSON backup should include scaleMax field")
+        assertTrue(json.contains("1"), "JSON backup should include scaleMin value")
+        assertTrue(json.contains("5"), "JSON backup should include scaleMax value")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesOptionTextsForOptionQuestions() = runTest {
+        // Option texts (not IDs) must be present so options can be recreated on import
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(
+                    "How did you sleep?", QuestionType.OPTION_SINGLE,
+                    options = listOf("Great", "Okay", "Poorly")
+                ),
+                schedule = dailySchedule(),
+                name = "Sleep"
+            )
+        ) as CreateNudgeResult.Success
+        val json = exportAnswers.execute(result.nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("Great"), "JSON backup should include option texts")
+        assertTrue(json.contains("Okay"), "JSON backup should include all options")
+        assertTrue(json.contains("Poorly"), "JSON backup should include all options")
+    }
+
+    @Test
+    fun TDD_jsonExport_includesFollowUpTriggerCondition() = runTest {
+        // Follow-up trigger operators and values must be present for conditional logic to reconstruct
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Did you exercise?", QuestionType.YES_NO),
+                followUpQuestions = listOf(
+                    QuestionRequest(
+                        text = "For how long?",
+                        type = QuestionType.SCALE,
+                        scaleMin = 0, scaleMax = 120,
+                        triggerAnswerValue = "YES",
+                        triggerOperator = TriggerOperator.EQ
+                    )
+                ),
+                schedule = dailySchedule(),
+                name = "Exercise"
+            )
+        ) as CreateNudgeResult.Success
+        val json = exportAnswers.execute(result.nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("triggerOperator"), "JSON backup should include trigger operator field")
+        assertTrue(json.contains("EQ"), "JSON backup should include trigger operator value")
+        assertTrue(json.contains("triggerAnswerValue"), "JSON backup should include trigger value field")
+        assertTrue(json.contains("YES"), "JSON backup should include trigger answer value")
+    }
+
+    @Test
+    fun TDD_jsonExport_answersReferencedByQuestionOrderIndex() = runTest {
+        // Answers must reference questions by orderIndex (stable across re-import), not by UUID
+        val (nudgeId, _, _) = createNudgeWithAnswer()
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("questionOrderIndex"), "JSON answers should reference question by orderIndex")
+    }
+
+    @Test
+    fun TDD_jsonExport_answersIncludeResolvedOptionText() = runTest {
+        // Option answers store UUIDs internally; the backup must store the human-readable text
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(
+                    "Mood?", QuestionType.OPTION_SINGLE, options = listOf("Happy", "Neutral", "Sad")
+                ),
+                schedule = dailySchedule(),
+                name = "Mood"
+            )
+        ) as CreateNudgeResult.Success
+        val nudgeId = result.nudgeId
+        val questionId = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }.id
+        val optionId = repos.questionOptionRepository.getByQuestionId(questionId).first { it.text == "Happy" }.id
+
+        repos.answerRepository.insert(
+            Answer(
+                id = "ans-opt", nudgeId = nudgeId, questionId = questionId,
+                value = optionId, scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(), isHidden = false
+            )
+        )
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("Happy"), "JSON export should resolve option UUID to option text in answers")
+        assertFalse(json.contains(optionId), "JSON export should not expose internal option UUIDs in answers")
+    }
+
+    @Test
+    fun TDD_jsonExport_answersIncludeTimestamps() = runTest {
+        val (nudgeId, _, _) = createNudgeWithAnswer()
+        val json = exportAnswers.execute(nudgeId, ExportFormat.JSON)
+
+        assertTrue(json.contains("scheduledAt"), "JSON export should include scheduledAt in answers")
+        assertTrue(json.contains("answeredAt"), "JSON export should include answeredAt in answers")
     }
 
     @Test

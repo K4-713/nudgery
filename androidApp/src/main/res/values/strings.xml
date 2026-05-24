@@ -110,8 +110,9 @@
     <string name="detail_delete_nudge">Delete nudge</string>
     <string name="detail_delete_confirm_title">Delete this nudge?</string>
     <string name="detail_delete_confirm_body">This will permanently delete this nudge, all of its questions, and every recorded answer. This cannot be undone.</string>
-    <string name="detail_export_csv">Export as CSV</string>
-    <string name="detail_export_tsv">Export as TSV</string>
+    <string name="detail_export_csv">Export data (CSV)</string>
+    <string name="detail_export_tsv">Export data (TSV)</string>
+    <string name="detail_export_backup">Back up nudge (JSON)</string>
     <string name="detail_followup_questions">Follow-up questions</string>
 
     <!-- Timeframe chips -->
@@ -150,6 +151,13 @@
     <string name="settings_exact_alarm_granted">Granted</string>
     <string name="settings_exact_alarm_not_granted">Not granted — notifications may be delayed</string>
     <string name="settings_exact_alarm_open_settings">Open Settings</string>
+
+    <!-- Settings: import nudge -->
+    <string name="settings_import">Import</string>
+    <string name="settings_import_button">Import Nudge from Backup</string>
+    <string name="settings_import_success">Nudge imported successfully.</string>
+    <string name="settings_import_failure">Could not import backup: %1$s</string>
+    <string name="settings_import_in_progress">Importing…</string>
 
     <!-- About screen -->
     <string name="about_title">About Nudgery</string>

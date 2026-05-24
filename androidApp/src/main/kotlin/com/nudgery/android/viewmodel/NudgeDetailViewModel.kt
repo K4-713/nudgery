@@ -58,6 +58,7 @@ data class NudgeDetailUiState(
     val visualizations: List<VisualizationData> = emptyList(),
     val selectedTimeframe: Timeframe = Timeframe.WEEKLY,
     val exportContent: String? = null,
+    val exportFormat: ExportFormat = ExportFormat.CSV,
     val isExporting: Boolean = false,
     val isDeleted: Boolean = false
 )
@@ -139,11 +140,11 @@ class NudgeDetailViewModel(
     }
 
     fun exportAnswers(format: ExportFormat) {
-        _uiState.update { it.copy(isExporting = true) }
+        _uiState.update { it.copy(isExporting = true, exportFormat = format) }
         viewModelScope.launch {
             val content = exportAnswers.execute(nudgeId, format)
             _uiState.update { it.copy(exportContent = content, isExporting = false) }
-            Log.i(TAG, "Exported ${content.lines().size} lines as $format")
+            Log.i(TAG, "Exported as $format")
         }
     }
 

@@ -112,8 +112,11 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.until
 import android.content.Intent
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import com.nudgery.shared.model.ExportFormat
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import java.io.File
@@ -145,11 +148,16 @@ fun NudgeDetailScreen(
     LaunchedEffect(uiState.exportContent) {
         val content = uiState.exportContent ?: return@LaunchedEffect
         val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
-        val file = File(exportDir, "nudgery-export.csv")
+        val (fileName, mimeType) = when (uiState.exportFormat) {
+            ExportFormat.CSV -> "nudgery-export.csv" to "text/csv"
+            ExportFormat.TSV -> "nudgery-export.tsv" to "text/tab-separated-values"
+            ExportFormat.JSON -> "nudgery-backup.json" to "application/json"
+        }
+        val file = File(exportDir, fileName)
         file.writeText(content)
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/csv"
+            type = mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -295,7 +303,7 @@ fun NudgeDetailScreen(
                         onSelectIndex = { selectedChartIndex = it },
                         selectedTimeframe = uiState.selectedTimeframe,
                         onTimeframeSelect = { viewModel.selectTimeframe(it) },
-                        onExport = { viewModel.exportAnswers(com.nudgery.shared.model.ExportFormat.CSV) },
+                        onExport = { format -> viewModel.exportAnswers(format) },
                         onExpandChart = { showFullScreenChart = true },
                         chartPalette = chartPalette
                     )
@@ -358,11 +366,12 @@ private fun ChartSection(
     onSelectIndex: (Int) -> Unit,
     selectedTimeframe: Timeframe,
     onTimeframeSelect: (Timeframe) -> Unit,
-    onExport: () -> Unit,
+    onExport: (ExportFormat) -> Unit,
     onExpandChart: () -> Unit,
     chartPalette: ChartPalettePreference
 ) {
     var showTypePicker by remember { mutableStateOf(false) }
+    var showExportMenu by remember { mutableStateOf(false) }
 
     val safeIndex = selectedIndex.coerceAtMost(visualizations.lastIndex)
 
@@ -379,8 +388,23 @@ private fun ChartSection(
                     ) {
                         Icon(Icons.Outlined.BarChart, contentDescription = stringResource(R.string.detail_edit_chart_type))
                     }
-                    IconButton(onClick = onExport) {
-                        Icon(Icons.Outlined.Download, contentDescription = stringResource(R.string.detail_export))
+                    Box {
+                        IconButton(onClick = { showExportMenu = true }) {
+                            Icon(Icons.Outlined.Download, contentDescription = stringResource(R.string.detail_export))
+                        }
+                        DropdownMenu(
+                            expanded = showExportMenu,
+                            onDismissRequest = { showExportMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.detail_export_csv)) },
+                                onClick = { showExportMenu = false; onExport(ExportFormat.CSV) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.detail_export_backup)) },
+                                onClick = { showExportMenu = false; onExport(ExportFormat.JSON) }
+                            )
+                        }
                     }
                     IconButton(onClick = onExpandChart) {
                         Icon(Icons.Outlined.ZoomIn, contentDescription = stringResource(R.string.detail_expand_chart))

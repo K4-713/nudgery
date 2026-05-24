@@ -1,5 +1,6 @@
 package com.nudgery.android.di
 
+import com.nudgery.android.backup.NudgeBackupParser
 import com.nudgery.android.settings.AppSettings
 import com.nudgery.android.viewmodel.AnswerFormViewModel
 import com.nudgery.android.viewmodel.CreateNudgeViewModel
@@ -16,6 +17,7 @@ import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
+import com.nudgery.shared.usecase.ImportNudgeUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
@@ -28,6 +30,7 @@ val appModule = module {
     single { DatabaseDriverFactory(androidContext()) }
     single<NotificationScheduler> { WorkManagerNotificationScheduler(androidContext()) }
     single { AppSettings(androidContext()) }
+    single { NudgeBackupParser() }
 
     viewModel {
         NudgeListViewModel(
@@ -84,6 +87,10 @@ val appModule = module {
     }
 
     viewModel {
-        SettingsViewModel(appSettings = get())
+        SettingsViewModel(
+            appSettings = get(),
+            importNudge = get<ImportNudgeUseCase>(),
+            backupParser = get<NudgeBackupParser>()
+        )
     }
 }
