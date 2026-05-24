@@ -13,14 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -72,14 +68,6 @@ fun AnswerFormScreen(
                     if (!uiState.isLoading && uiState.totalSteps > 1) {
                         Text(stringResource(R.string.answer_step_indicator, uiState.currentStepIndex + 1, uiState.totalSteps))
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.dismiss() }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Close,
-                            contentDescription = stringResource(R.string.nav_close)
-                        )
-                    }
                 }
             )
         }
@@ -108,6 +96,7 @@ fun AnswerFormScreen(
                         stepIndex = stepIndex,
                         onAnswerChange = { viewModel.setCurrentAnswer(it) },
                         onSave = { viewModel.saveAnswer() },
+                        onCancel = { viewModel.dismiss() },
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
@@ -125,6 +114,7 @@ private fun AnswerStep(
     stepIndex: Int,
     onAnswerChange: (String) -> Unit,
     onSave: () -> Unit,
+    onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val question = uiState.questions.getOrNull(stepIndex) ?: return
@@ -169,12 +159,23 @@ private fun AnswerStep(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Button(
-            onClick = onSave,
-            enabled = uiState.currentAnswer.isNotBlank() && !uiState.isSubmitting,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(R.string.answer_save))
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.action_cancel))
+            }
+            Button(
+                onClick = onSave,
+                enabled = uiState.currentAnswer.isNotBlank() && !uiState.isSubmitting,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.answer_save))
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

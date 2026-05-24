@@ -9,13 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,11 +57,6 @@ fun CreateNudgeScreen(
             TopAppBar(
                 title = {
                     Text(stringResource(R.string.wizard_step_of, currentStep + 1, WIZARD_TOTAL_STEPS))
-                },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.nav_close))
-                    }
                 }
             )
         }
@@ -110,6 +101,7 @@ fun CreateNudgeScreen(
                 currentStep = currentStep,
                 totalSteps = WIZARD_TOTAL_STEPS,
                 isSubmitting = formState.isSubmitting,
+                onCancel = onDismiss,
                 onBack = { currentStep-- },
                 onNext = { currentStep++ },
                 onSave = { viewModel.submit() }
@@ -123,6 +115,7 @@ internal fun WizardNavBar(
     currentStep: Int,
     totalSteps: Int,
     isSubmitting: Boolean,
+    onCancel: () -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
     onSave: () -> Unit
@@ -138,7 +131,9 @@ internal fun WizardNavBar(
                 Text(stringResource(R.string.wizard_back))
             }
         } else {
-            Spacer(modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = onCancel) {
+                Text(stringResource(R.string.action_cancel))
+            }
         }
 
         if (currentStep < totalSteps - 1) {

@@ -7,14 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -73,11 +69,6 @@ fun EditNudgeScreen(
             TopAppBar(
                 title = {
                     Text(stringResource(R.string.wizard_step_of, currentStep + 1, EDIT_WIZARD_STEPS))
-                },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.nav_close))
-                    }
                 }
             )
         }
@@ -137,6 +128,7 @@ fun EditNudgeScreen(
                 currentStep = currentStep,
                 totalSteps = EDIT_WIZARD_STEPS,
                 isSubmitting = formState.isSubmitting,
+                onCancel = onDismiss,
                 onBack = { currentStep-- },
                 onNext = { currentStep++ },
                 onSave = { viewModel.submit() }
