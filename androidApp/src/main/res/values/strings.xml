@@ -114,6 +114,7 @@
     <string name="detail_export_tsv">Export data (TSV)</string>
     <string name="detail_export_backup">Back up nudge (JSON)</string>
     <string name="detail_followup_questions">Follow-up questions</string>
+    <string name="detail_followup_question_label">Follow-up: %1$s</string>
 
     <!-- Timeframe chips -->
     <string name="timeframe_weekly">Weekly</string>
@@ -193,6 +194,12 @@
     <string name="heatmap_legend_day">1 square = 1 day</string>
     <string name="heatmap_legend_week">1 square = 1 week</string>
     <string name="heatmap_legend_month">1 square = 1 month</string>
+
+    <!-- Plurals -->
+    <plurals name="detail_session_followup_count">
+        <item quantity="one">1 follow-up answer</item>
+        <item quantity="other">%1$d follow-up answers</item>
+    </plurals>
 
     <!-- Days of week (abbreviated) -->
     <string name="day_sun">Sun</string>

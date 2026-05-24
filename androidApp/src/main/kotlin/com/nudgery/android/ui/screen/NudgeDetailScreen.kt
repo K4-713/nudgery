@@ -66,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -945,13 +946,36 @@ private fun TagCloudChart(entries: List<NamedCount>) {
     }
 }
 
+private data class AnswerSession(
+    val sessionKey: String,
+    val mainAnswer: AnswerRow?,
+    val followUps: List<AnswerRow>
+)
+
 @Composable
 private fun AnswerTableSection(
     answers: List<AnswerRow>,
     onSetHidden: (String, Boolean) -> Unit
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    var tableExpanded by rememberSaveable { mutableStateOf(false) }
+    // Tracks which session keys have their follow-up section expanded; reset on recomposition is fine
+    var expandedSessionKeys by remember { mutableStateOf(emptySet<String>()) }
     var confirmHideId by remember { mutableStateOf<String?>(null) }
+
+    val sessions = remember(answers) {
+        answers
+            .groupBy { it.scheduledAt }
+            .entries
+            .sortedByDescending { (scheduledAt, _) -> scheduledAt }
+            .map { (scheduledAt, sessionAnswers) ->
+                val sorted = sessionAnswers.sortedBy { it.questionOrderIndex }
+                AnswerSession(
+                    sessionKey = scheduledAt.toString(),
+                    mainAnswer = sorted.firstOrNull { it.questionOrderIndex == 0 },
+                    followUps = sorted.filter { it.questionOrderIndex > 0 }
+                )
+            }
+    }
 
     confirmHideId?.let { answerId ->
         AlertDialog(
@@ -980,7 +1004,7 @@ private fun AnswerTableSection(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expanded = !expanded }
+                    .clickable { tableExpanded = !tableExpanded }
                     .padding(16.dp)
             ) {
                 Text(
@@ -992,24 +1016,94 @@ private fun AnswerTableSection(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = if (expanded) "▲" else "▼",
+                    text = if (tableExpanded) "▲" else "▼",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            if (expanded) {
-                HorizontalDivider()
-                answers.forEach { answer ->
-                    AnswerTableRow(
-                        answer = answer,
-                        onHide = { confirmHideId = answer.answerId },
-                        onUnhide = { onSetHidden(answer.answerId, false) }
-                    )
+            AnimatedVisibility(visible = tableExpanded) {
+                Column {
                     HorizontalDivider()
+                    sessions.forEachIndexed { index, session ->
+                        session.mainAnswer?.let { main ->
+                            AnswerTableRow(
+                                answer = main,
+                                onHide = { confirmHideId = main.answerId },
+                                onUnhide = { onSetHidden(main.answerId, false) }
+                            )
+                        }
+
+                        if (session.followUps.isNotEmpty()) {
+                            val sessionExpanded = session.sessionKey in expandedSessionKeys
+                            FollowUpToggleRow(
+                                count = session.followUps.size,
+                                expanded = sessionExpanded,
+                                onClick = {
+                                    expandedSessionKeys = if (sessionExpanded)
+                                        expandedSessionKeys - session.sessionKey
+                                    else
+                                        expandedSessionKeys + session.sessionKey
+                                }
+                            )
+                            AnimatedVisibility(visible = sessionExpanded) {
+                                Column {
+                                    session.followUps.forEach { followUp ->
+                                        FollowUpAnswerRows(
+                                            answer = followUp,
+                                            onHide = { confirmHideId = followUp.answerId },
+                                            onUnhide = { onSetHidden(followUp.answerId, false) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (index < sessions.lastIndex) HorizontalDivider()
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FollowUpToggleRow(count: Int, expanded: Boolean, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 32.dp, end = 16.dp, top = 6.dp, bottom = 6.dp)
+    ) {
+        Text(
+            text = pluralStringResource(R.plurals.detail_session_followup_count, count, count),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = if (expanded) "▼" else "▶",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun FollowUpAnswerRows(
+    answer: AnswerRow,
+    onHide: () -> Unit,
+    onUnhide: () -> Unit
+) {
+    Column(modifier = Modifier.padding(start = 24.dp)) {
+        Text(
+            text = stringResource(R.string.detail_followup_question_label, answer.questionText),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 2.dp)
+        )
+        AnswerTableRow(answer = answer, onHide = onHide, onUnhide = onUnhide, showDate = false)
     }
 }
 
@@ -1057,10 +1151,11 @@ private fun buildMonthCells(
 private fun AnswerTableRow(
     answer: AnswerRow,
     onHide: () -> Unit,
-    onUnhide: () -> Unit
+    onUnhide: () -> Unit,
+    showDate: Boolean = true
 ) {
     val tz = TimeZone.currentSystemDefault()
-    val dateTime = answer.scheduledAt.toLocalDateTime(tz)
+    val dateTime = answer.answeredAt.toLocalDateTime(tz)
     val dateLabel = "${dateTime.date} ${dateTime.hour}:${dateTime.minute.toString().padStart(2, '0')}"
 
     Row(
@@ -1075,11 +1170,13 @@ private fun AnswerTableRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (answer.isHidden) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = dateLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (showDate) {
+                Text(
+                    text = dateLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         TextButton(
             onClick = if (answer.isHidden) onUnhide else onHide

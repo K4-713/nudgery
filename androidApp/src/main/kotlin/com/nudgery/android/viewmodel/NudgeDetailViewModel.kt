@@ -38,6 +38,7 @@ private const val TAG = "NudgeDetailViewModel"
 data class AnswerRow(
     val answerId: String,
     val questionText: String,
+    val questionOrderIndex: Int,
     val displayValue: String,
     val scheduledAt: Instant,
     val answeredAt: Instant,
@@ -110,6 +111,7 @@ class NudgeDetailViewModel(
                     AnswerRow(
                         answerId = answer.id,
                         questionText = question?.text ?: "",
+                        questionOrderIndex = question?.orderIndex ?: 0,
                         displayValue = formatDisplayValue(answer.value, question?.type, optionTexts),
                         scheduledAt = answer.scheduledAt,
                         answeredAt = answer.answeredAt,
