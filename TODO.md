@@ -8,7 +8,7 @@ The chart editor (opened via the chart type icon on the detail screen) should in
 
 ## Play Store Listing Materials
 Prepare before submitting:
-- Export a 512×512 PNG icon for the Play Store store listing
+- Export a 512×512 PNG icon for the Play Store store listing (see `art/play_store_icon.png`)
 - Short description (max 80 characters)
 - Full description (max 4000 characters)
 - At least 2 phone screenshots (additional tablet/foldable screenshots improve ranking)

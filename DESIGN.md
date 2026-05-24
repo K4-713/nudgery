@@ -158,7 +158,7 @@ Lavender (`#c8a8f0`) background with a warm golden yellow radial glow (`#ffcc55`
 
 The identifying mark is an organic black squiggle (the "good hand" N-form), centered in the safe zone. It reads as both a gesture and an initial.
 
-Source file: `Nudgery Final.svg` (project root, Inkscape).
+Source file: `art/Nudgery Final.svg` (Inkscape).
 
 ### Adaptive Icon Structure (API 26+)
 
@@ -179,7 +179,7 @@ Rasterized from `Nudgery Final.svg` via Inkscape. Stored in `mipmap-{mdpi,hdpi,x
 
 ### Play Store
 
-512×512 PNG (`play_store_icon.png`, project root). Same full composition as the launcher icon.
+512×512 PNG (`art/play_store_icon.png`). Same full composition as the launcher icon.
 
 ---
 
