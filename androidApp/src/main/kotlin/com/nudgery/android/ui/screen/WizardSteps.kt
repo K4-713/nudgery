@@ -96,12 +96,50 @@ fun QuestionStep(
             }
         )
 
+        if (question.type == QuestionType.SCALE) {
+            ScaleRangeEditor(
+                scaleMin = question.scaleMin,
+                scaleMax = question.scaleMax,
+                onScaleMinChange = { onQuestionChange(question.copy(scaleMin = it)) },
+                onScaleMaxChange = { onQuestionChange(question.copy(scaleMax = it)) }
+            )
+        }
+
         if (question.type.isOptionType) {
             OptionListEditor(
                 options = question.options,
                 onOptionsChange = { onQuestionChange(question.copy(options = it)) }
             )
         }
+    }
+}
+
+@Composable
+private fun ScaleRangeEditor(
+    scaleMin: Int,
+    scaleMax: Int,
+    onScaleMinChange: (Int) -> Unit,
+    onScaleMaxChange: (Int) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        OutlinedTextField(
+            value = scaleMin.toString(),
+            onValueChange = { raw ->
+                raw.toIntOrNull()?.let { onScaleMinChange(it) }
+            },
+            label = { Text(stringResource(R.string.field_scale_min)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = scaleMax.toString(),
+            onValueChange = { raw ->
+                raw.toIntOrNull()?.let { onScaleMaxChange(it) }
+            },
+            label = { Text(stringResource(R.string.field_scale_max)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -122,6 +160,7 @@ private fun AnswerTypeSelector(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             buildList {
                 add(QuestionType.YES_NO to R.string.answer_type_yes_no)
+                add(QuestionType.SCALE to R.string.answer_type_scale)
                 add(QuestionType.NUMBER to R.string.answer_type_number)
                 add(QuestionType.OPTION_SINGLE to R.string.answer_type_option_single)
                 add(QuestionType.OPTION_MULTI to R.string.answer_type_option_multi)
@@ -234,7 +273,7 @@ private fun FollowUpEditor(
             )
             when (mainQuestion.type) {
                 QuestionType.YES_NO -> YesNoTrigger(followUp, onUpdate)
-                QuestionType.NUMBER -> NumberTrigger(followUp, onUpdate)
+                QuestionType.SCALE, QuestionType.NUMBER -> NumberTrigger(followUp, onUpdate)
                 QuestionType.OPTION_SINGLE -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = false)
                 QuestionType.OPTION_MULTI -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = true)
                 else -> {}
@@ -258,6 +297,15 @@ private fun FollowUpEditor(
             },
             includeText = true
         )
+
+        if (followUp.type == QuestionType.SCALE) {
+            ScaleRangeEditor(
+                scaleMin = followUp.scaleMin,
+                scaleMax = followUp.scaleMax,
+                onScaleMinChange = { onUpdate(followUp.copy(scaleMin = it)) },
+                onScaleMaxChange = { onUpdate(followUp.copy(scaleMax = it)) }
+            )
+        }
 
         if (followUp.type.isOptionType) {
             OptionListEditor(

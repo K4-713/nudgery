@@ -232,6 +232,106 @@ class QuestionSetupTest {
     }
 
     @Test
+    fun TDD_scaleQuestion_storesAndRetrievesMinAndMax() = runTest {
+        // SCALE questions have a user-defined integer range; both bounds must round-trip through the DB
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Rate your focus today?", QuestionType.SCALE, scaleMin = 1, scaleMax = 7),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val questions = repos.questionRepository.getByNudgeId(result.nudgeId)
+        val main = questions.first { it.isMainQuestion }
+        assertEquals(QuestionType.SCALE, main.type)
+        assertEquals(1, main.scaleMin)
+        assertEquals(7, main.scaleMax)
+    }
+
+    @Test
+    fun TDD_scaleQuestion_invalidRangeIsRejected() = runTest {
+        // scaleMin must be strictly less than scaleMax; equal values have no valid positions
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Rate your focus?", QuestionType.SCALE, scaleMin = 5, scaleMax = 5),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.InvalidScaleRange>(result)
+    }
+
+    @Test
+    fun TDD_scaleQuestion_minGreaterThanMaxIsRejected() = runTest {
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Rate your focus?", QuestionType.SCALE, scaleMin = 10, scaleMax = 1),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.InvalidScaleRange>(result)
+    }
+
+    @Test
+    fun TDD_scaleQuestion_defaultsAreZeroToTen() = runTest {
+        // Existing SCALE questions migrated from the old NUMBER type default to 0–10
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Rate your day?", QuestionType.SCALE),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val main = repos.questionRepository.getByNudgeId(result.nudgeId).first { it.isMainQuestion }
+        assertEquals(0, main.scaleMin)
+        assertEquals(10, main.scaleMax)
+    }
+
+    @Test
+    fun TDD_scaleQuestion_isValidForMainQuestion() = runTest {
+        // SCALE is not TEXT, so it should be valid as a main question
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How tired are you?", QuestionType.SCALE, scaleMin = 0, scaleMax = 5),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+    }
+
+    @Test
+    fun TDD_numberQuestion_isValidAsFollowUp() = runTest {
+        // NUMBER (free-form decimal) is a valid follow-up type
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Did you exercise?", QuestionType.YES_NO),
+                followUpQuestions = listOf(
+                    QuestionRequest(
+                        text = "How many km did you run?",
+                        type = QuestionType.NUMBER,
+                        triggerAnswerValue = "YES",
+                        triggerOperator = TriggerOperator.EQ
+                    )
+                ),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val followUp = repos.questionRepository.getByNudgeId(result.nudgeId).first { !it.isMainQuestion }
+        assertEquals(QuestionType.NUMBER, followUp.type)
+    }
+
+    @Test
+    fun TDD_numberQuestion_hasNoScaleBounds() = runTest {
+        // NUMBER (free-form decimal) does not carry scaleMin/scaleMax — those are SCALE-only
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How many km did you run?", QuestionType.NUMBER),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val main = repos.questionRepository.getByNudgeId(result.nudgeId).first { it.isMainQuestion }
+        assertEquals(null, main.scaleMin)
+        assertEquals(null, main.scaleMax)
+    }
+
+    @Test
     fun TDD_followUpQuestionsHaveOrderIndexGreaterThanZero() = runTest {
         // ARCHITECTURE.md Question.orderIndex: "subsequent questions are follow-ups"
         val result = createNudge.execute(

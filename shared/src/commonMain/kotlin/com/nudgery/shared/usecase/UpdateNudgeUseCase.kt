@@ -4,6 +4,7 @@ import com.nudgery.shared.model.NudgeEdit
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
+import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.repository.NudgeEditRepository
 import com.nudgery.shared.repository.NudgeRepository
@@ -157,7 +158,9 @@ class UpdateNudgeUseCase(
                         type = req.type,
                         orderIndex = orderIndex,
                         triggerAnswerValue = resolvedTriggerValue,
-                        triggerOperator = req.triggerOperator
+                        triggerOperator = req.triggerOperator,
+                        scaleMin = if (req.type == QuestionType.SCALE) req.scaleMin else null,
+                        scaleMax = if (req.type == QuestionType.SCALE) req.scaleMax else null
                     )
                 )
                 val existingOptionTexts = questionOptionRepository.getByQuestionId(existing.id)
@@ -182,7 +185,9 @@ class UpdateNudgeUseCase(
                         type = req.type,
                         orderIndex = orderIndex,
                         triggerAnswerValue = resolvedTriggerValue,
-                        triggerOperator = req.triggerOperator
+                        triggerOperator = req.triggerOperator,
+                        scaleMin = if (req.type == QuestionType.SCALE) req.scaleMin else null,
+                        scaleMax = if (req.type == QuestionType.SCALE) req.scaleMax else null
                     )
                 )
                 if (req.type.isOptionType) {

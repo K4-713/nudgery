@@ -6,12 +6,17 @@ import com.nudgery.shared.model.TriggerOperator
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalTime
 
+private const val DEFAULT_SCALE_MIN = 0
+private const val DEFAULT_SCALE_MAX = 10
+
 data class QuestionRequest(
     val text: String,
     val type: QuestionType,
     val options: List<String> = emptyList(),
     val triggerAnswerValue: String? = null,
-    val triggerOperator: TriggerOperator? = null
+    val triggerOperator: TriggerOperator? = null,
+    val scaleMin: Int = DEFAULT_SCALE_MIN,
+    val scaleMax: Int = DEFAULT_SCALE_MAX
 )
 
 data class ScheduleRequest(
@@ -35,6 +40,7 @@ sealed class CreateNudgeResult {
     sealed class Failure : CreateNudgeResult() {
         data object MainQuestionCannotBeText : Failure()
         data class TooManyOptions(val questionText: String) : Failure()
+        data object InvalidScaleRange : Failure()
     }
 }
 

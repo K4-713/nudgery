@@ -21,7 +21,9 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
             type = question.type.name,
             orderIndex = question.orderIndex.toLong(),
             triggerAnswerValue = question.triggerAnswerValue,
-            triggerOperator = question.triggerOperator?.name
+            triggerOperator = question.triggerOperator?.name,
+            scale_min = question.scaleMin?.toLong(),
+            scale_max = question.scaleMax?.toLong()
         )
     }
 
@@ -36,7 +38,9 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
             type = question.type.name,
             orderIndex = question.orderIndex.toLong(),
             triggerAnswerValue = question.triggerAnswerValue,
-            triggerOperator = question.triggerOperator?.name
+            triggerOperator = question.triggerOperator?.name,
+            scale_min = question.scaleMin?.toLong(),
+            scale_max = question.scaleMax?.toLong()
         )
     }
 
@@ -55,6 +59,8 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
         type = QuestionType.valueOf(type),
         orderIndex = orderIndex.toInt(),
         triggerAnswerValue = triggerAnswerValue,
-        triggerOperator = triggerOperator?.let { TriggerOperator.valueOf(it) }
+        triggerOperator = triggerOperator?.let { TriggerOperator.valueOf(it) },
+        scaleMin = scale_min?.toInt(),
+        scaleMax = scale_max?.toInt()
     )
 }

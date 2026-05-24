@@ -52,7 +52,7 @@ class GetVisualizationDataUseCase(
 
         return when (question.type) {
             QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, effectiveWindowStart, today, granularity)
-            QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today, granularity)
+            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today, granularity)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
             QuestionType.TEXT -> emptyList()

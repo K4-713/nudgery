@@ -42,6 +42,8 @@ data class EditNudgeFormState(
     val mainQuestionText: String = "",
     val originalMainQuestionText: String = "",
     val mainQuestionType: QuestionType = QuestionType.YES_NO,
+    val mainQuestionScaleMin: Int = 0,
+    val mainQuestionScaleMax: Int = 10,
     val options: List<OptionEditState> = emptyList(),
     val followUps: List<EditableFollowUp> = emptyList(),
     val schedule: ScheduleFormState = ScheduleFormState(),
@@ -200,7 +202,9 @@ class EditNudgeViewModel(
                     type = q.type,
                     options = followUpOptions,
                     triggerAnswerValue = uiTriggerValue,
-                    triggerOperator = q.triggerOperator
+                    triggerOperator = q.triggerOperator,
+                    scaleMin = q.scaleMin ?: 0,
+                    scaleMax = q.scaleMax ?: 10
                 )
             )
         }
@@ -217,6 +221,8 @@ class EditNudgeViewModel(
                 mainQuestionText = mainQuestion?.text ?: "",
                 originalMainQuestionText = mainQuestion?.text ?: "",
                 mainQuestionType = mainQuestion?.type ?: QuestionType.YES_NO,
+                mainQuestionScaleMin = mainQuestion?.scaleMin ?: 0,
+                mainQuestionScaleMax = mainQuestion?.scaleMax ?: 10,
                 options = editableOptions,
                 followUps = followUps,
                 schedule = scheduleForm

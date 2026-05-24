@@ -97,7 +97,9 @@ fun EditNudgeScreen(
                         mainQuestion = QuestionFormState(
                             text = formState.mainQuestionText,
                             type = formState.mainQuestionType,
-                            options = formState.options.map { it.text }
+                            options = formState.options.map { it.text },
+                            scaleMin = formState.mainQuestionScaleMin,
+                            scaleMax = formState.mainQuestionScaleMax
                         ),
                         followUps = formState.followUps.map { it.formState },
                         onAdd = { viewModel.addFollowUp() },

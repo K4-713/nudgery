@@ -31,6 +31,9 @@ class CreateNudgeUseCase(
             if (question.type.isOptionType && question.options.size > MAX_OPTIONS_PER_QUESTION) {
                 return CreateNudgeResult.Failure.TooManyOptions(question.text)
             }
+            if (question.type == QuestionType.SCALE && question.scaleMin >= question.scaleMax) {
+                return CreateNudgeResult.Failure.InvalidScaleRange
+            }
         }
 
         val now = Clock.System.now()
@@ -92,7 +95,9 @@ class CreateNudgeUseCase(
                 type = questionRequest.type,
                 orderIndex = orderIndex,
                 triggerAnswerValue = triggerValue,
-                triggerOperator = if (orderIndex == 0) null else questionRequest.triggerOperator
+                triggerOperator = if (orderIndex == 0) null else questionRequest.triggerOperator,
+                scaleMin = if (questionRequest.type == QuestionType.SCALE) questionRequest.scaleMin else null,
+                scaleMax = if (questionRequest.type == QuestionType.SCALE) questionRequest.scaleMax else null
             )
         )
         val optionIds = mutableListOf<String>()

@@ -42,9 +42,6 @@ import kotlinx.datetime.Instant
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-private const val NUMBER_SLIDER_MIN = 0f
-private const val NUMBER_SLIDER_MAX = 10f
-private const val NUMBER_SLIDER_STEPS = 9
 private const val UNSELECTED_ALPHA = 0.4f
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,6 +132,12 @@ private fun AnswerStep(
         when (question.question.type) {
             QuestionType.YES_NO -> YesNoInput(
                 currentAnswer = uiState.currentAnswer,
+                onAnswerChange = onAnswerChange
+            )
+            QuestionType.SCALE -> ScaleInput(
+                currentAnswer = uiState.currentAnswer,
+                scaleMin = question.question.scaleMin ?: 0,
+                scaleMax = question.question.scaleMax ?: 10,
                 onAnswerChange = onAnswerChange
             )
             QuestionType.NUMBER -> NumberInput(
@@ -229,8 +232,15 @@ private fun YesNoInput(currentAnswer: String, onAnswerChange: (String) -> Unit) 
 }
 
 @Composable
-private fun NumberInput(currentAnswer: String, onAnswerChange: (String) -> Unit) {
-    val value = currentAnswer.toFloatOrNull() ?: NUMBER_SLIDER_MIN
+private fun ScaleInput(
+    currentAnswer: String,
+    scaleMin: Int,
+    scaleMax: Int,
+    onAnswerChange: (String) -> Unit
+) {
+    val steps = (scaleMax - scaleMin - 1).coerceAtLeast(0)
+    val value = currentAnswer.toFloatOrNull()?.coerceIn(scaleMin.toFloat(), scaleMax.toFloat())
+        ?: scaleMin.toFloat()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -241,18 +251,35 @@ private fun NumberInput(currentAnswer: String, onAnswerChange: (String) -> Unit)
         Slider(
             value = value,
             onValueChange = { onAnswerChange(it.toInt().toString()) },
-            valueRange = NUMBER_SLIDER_MIN..NUMBER_SLIDER_MAX,
-            steps = NUMBER_SLIDER_STEPS,
+            valueRange = scaleMin.toFloat()..scaleMax.toFloat(),
+            steps = steps,
             modifier = Modifier.fillMaxWidth()
         )
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(NUMBER_SLIDER_MIN.toInt().toString(), style = MaterialTheme.typography.bodySmall)
-            Text(NUMBER_SLIDER_MAX.toInt().toString(), style = MaterialTheme.typography.bodySmall)
+            Text(scaleMin.toString(), style = MaterialTheme.typography.bodySmall)
+            Text(scaleMax.toString(), style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+@Composable
+private fun NumberInput(currentAnswer: String, onAnswerChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = currentAnswer,
+        onValueChange = { raw ->
+            val filtered = raw.filter { it.isDigit() || it == '.' || it == '-' }
+            onAnswerChange(filtered)
+        },
+        label = { Text(stringResource(R.string.answer_type_number)) },
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+        ),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable

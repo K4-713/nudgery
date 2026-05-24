@@ -7,7 +7,9 @@ data class Question(
     val type: QuestionType,
     val orderIndex: Int,
     val triggerAnswerValue: String?,
-    val triggerOperator: TriggerOperator?
+    val triggerOperator: TriggerOperator?,
+    val scaleMin: Int? = null,
+    val scaleMax: Int? = null
 ) {
     val isMainQuestion: Boolean get() = orderIndex == 0
 }

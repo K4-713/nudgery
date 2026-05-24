@@ -2,6 +2,7 @@ package com.nudgery.shared.model
 
 enum class QuestionType {
     YES_NO,
+    SCALE,
     NUMBER,
     OPTION_SINGLE,
     OPTION_MULTI,

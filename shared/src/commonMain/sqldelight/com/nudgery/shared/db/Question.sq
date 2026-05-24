@@ -6,6 +6,8 @@ CREATE TABLE Question (
     orderIndex INTEGER NOT NULL,
     triggerAnswerValue TEXT,
     triggerOperator TEXT,
+    scale_min INTEGER,
+    scale_max INTEGER,
     FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE
 );
 
@@ -13,15 +15,15 @@ selectByNudgeId:
 SELECT * FROM Question WHERE nudgeId = :nudgeId ORDER BY orderIndex ASC;
 
 insert:
-INSERT INTO Question (id, nudgeId, text, type, orderIndex, triggerAnswerValue, triggerOperator)
-VALUES (:id, :nudgeId, :text, :type, :orderIndex, :triggerAnswerValue, :triggerOperator);
+INSERT INTO Question (id, nudgeId, text, type, orderIndex, triggerAnswerValue, triggerOperator, scale_min, scale_max)
+VALUES (:id, :nudgeId, :text, :type, :orderIndex, :triggerAnswerValue, :triggerOperator, :scale_min, :scale_max);
 
 updateText:
 UPDATE Question SET text = :text WHERE id = :id;
 
 update:
 UPDATE Question
-SET text = :text, type = :type, orderIndex = :orderIndex, triggerAnswerValue = :triggerAnswerValue, triggerOperator = :triggerOperator
+SET text = :text, type = :type, orderIndex = :orderIndex, triggerAnswerValue = :triggerAnswerValue, triggerOperator = :triggerOperator, scale_min = :scale_min, scale_max = :scale_max
 WHERE id = :id;
 
 deleteById:

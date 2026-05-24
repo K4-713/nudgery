@@ -9,13 +9,17 @@ data class QuestionFormState(
     val type: QuestionType = QuestionType.YES_NO,
     val options: List<String> = emptyList(),
     val triggerAnswerValue: String? = null,
-    val triggerOperator: TriggerOperator? = null
+    val triggerOperator: TriggerOperator? = null,
+    val scaleMin: Int = 0,
+    val scaleMax: Int = 10
 ) {
     fun toRequest() = QuestionRequest(
         text = text,
         type = type,
         options = options,
         triggerAnswerValue = triggerAnswerValue,
-        triggerOperator = triggerOperator
+        triggerOperator = triggerOperator,
+        scaleMin = scaleMin,
+        scaleMax = scaleMax
     )
 }

@@ -40,10 +40,14 @@
     </string-array>
     <string name="field_answer_type">Answer type</string>
     <string name="answer_type_yes_no">Yes / No</string>
+    <string name="answer_type_scale">Scale</string>
     <string name="answer_type_number">Number</string>
     <string name="answer_type_option_single">Choose one</string>
     <string name="answer_type_option_multi">Choose multiple</string>
     <string name="answer_type_text">Free text</string>
+    <string name="field_scale_min">Minimum</string>
+    <string name="field_scale_max">Maximum</string>
+    <string name="error_scale_range_invalid">Minimum must be less than maximum</string>
     <string name="field_options">Options</string>
     <string name="option_add">Add option</string>
     <string name="option_remove">Remove option</string>
