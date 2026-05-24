@@ -13,6 +13,8 @@ import com.nudgery.shared.repository.QuestionRepository
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
@@ -33,30 +35,52 @@ class GetVisualizationDataUseCase(
         val question = questionRepository.getByNudgeId(nudgeId).firstOrNull { it.id == questionId }
             ?: return emptyList()
 
-        val since = computeSince(timeframe, now, timeZone)
+        val today = now.toLocalDateTime(timeZone).date
+        val (windowStart, since) = computeWindow(timeframe, today, timeZone)
         val answers = answerRepository.getVisibleByNudgeIdSince(nudgeId, since)
             .filter { it.questionId == questionId }
 
+        val effectiveWindowStart = if (timeframe == Timeframe.ALL_TIME) {
+            answers.minOfOrNull { it.scheduledAt.toLocalDateTime(timeZone).date } ?: today
+        } else {
+            windowStart
+        }
+
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone)
-            QuestionType.NUMBER -> buildNumberCharts(answers, timeZone)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, effectiveWindowStart, today)
+            QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
             QuestionType.TEXT -> emptyList()
         }
     }
 
-    private fun computeSince(timeframe: Timeframe, now: Instant, timeZone: TimeZone): Instant {
-        val today = now.toLocalDateTime(timeZone).date
-        return when (timeframe) {
-            Timeframe.WEEKLY -> today.minus(7, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
-            Timeframe.MONTHLY -> today.minus(30, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
-            Timeframe.YEARLY -> today.minus(365, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
-            Timeframe.ALL_TIME -> Instant.DISTANT_PAST
+    private fun computeWindow(
+        timeframe: Timeframe,
+        today: LocalDate,
+        timeZone: TimeZone
+    ): Pair<LocalDate, Instant> = when (timeframe) {
+        Timeframe.WEEKLY -> {
+            val start = today.minus(7, DateTimeUnit.DAY)
+            start to start.atStartOfDayIn(timeZone)
         }
+        Timeframe.MONTHLY -> {
+            val start = LocalDate(today.year, today.month, 1)
+            start to start.atStartOfDayIn(timeZone)
+        }
+        Timeframe.YEARLY -> {
+            val start = LocalDate(today.year, Month.JANUARY, 1)
+            start to start.atStartOfDayIn(timeZone)
+        }
+        Timeframe.ALL_TIME -> today to Instant.DISTANT_PAST
     }
 
-    private fun buildYesNoCharts(answers: List<Answer>, timeZone: TimeZone): List<VisualizationData> {
+    private fun buildYesNoCharts(
+        answers: List<Answer>,
+        timeZone: TimeZone,
+        windowStart: LocalDate,
+        windowEnd: LocalDate
+    ): List<VisualizationData> {
         val dailyCounts = answers
             .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
             .map { (date, dayAnswers) ->
@@ -70,13 +94,18 @@ class GetVisualizationDataUseCase(
         val totalNo = answers.count { it.value.uppercase() == "NO" }
 
         return listOf(
-            VisualizationData.CalendarHeatMap(dailyCounts),
-            VisualizationData.LineGraph(dailyYesPoints),
+            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd),
+            VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd),
             VisualizationData.ColumnChart(listOf(NamedCount("YES", totalYes), NamedCount("NO", totalNo)))
         )
     }
 
-    private fun buildNumberCharts(answers: List<Answer>, timeZone: TimeZone): List<VisualizationData> {
+    private fun buildNumberCharts(
+        answers: List<Answer>,
+        timeZone: TimeZone,
+        windowStart: LocalDate,
+        windowEnd: LocalDate
+    ): List<VisualizationData> {
         val points = answers
             .mapNotNull { answer ->
                 answer.value.toDoubleOrNull()?.let { DataPoint(answer.scheduledAt, it) }
@@ -92,8 +121,8 @@ class GetVisualizationDataUseCase(
             .sortedBy { it.date }
 
         return listOf(
-            VisualizationData.LineGraph(points),
-            VisualizationData.CalendarHeatMap(dailyCounts)
+            VisualizationData.LineGraph(points, windowStart, windowEnd),
+            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd)
         )
     }
 

@@ -83,6 +83,7 @@ import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
@@ -99,6 +100,7 @@ import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.until
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
@@ -551,8 +553,16 @@ private fun NudgeryChart(
     ) {
         key(visualization) {
             when (visualization) {
-                is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(visualization.dailyCounts)
-                is VisualizationData.LineGraph -> LineGraphChart(visualization.points)
+                is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(
+                    counts = visualization.dailyCounts,
+                    windowStart = visualization.windowStart,
+                    windowEnd = visualization.windowEnd
+                )
+                is VisualizationData.LineGraph -> LineGraphChart(
+                    points = visualization.points,
+                    windowStart = visualization.windowStart,
+                    windowEnd = visualization.windowEnd
+                )
                 is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
                 is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
                 is VisualizationData.TagCloud -> TagCloudChart(visualization.entries)
@@ -562,23 +572,17 @@ private fun NudgeryChart(
 }
 
 @Composable
-private fun CalendarHeatMapChart(counts: List<DailyCount>) {
-    if (counts.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
-        }
-        return
-    }
-
-    val maxValue = remember(counts) { counts.maxOf { it.value }.coerceAtLeast(1.0) }
+private fun CalendarHeatMapChart(
+    counts: List<DailyCount>,
+    windowStart: LocalDate,
+    windowEnd: LocalDate
+) {
+    val maxValue = remember(counts) { counts.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0 }
     val countByDate = remember(counts) { counts.associate { it.date to it.value } }
-    // List of Monday dates, one per week column in the grid
-    val gridWeeks = remember(counts) {
-        val firstDate = counts.minOf { it.date }
-        val lastDate = counts.maxOf { it.date }
-        // Snap to the Monday of the first and last week
-        val gridStart = firstDate.minus(firstDate.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
-        val gridEnd = lastDate.plus(7 - lastDate.dayOfWeek.isoDayNumber, DateTimeUnit.DAY)
+    // List of Monday dates, one per week column in the grid, spanning the full window
+    val gridWeeks = remember(windowStart, windowEnd) {
+        val gridStart = windowStart.minus(windowStart.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
+        val gridEnd = windowEnd.plus(7 - windowEnd.dayOfWeek.isoDayNumber, DateTimeUnit.DAY)
         val weeks = mutableListOf<LocalDate>()
         var week = gridStart
         while (week <= gridEnd) {
@@ -621,21 +625,38 @@ private fun CalendarHeatMapChart(counts: List<DailyCount>) {
 }
 
 @Composable
-private fun LineGraphChart(points: List<DataPoint>) {
+private fun LineGraphChart(
+    points: List<DataPoint>,
+    windowStart: LocalDate,
+    windowEnd: LocalDate
+) {
     if (points.isEmpty()) {
         Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
         return
     }
-    val modelProducer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(points) {
-        modelProducer.runTransaction {
-            lineSeries { series(points.map { it.value }) }
+    val tz = TimeZone.currentSystemDefault()
+    val windowDays = remember(windowStart, windowEnd) {
+        (windowStart.until(windowEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
+    }
+    val xOffsets = remember(points, windowStart) {
+        points.map { pt ->
+            windowStart.until(pt.at.toLocalDateTime(tz).date, DateTimeUnit.DAY).toDouble()
         }
     }
-    val tz = TimeZone.currentSystemDefault()
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(points, windowStart) {
+        modelProducer.runTransaction {
+            lineSeries { series(xOffsets, points.map { it.value }) }
+        }
+    }
     CartesianChartHost(
         chart = rememberCartesianChart(
-            rememberLineCartesianLayer(),
+            rememberLineCartesianLayer(
+                rangeProvider = CartesianLayerRangeProvider.fixed(
+                    minX = 0.0,
+                    maxX = (windowDays - 1).toDouble()
+                )
+            ),
             startAxis = VerticalAxis.rememberStart(),
             bottomAxis = HorizontalAxis.rememberBottom(
                 valueFormatter = object : CartesianValueFormatter {
@@ -644,9 +665,11 @@ private fun LineGraphChart(points: List<DataPoint>) {
                         value: Double,
                         verticalAxisPosition: Axis.Position.Vertical?
                     ): CharSequence {
-                        val idx = value.toInt().coerceIn(0, points.lastIndex)
-                        val dt = points[idx].at.toLocalDateTime(tz)
-                        return "${dt.monthNumber}/${dt.dayOfMonth}"
+                        val date = windowStart.plus(
+                            value.toInt().coerceIn(0, windowDays - 1),
+                            DateTimeUnit.DAY
+                        )
+                        return "${date.monthNumber}/${date.dayOfMonth}"
                     }
                 }
             ),
