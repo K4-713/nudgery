@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.shared.model.ExportFormat
+import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.Schedule
@@ -85,7 +86,16 @@ class NudgeDetailViewModel(
     private val _optionTextMap = MutableStateFlow<Map<String, String>>(emptyMap())
 
     init {
-        viewModelScope.launch { loadStaticData() }
+        viewModelScope.launch {
+            nudgeRepository.observeById(nudgeId).collect { nudge ->
+                if (nudge == null) {
+                    Log.w(TAG, "Nudge $nudgeId not found")
+                    _uiState.update { it.copy(isLoading = false) }
+                } else {
+                    loadNudgeData(nudge)
+                }
+            }
+        }
 
         viewModelScope.launch {
             combine(
@@ -111,6 +121,7 @@ class NudgeDetailViewModel(
                 Pair(rows, hasMissed)
             }.collect { (rows, hasMissed) ->
                 _uiState.update { it.copy(answers = rows, hasMissedNotification = hasMissed) }
+                loadVisualizations()
             }
         }
     }
@@ -156,14 +167,7 @@ class NudgeDetailViewModel(
         _uiState.update { it.copy(exportContent = null) }
     }
 
-    private suspend fun loadStaticData() {
-        val nudge = nudgeRepository.getById(nudgeId)
-        if (nudge == null) {
-            Log.w(TAG, "Nudge $nudgeId not found")
-            _uiState.update { it.copy(isLoading = false) }
-            return
-        }
-
+    private suspend fun loadNudgeData(nudge: Nudge) {
         val questions = questionRepository.getByNudgeId(nudgeId)
         val mainQuestion = questions.firstOrNull { it.isMainQuestion }
 

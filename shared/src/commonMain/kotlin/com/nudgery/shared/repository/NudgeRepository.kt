@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface NudgeRepository {
     fun observeAll(): Flow<List<Nudge>>
+    fun observeById(id: String): Flow<Nudge?>
     suspend fun getById(id: String): Nudge?
     suspend fun insert(nudge: Nudge)
     suspend fun update(nudge: Nudge)

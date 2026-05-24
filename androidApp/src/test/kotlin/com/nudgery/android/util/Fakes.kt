@@ -34,6 +34,7 @@ class FakeNudgeRepository : NudgeRepository {
     private val _nudges = MutableStateFlow<List<Nudge>>(emptyList())
 
     override fun observeAll(): Flow<List<Nudge>> = _nudges
+    override fun observeById(id: String): Flow<Nudge?> = _nudges.map { list -> list.find { it.id == id } }
     override suspend fun getById(id: String): Nudge? = _nudges.value.find { it.id == id }
     override suspend fun insert(nudge: Nudge) { _nudges.update { it + nudge } }
     override suspend fun update(nudge: Nudge) {

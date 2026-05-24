@@ -2,6 +2,7 @@ package com.nudgery.shared.db
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.repository.NudgeRepository
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,12 @@ class SqlDelightNudgeRepository(private val database: NudgeryDatabase) : NudgeRe
             .asFlow()
             .mapToList(Dispatchers.Default)
             .map { rows -> rows.map { it.toDomain() } }
+
+    override fun observeById(id: String): Flow<Nudge?> =
+        database.nudgeQueries.selectById(id)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.Default)
+            .map { it?.toDomain() }
 
     override suspend fun getById(id: String): Nudge? = withContext(Dispatchers.Default) {
         database.nudgeQueries.selectById(id).executeAsOneOrNull()?.toDomain()

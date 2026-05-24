@@ -55,6 +55,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -548,12 +549,14 @@ private fun NudgeryChart(
             .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        when (visualization) {
-            is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(visualization.dailyCounts)
-            is VisualizationData.LineGraph -> LineGraphChart(visualization.points)
-            is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
-            is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
-            is VisualizationData.TagCloud -> TagCloudChart(visualization.entries)
+        key(visualization) {
+            when (visualization) {
+                is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(visualization.dailyCounts)
+                is VisualizationData.LineGraph -> LineGraphChart(visualization.points)
+                is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
+                is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
+                is VisualizationData.TagCloud -> TagCloudChart(visualization.entries)
+            }
         }
     }
 }

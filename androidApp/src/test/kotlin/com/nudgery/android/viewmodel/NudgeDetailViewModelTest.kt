@@ -14,6 +14,7 @@ import com.nudgery.shared.usecase.CreateNudgeResult
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.QuestionRequest
 import com.nudgery.shared.usecase.ScheduleRequest
+import com.nudgery.shared.model.VisualizationData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.days
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalTime
 import org.junit.After
@@ -169,6 +171,39 @@ class NudgeDetailViewModelTest {
     }
 
     @Test
+    fun TDD_selectTimeframe_updatesVisualizationData() = runTest {
+        // Selecting a different timeframe must reload chart data for that window
+        val nudgeId = createNudge("Did you see any cool birds today?")
+        val questions = repos.questionRepo.getByNudgeId(nudgeId)
+        val questionId = questions.first().id
+        val now = Clock.System.now()
+
+        // One answer from today (inside weekly range)
+        repos.answerRepo.insert(makeAnswer(nudgeId, questionId, "YES", id = "recent"))
+        // One answer from 60 days ago (outside weekly range, inside all-time)
+        repos.answerRepo.insert(makeAnswer(nudgeId, questionId, "YES", id = "old",
+            scheduledAt = now - 60.days))
+
+
+        val viewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        val weeklyHeatMap = viewModel.uiState.value.visualizations
+            .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+        assertEquals("WEEKLY should only include the recent answer",
+            1.0, weeklyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+
+        viewModel.selectTimeframe(Timeframe.ALL_TIME)
+        advanceUntilIdle()
+
+        val allTimeHeatMap = viewModel.uiState.value.visualizations
+            .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+        assertEquals("ALL_TIME should include both answers",
+            2.0, allTimeHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+    }
+
+    @Test
     fun TDD_deleteNudge_setsIsDeleted() = runTest {
         // Deleting a nudge must signal the UI to navigate away
         val nudgeId = createNudge("Did you see any cool birds today?")
@@ -235,9 +270,10 @@ class NudgeDetailViewModelTest {
         nudgeId: String,
         questionId: String,
         value: String,
-        id: String = "ans-${System.nanoTime()}"
+        id: String = "ans-${System.nanoTime()}",
+        scheduledAt: kotlinx.datetime.Instant = Clock.System.now()
     ) = Answer(
         id = id, nudgeId = nudgeId, questionId = questionId,
-        value = value, scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(), isHidden = false
+        value = value, scheduledAt = scheduledAt, answeredAt = Clock.System.now(), isHidden = false
     )
 }
