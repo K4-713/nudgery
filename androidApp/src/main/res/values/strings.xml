@@ -156,6 +156,11 @@
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
 
+    <!-- Heat map legend -->
+    <string name="heatmap_legend_day">1 square = 1 day</string>
+    <string name="heatmap_legend_week">1 square = 1 week</string>
+    <string name="heatmap_legend_month">1 square = 1 month</string>
+
     <!-- Days of week (abbreviated) -->
     <string name="day_sun">Sun</string>
     <string name="day_mon">Mon</string>

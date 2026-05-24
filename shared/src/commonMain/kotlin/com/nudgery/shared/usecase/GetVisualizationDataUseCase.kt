@@ -3,6 +3,7 @@ package com.nudgery.shared.usecase
 import com.nudgery.shared.model.Answer
 import com.nudgery.shared.model.DailyCount
 import com.nudgery.shared.model.DataPoint
+import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.Timeframe
@@ -19,6 +20,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.until
 
 class GetVisualizationDataUseCase(
     private val answerRepository: AnswerRepository,
@@ -46,12 +48,31 @@ class GetVisualizationDataUseCase(
             windowStart
         }
 
+        val granularity = computeGranularity(timeframe, effectiveWindowStart, today)
+
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, effectiveWindowStart, today)
-            QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, effectiveWindowStart, today, granularity)
+            QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today, granularity)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
             QuestionType.TEXT -> emptyList()
+        }
+    }
+
+    private fun computeGranularity(
+        timeframe: Timeframe,
+        windowStart: LocalDate,
+        windowEnd: LocalDate
+    ): HeatMapGranularity = when (timeframe) {
+        Timeframe.WEEKLY, Timeframe.MONTHLY -> HeatMapGranularity.DAY
+        Timeframe.YEARLY -> HeatMapGranularity.WEEK
+        Timeframe.ALL_TIME -> {
+            val days = windowStart.until(windowEnd, DateTimeUnit.DAY)
+            when {
+                days < 90 -> HeatMapGranularity.DAY
+                days < 730 -> HeatMapGranularity.WEEK
+                else -> HeatMapGranularity.MONTH
+            }
         }
     }
 
@@ -79,7 +100,8 @@ class GetVisualizationDataUseCase(
         answers: List<Answer>,
         timeZone: TimeZone,
         windowStart: LocalDate,
-        windowEnd: LocalDate
+        windowEnd: LocalDate,
+        granularity: HeatMapGranularity
     ): List<VisualizationData> {
         val dailyCounts = answers
             .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
@@ -94,7 +116,7 @@ class GetVisualizationDataUseCase(
         val totalNo = answers.count { it.value.uppercase() == "NO" }
 
         return listOf(
-            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd),
+            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity),
             VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd),
             VisualizationData.ColumnChart(listOf(NamedCount("YES", totalYes), NamedCount("NO", totalNo)))
         )
@@ -104,7 +126,8 @@ class GetVisualizationDataUseCase(
         answers: List<Answer>,
         timeZone: TimeZone,
         windowStart: LocalDate,
-        windowEnd: LocalDate
+        windowEnd: LocalDate,
+        granularity: HeatMapGranularity
     ): List<VisualizationData> {
         val points = answers
             .mapNotNull { answer ->
@@ -122,7 +145,7 @@ class GetVisualizationDataUseCase(
 
         return listOf(
             VisualizationData.LineGraph(points, windowStart, windowEnd),
-            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd)
+            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity)
         )
     }
 

@@ -9,11 +9,14 @@ data class DataPoint(val at: Instant, val value: Double)
 
 data class NamedCount(val label: String, val count: Int)
 
+enum class HeatMapGranularity { DAY, WEEK, MONTH }
+
 sealed class VisualizationData {
     data class CalendarHeatMap(
         val dailyCounts: List<DailyCount>,
         val windowStart: LocalDate,
-        val windowEnd: LocalDate
+        val windowEnd: LocalDate,
+        val granularity: HeatMapGranularity
     ) : VisualizationData()
     data class LineGraph(
         val points: List<DataPoint>,
