@@ -181,6 +181,98 @@ Rasterized from `Nudgery Final.svg` via Inkscape. Stored in `mipmap-{mdpi,hdpi,x
 
 512×512 PNG (`art/play_store_icon.png`). Same full composition as the launcher icon.
 
+### Regenerating Icon Assets
+
+#### Artwork requirements
+
+The source SVGs must meet these structural requirements before any export. Inkscape hides complexity that breaks the toolchain.
+
+**Both SVGs:**
+- Fills may be in either SVG presentation attributes (`fill="#cfaddd"`) or CSS style strings (`style="fill:#cfaddd"`). The generation script promotes them automatically, so no Inkscape preference change is needed.
+- No nested or redundant transforms. Every shape's coordinates must already be in the final 108 × 108 viewport space with no `transform` attribute on individual `<path>` elements. Inkscape stacks transforms when you resize or reposition nested objects. To flatten: select all objects in the transformed layer, cut (Ctrl+X), create a new layer with no transform, and Paste in Place (Ctrl+Alt+V). Inkscape computes absolute canvas positions on paste, baking out the stacked transforms. Note: Inkscape layers cannot be ungrouped via Ctrl+Shift+G — only plain groups can.
+- No `<ellipse>` or `<circle>` elements — svg2vectordrawable silently skips them. Convert all shapes to paths in Inkscape first: *Path > Object to Path*.
+
+**`art/Nudgery Final.svg`:**
+- One layer contains only the background shapes (the lavender rect and ellipses).
+- A separate layer contains only the foreground shapes (shadow echo and black squiggle).
+- Hidden reference layers (e.g. a safe-zone guide circle) are fine to keep. The generation script extracts layers by ID and ignores anything not explicitly included.
+
+**`art/Nudgery HandOnly.svg`:**
+- Must contain a single compound path — the boolean difference of the outer white silhouette minus the inner cutout — using `fill-rule="evenodd"`. Perform the difference in Inkscape (*Path > Difference*) and verify the result is one `<path>` element. A separate black-filled path is not treated as a mask and will render as opaque white in the notification icon.
+
+#### Prerequisites
+
+- **Inkscape 1.x** — available as `inkscape` on the command line
+- **svg2vectordrawable** — `npm install -g svg2vectordrawable` (invoked as `s2v`)
+
+#### Legacy launcher icons (PNG, pre-API 26)
+
+Run from the project root:
+
+```bash
+for density in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+  d="${density%%:*}"; size="${density##*:}"
+  inkscape --export-type=png --export-width=$size --export-height=$size \
+    --export-filename="androidApp/src/main/res/mipmap-${d}/ic_launcher.png" \
+    "art/Nudgery Final.svg"
+done
+```
+
+#### Play Store icon (512×512 PNG)
+
+```bash
+inkscape --export-type=png --export-width=512 --export-height=512 \
+  --export-filename="art/play_store_icon.png" \
+  "art/Nudgery Final.svg"
+```
+
+#### Adaptive icon layers (VectorDrawable XML, API 26+)
+
+svg2vectordrawable does not respect `display:none` layer visibility — it includes all elements regardless. The background and foreground must be exported as separate, minimal SVGs containing only the relevant elements before conversion.
+
+For each layer, produce a clean SVG (`art/ic_launcher_background_export.svg` and `art/ic_launcher_foreground_export.svg`) that contains only the child elements of that layer, with no Inkscape-specific attributes and no hidden elements. Then convert:
+
+```bash
+s2v -i art/ic_launcher_background_export.svg \
+    -o androidApp/src/main/res/drawable/ic_launcher_background.xml
+
+s2v -i art/ic_launcher_foreground_export.svg \
+    -o androidApp/src/main/res/drawable/ic_launcher_foreground.xml
+```
+
+After converting, verify and if necessary correct the root `<vector>` attributes by hand:
+
+```xml
+android:width="108dp"
+android:height="108dp"
+android:viewportWidth="108"
+android:viewportHeight="108"
+```
+
+The `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` files reference these drawables by name and do not need editing.
+
+#### Notification small icon (VectorDrawable XML)
+
+Like the adaptive icon layers, the notification icon requires a clean intermediate SVG before conversion — the source file contains a BG reference layer and fills in style strings that must be stripped first. The generation script produces `art/ic_notification_export.svg` containing only the Badge layer's compound path with promoted fill attributes. Then convert:
+
+```bash
+s2v -i art/ic_notification_export.svg \
+    -o shared/src/androidMain/res/drawable/ic_notification.xml
+```
+
+After converting, verify and correct the root `<vector>` attributes by hand:
+
+```xml
+android:width="24dp"
+android:height="24dp"
+android:viewportWidth="108"
+android:viewportHeight="108"
+```
+
+Also verify the single `<path>` element has both:
+- `android:fillColor="#FFFFFFFF"`
+- `android:fillType="evenOdd"`
+
 ---
 
 ## Iconography
