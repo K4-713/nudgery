@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <!-- Warning triangle (pre-computed from matrix transform in source SVG) -->
+    <path
+        android:pathData="M7.06,128.63 L145.13,13.93 L183.32,190.03 Z"
+        android:fillColor="#FFCC55"
+        android:strokeColor="#837493"
+        android:strokeWidth="19.7791"
+        android:strokeAlpha="0.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Exclamation mark: upper body -->
+    <path
+        android:pathData="M158.63,37.94c-6.56,0.04-13.28,1.61-18.88,5.26-3.81,2.71-5.69,7.34-8.18,11.25-5.66,11.67-11.22,23.48-14.87,36.04-1.95,5.39-2.84,12.43,1.42,16.89,3.89,3.99,10,3.88,14.65,1.51,11.77-5.24,20.42-15.64,31.32-22.38,6.24-4,12.86-7.47,19.84-9.79,3.57-0.79,7.25-0.15,10.84-0.72,4.26-2.66,1.69-8.66,1.09-12.68-3.51-12.16-13.51-22.5-25.75-24.18-3.78-0.73-7.63-1.15-11.48-1.2z"
+        android:fillColor="#000000"
+        android:strokeColor="#FFB300"
+        android:strokeWidth="4.596"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Exclamation mark: dot -->
+    <path
+        android:pathData="M103.76,107.81c-6.76,1.23-13.02,4.95-17.59,10.32-3.08,3.34-5.65,7.86-5.01,12.68,0.84,6.31,5.91,11.38,11.61,13.08,8.72,2.62,19.09-1.1,23.91-9.29,2.38-3.92,2.86-8.81,2.2-13.32-0.44-3.41-2.87-5.89-4.92-8.37-1.96-2.18-4.31-4.38-7.21-4.85-1,-0.07-1.98,-0.29-2.99,-0.25z"
+        android:fillColor="#000000"
+        android:strokeColor="#FFB300"
+        android:strokeWidth="4.596"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

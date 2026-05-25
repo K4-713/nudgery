@@ -172,14 +172,22 @@ private fun AnswerStep(
                 onClick = onCancel,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(stringResource(R.string.action_cancel))
+                Text(
+                    text = stringResource(R.string.action_cancel),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
             }
             Button(
                 onClick = onSave,
                 enabled = uiState.currentAnswer.isNotBlank() && !uiState.isSubmitting,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(stringResource(R.string.answer_save))
+                Text(
+                    text = stringResource(R.string.answer_save),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
             }
         }
 

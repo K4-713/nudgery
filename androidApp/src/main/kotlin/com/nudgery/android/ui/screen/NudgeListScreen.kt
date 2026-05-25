@@ -206,7 +206,7 @@ private fun NudgeListItem(
                             overflow = TextOverflow.Ellipsis
                         )
                         if (nudge.hasMissedNotification) {
-                            MissedDot(modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp))
+                            MissedDot(modifier = Modifier.align(Alignment.TopEnd).offset(x = 12.dp, y = (-4).dp))
                         }
                     }
                 }
