@@ -62,7 +62,8 @@ val appModule = module {
             setAnswerHidden = get<SetAnswerHiddenUseCase>(),
             exportAnswers = get<ExportAnswersUseCase>(),
             updateNudge = get<UpdateNudgeUseCase>(),
-            deleteNudge = get<DeleteNudgeUseCase>()
+            deleteNudge = get<DeleteNudgeUseCase>(),
+            appSettings = get<AppSettings>()
         )
     }
 

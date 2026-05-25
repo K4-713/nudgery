@@ -25,7 +25,7 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Notification scheduling (Android) | AlarmManager + WorkManager | AlarmManager provides precise timing; WorkManager handles reliable execution. Implements shared `NotificationScheduler` interface. |
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
-| Settings persistence | DataStore Preferences | Stores `ThemePreference`, bold text toggle, and `ChartPalette`; flows observed by `SettingsViewModel` |
+| Settings persistence | DataStore Preferences | Stores `ThemePreference`, bold text toggle, `ChartPalette`, and per-nudge default timeframe (keyed as `default_timeframe_<nudgeId>`); flows observed by `SettingsViewModel` and `NudgeDetailViewModel` |
 | Typeface | Atkinson Hyperlegible Next | All 14 weight/style variants bundled as TTF in `androidApp/src/main/res/font/`; wired into `nudgeryTypography()` in `Type.kt` |
 
 ---
@@ -89,7 +89,7 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 | `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time formatted as `String?` in local time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
 | `CreateNudgeViewModel` | Manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled); calls `CreateNudgeUseCase` on `submit()` |
 | `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId`); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
-| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
+| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); reads persisted default timeframe from `AppSettings` on init and saves it when changed; live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
 | `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for the import-from-backup feature |
 

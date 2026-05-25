@@ -3,6 +3,7 @@ package com.nudgery.android.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nudgery.android.settings.AppSettings
 import com.nudgery.shared.model.ExportFormat
 import com.nudgery.shared.model.Nudge
 import com.nudgery.shared.model.Question
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -77,7 +79,8 @@ class NudgeDetailViewModel(
     private val setAnswerHidden: SetAnswerHiddenUseCase,
     private val exportAnswers: ExportAnswersUseCase,
     private val updateNudge: UpdateNudgeUseCase,
-    private val deleteNudge: DeleteNudgeUseCase
+    private val deleteNudge: DeleteNudgeUseCase,
+    private val appSettings: AppSettings
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NudgeDetailUiState())
@@ -89,6 +92,9 @@ class NudgeDetailViewModel(
 
     init {
         viewModelScope.launch {
+            val storedTimeframe = appSettings.getDefaultTimeframe(nudgeId).first()
+            _uiState.update { it.copy(selectedTimeframe = storedTimeframe) }
+
             nudgeRepository.observeById(nudgeId).collect { nudge ->
                 if (nudge == null) {
                     Log.w(TAG, "Nudge $nudgeId not found")
@@ -131,6 +137,7 @@ class NudgeDetailViewModel(
 
     fun selectTimeframe(timeframe: Timeframe) {
         _uiState.update { it.copy(selectedTimeframe = timeframe) }
+        viewModelScope.launch { appSettings.setDefaultTimeframe(nudgeId, timeframe) }
         loadVisualizations()
     }
 

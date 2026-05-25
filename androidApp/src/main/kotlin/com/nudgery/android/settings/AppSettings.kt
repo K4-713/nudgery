@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.nudgery.android.ui.theme.ChartPalettePreference
+import com.nudgery.shared.model.Timeframe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -20,6 +21,8 @@ interface AppSettings {
     suspend fun setThemePreference(pref: ThemePreference)
     suspend fun setBoldText(bold: Boolean)
     suspend fun setChartPalette(palette: ChartPalettePreference)
+    fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe>
+    suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe)
 }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "nudgery_settings")
@@ -60,5 +63,21 @@ class DataStoreAppSettings(private val context: Context) : AppSettings {
 
     override suspend fun setChartPalette(palette: ChartPalettePreference) {
         context.dataStore.edit { prefs -> prefs[KEY_CHART_PALETTE] = palette.name }
+    }
+
+    override fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe> =
+        context.dataStore.data.map { prefs ->
+            when (prefs[stringPreferencesKey("default_timeframe_$nudgeId")]) {
+                "MONTHLY" -> Timeframe.MONTHLY
+                "YEARLY" -> Timeframe.YEARLY
+                "ALL_TIME" -> Timeframe.ALL_TIME
+                else -> Timeframe.WEEKLY
+            }
+        }
+
+    override suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe) {
+        context.dataStore.edit { prefs ->
+            prefs[stringPreferencesKey("default_timeframe_$nudgeId")] = timeframe.name
+        }
     }
 }

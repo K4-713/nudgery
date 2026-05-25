@@ -17,6 +17,7 @@ import com.nudgery.shared.usecase.ScheduleRequest
 import com.nudgery.shared.model.VisualizationData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -230,6 +231,52 @@ class NudgeDetailViewModelTest {
         assertTrue(repos.scheduler.cancelled.contains(nudgeId))
     }
 
+    @Test
+    fun TDD_defaultTimeframe_loadsPersistedValueOnOpen() = runTest {
+        // Detail screen: timeframe picker should be pre-populated with the user's last choice
+        val nudgeId = createNudge("Did you exercise?")
+        repos.appSettings.setDefaultTimeframe(nudgeId, Timeframe.YEARLY)
+
+        val viewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(Timeframe.YEARLY, viewModel.uiState.value.selectedTimeframe)
+    }
+
+    @Test
+    fun TDD_defaultTimeframe_persistsWhenTimeframeSelected() = runTest {
+        // Selecting a timeframe must save it so it survives an app restart
+        val nudgeId = createNudge("Did you exercise?")
+        val viewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.selectTimeframe(Timeframe.MONTHLY)
+        advanceUntilIdle()
+
+        val stored = repos.appSettings.getDefaultTimeframe(nudgeId).first()
+        assertEquals(Timeframe.MONTHLY, stored)
+    }
+
+    @Test
+    fun TDD_defaultTimeframe_newViewModelUsesPersistedValue() = runTest {
+        // A freshly constructed ViewModel for the same nudge should open with the previously saved timeframe
+        val nudgeId = createNudge("Did you exercise?")
+        buildViewModel(nudgeId).also { vm ->
+            backgroundScope.launch(testDispatcher) { vm.uiState.collect {} }
+            advanceUntilIdle()
+            vm.selectTimeframe(Timeframe.ALL_TIME)
+            advanceUntilIdle()
+        }
+
+        val secondViewModel = buildViewModel(nudgeId)
+        backgroundScope.launch(testDispatcher) { secondViewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(Timeframe.ALL_TIME, secondViewModel.uiState.value.selectedTimeframe)
+    }
+
     private fun buildViewModel(nudgeId: String) = NudgeDetailViewModel(
         nudgeId = nudgeId,
         nudgeRepository = repos.nudgeRepo,
@@ -243,7 +290,8 @@ class NudgeDetailViewModelTest {
         setAnswerHidden = repos.setAnswerHiddenUseCase(),
         exportAnswers = repos.exportAnswersUseCase(),
         updateNudge = repos.updateNudgeUseCase(),
-        deleteNudge = repos.deleteNudgeUseCase()
+        deleteNudge = repos.deleteNudgeUseCase(),
+        appSettings = repos.appSettings
     )
 
     private suspend fun createNudge(

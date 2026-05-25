@@ -11,6 +11,7 @@ import com.nudgery.shared.model.TimezoneChangeEvent
 import com.nudgery.android.settings.AppSettings
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
+import com.nudgery.shared.model.Timeframe
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
@@ -38,12 +39,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.datetime.Instant
 
 class FakeAppSettings : AppSettings {
+    private val _defaultTimeframes = MutableStateFlow<Map<String, Timeframe>>(emptyMap())
+
     override val themePreference: Flow<ThemePreference> = flowOf(ThemePreference.SYSTEM)
     override val boldText: Flow<Boolean> = flowOf(false)
     override val chartPalette: Flow<ChartPalettePreference> = flowOf(ChartPalettePreference.SPECTRUM)
     override suspend fun setThemePreference(pref: ThemePreference) {}
     override suspend fun setBoldText(bold: Boolean) {}
     override suspend fun setChartPalette(palette: ChartPalettePreference) {}
+    override fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe> =
+        _defaultTimeframes.map { it[nudgeId] ?: Timeframe.WEEKLY }
+    override suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe) {
+        _defaultTimeframes.update { it + (nudgeId to timeframe) }
+    }
 }
 
 class FakeNudgeRepository : NudgeRepository {
@@ -180,6 +188,7 @@ class FakeNotificationScheduler : NotificationScheduler {
 
 /** Bundles all fakes and use-case factories for ViewModel tests. */
 class TestViewModelRepositories {
+    val appSettings = FakeAppSettings()
     val nudgeRepo = FakeNudgeRepository()
     val questionRepo = FakeQuestionRepository()
     val optionRepo = FakeQuestionOptionRepository()

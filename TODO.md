@@ -1,11 +1,5 @@
 # Next Steps
 
-## Detail Screen: Default Timeframe
-The chart editor (opened via the chart type icon on the detail screen) should include a **default timeframe selector** that persists the user's chosen timeframe across app sessions for that nudge. Currently the timeframe picker changes the active view but resets to Weekly on every launch.
-- Store the default timeframe preference per nudge (e.g. in DataStore keyed by nudge ID, or as a nudge-level field)
-- Pre-populate the timeframe picker from the stored default on screen open
-- Write TDD tests first
-
 ## Play Store Listing Materials
 Prepare before submitting:
 - Export a 512×512 PNG icon for the Play Store store listing (see `art/play_store_icon.png`)
