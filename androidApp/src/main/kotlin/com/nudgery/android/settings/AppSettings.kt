@@ -13,15 +13,24 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemePreference { SYSTEM, LIGHT, DARK }
 
+interface AppSettings {
+    val themePreference: Flow<ThemePreference>
+    val boldText: Flow<Boolean>
+    val chartPalette: Flow<ChartPalettePreference>
+    suspend fun setThemePreference(pref: ThemePreference)
+    suspend fun setBoldText(bold: Boolean)
+    suspend fun setChartPalette(palette: ChartPalettePreference)
+}
+
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "nudgery_settings")
 
 private val KEY_THEME = stringPreferencesKey("theme_preference")
 private val KEY_BOLD_TEXT = booleanPreferencesKey("bold_text")
 private val KEY_CHART_PALETTE = stringPreferencesKey("chart_palette")
 
-class AppSettings(private val context: Context) {
+class DataStoreAppSettings(private val context: Context) : AppSettings {
 
-    val themePreference: Flow<ThemePreference> = context.dataStore.data.map { prefs ->
+    override val themePreference: Flow<ThemePreference> = context.dataStore.data.map { prefs ->
         when (prefs[KEY_THEME]) {
             "LIGHT" -> ThemePreference.LIGHT
             "DARK" -> ThemePreference.DARK
@@ -29,11 +38,11 @@ class AppSettings(private val context: Context) {
         }
     }
 
-    val boldText: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    override val boldText: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_BOLD_TEXT] ?: false
     }
 
-    val chartPalette: Flow<ChartPalettePreference> = context.dataStore.data.map { prefs ->
+    override val chartPalette: Flow<ChartPalettePreference> = context.dataStore.data.map { prefs ->
         when (prefs[KEY_CHART_PALETTE]) {
             "HORIZON" -> ChartPalettePreference.HORIZON
             "EMBER" -> ChartPalettePreference.EMBER
@@ -41,15 +50,15 @@ class AppSettings(private val context: Context) {
         }
     }
 
-    suspend fun setThemePreference(pref: ThemePreference) {
+    override suspend fun setThemePreference(pref: ThemePreference) {
         context.dataStore.edit { prefs -> prefs[KEY_THEME] = pref.name }
     }
 
-    suspend fun setBoldText(bold: Boolean) {
+    override suspend fun setBoldText(bold: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_BOLD_TEXT] = bold }
     }
 
-    suspend fun setChartPalette(palette: ChartPalettePreference) {
+    override suspend fun setChartPalette(palette: ChartPalettePreference) {
         context.dataStore.edit { prefs -> prefs[KEY_CHART_PALETTE] = palette.name }
     }
 }

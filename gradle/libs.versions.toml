@@ -55,6 +55,7 @@ vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }
+org-json = { module = "org.json:json", version = "20240303" }
 androidx-test-ext = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext" }
 compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }

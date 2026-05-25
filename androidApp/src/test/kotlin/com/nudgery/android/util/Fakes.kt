@@ -8,6 +8,9 @@ import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.TimezoneChangeEvent
+import com.nudgery.android.settings.AppSettings
+import com.nudgery.android.settings.ThemePreference
+import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
@@ -17,18 +20,31 @@ import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.repository.TimezoneChangeEventRepository
 import com.nudgery.shared.scheduler.NotificationScheduler
+import com.nudgery.android.backup.NudgeBackupParser
+import com.nudgery.android.viewmodel.SettingsViewModel
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
+import com.nudgery.shared.usecase.ImportNudgeUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.datetime.Instant
+
+class FakeAppSettings : AppSettings {
+    override val themePreference: Flow<ThemePreference> = flowOf(ThemePreference.SYSTEM)
+    override val boldText: Flow<Boolean> = flowOf(false)
+    override val chartPalette: Flow<ChartPalettePreference> = flowOf(ChartPalettePreference.SPECTRUM)
+    override suspend fun setThemePreference(pref: ThemePreference) {}
+    override suspend fun setBoldText(bold: Boolean) {}
+    override suspend fun setChartPalette(palette: ChartPalettePreference) {}
+}
 
 class FakeNudgeRepository : NudgeRepository {
     private val _nudges = MutableStateFlow<List<Nudge>>(emptyList())
@@ -183,4 +199,14 @@ class TestViewModelRepositories {
     fun exportAnswersUseCase() = ExportAnswersUseCase(nudgeRepo, questionRepo, optionRepo, answerRepo, scheduleRepo)
     fun getVisualizationDataUseCase() = GetVisualizationDataUseCase(answerRepo, questionRepo, optionRepo)
     fun recordAnswerUseCase() = RecordAnswerUseCase(answerRepo)
+    fun importNudgeUseCase() = ImportNudgeUseCase(
+        nudgeRepo, questionRepo, optionRepo, scheduleRepo, answerRepo, scheduler
+    )
+    fun settingsViewModel() = SettingsViewModel(
+        appSettings = FakeAppSettings(),
+        importNudge = importNudgeUseCase(),
+        deleteNudge = deleteNudgeUseCase(),
+        nudgeRepository = nudgeRepo,
+        backupParser = NudgeBackupParser()
+    )
 }

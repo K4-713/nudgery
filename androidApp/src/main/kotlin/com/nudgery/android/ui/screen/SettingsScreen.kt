@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,11 +19,13 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -35,7 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,6 +88,15 @@ fun SettingsScreen(
             }
             else -> Unit
         }
+    }
+
+    if (importStatus is ImportStatus.NameCollision) {
+        ImportCollisionDialog(
+            existingName = importStatus.pendingRequest.name,
+            onRename = { viewModel.confirmImportRename(it) },
+            onReplace = { viewModel.confirmImportReplace() },
+            onDismiss = { viewModel.clearImportStatus() }
+        )
     }
 
     val filePicker = rememberLauncherForActivityResult(
@@ -276,6 +290,52 @@ private fun ExactAlarmDiagnosticRow() {
             }
         }
     }
+}
+
+@Composable
+private fun ImportCollisionDialog(
+    existingName: String,
+    onRename: (String) -> Unit,
+    onReplace: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var newName by remember(existingName) { mutableStateOf(existingName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.import_collision_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.import_collision_body, existingName))
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text(stringResource(R.string.import_collision_rename_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onRename(newName) },
+                enabled = newName.isNotBlank() && newName != existingName
+            ) {
+                Text(stringResource(R.string.import_collision_rename))
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onReplace) {
+                    Text(stringResource(R.string.import_collision_replace))
+                }
+            }
+        }
+    )
 }
 
 @Composable

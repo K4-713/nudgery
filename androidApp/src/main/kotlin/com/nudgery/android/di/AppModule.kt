@@ -2,6 +2,7 @@ package com.nudgery.android.di
 
 import com.nudgery.android.backup.NudgeBackupParser
 import com.nudgery.android.settings.AppSettings
+import com.nudgery.android.settings.DataStoreAppSettings
 import com.nudgery.android.viewmodel.AnswerFormViewModel
 import com.nudgery.android.viewmodel.CreateNudgeViewModel
 import com.nudgery.android.viewmodel.EditNudgeViewModel
@@ -29,7 +30,7 @@ import org.koin.dsl.module
 val appModule = module {
     single { DatabaseDriverFactory(androidContext()) }
     single<NotificationScheduler> { WorkManagerNotificationScheduler(androidContext()) }
-    single { AppSettings(androidContext()) }
+    single<AppSettings> { DataStoreAppSettings(androidContext()) }
     single { NudgeBackupParser() }
 
     viewModel {
@@ -90,6 +91,8 @@ val appModule = module {
         SettingsViewModel(
             appSettings = get(),
             importNudge = get<ImportNudgeUseCase>(),
+            deleteNudge = get<DeleteNudgeUseCase>(),
+            nudgeRepository = get(),
             backupParser = get<NudgeBackupParser>()
         )
     }

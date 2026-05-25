@@ -7,11 +7,15 @@ import com.nudgery.android.backup.NudgeBackupParser
 import com.nudgery.android.settings.AppSettings
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
+import com.nudgery.shared.repository.NudgeRepository
+import com.nudgery.shared.usecase.DeleteNudgeUseCase
+import com.nudgery.shared.usecase.ImportNudgeRequest
 import com.nudgery.shared.usecase.ImportNudgeUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -23,6 +27,10 @@ sealed class ImportStatus {
     data object InProgress : ImportStatus()
     data class Success(val nudgeId: String) : ImportStatus()
     data class Failure(val message: String) : ImportStatus()
+    data class NameCollision(
+        val pendingRequest: ImportNudgeRequest,
+        val existingNudgeId: String
+    ) : ImportStatus()
 }
 
 data class SettingsUiState(
@@ -35,6 +43,8 @@ data class SettingsUiState(
 class SettingsViewModel(
     private val appSettings: AppSettings,
     private val importNudge: ImportNudgeUseCase,
+    private val deleteNudge: DeleteNudgeUseCase,
+    private val nudgeRepository: NudgeRepository,
     private val backupParser: NudgeBackupParser
 ) : ViewModel() {
 
@@ -70,11 +80,40 @@ class SettingsViewModel(
                     _importStatus.update { ImportStatus.Failure(parsed.message) }
                 }
                 is NudgeBackupParser.ParseResult.Success -> {
-                    val nudgeId = importNudge.execute(parsed.request)
-                    Log.i(TAG, "Imported nudge from backup: $nudgeId")
-                    _importStatus.update { ImportStatus.Success(nudgeId) }
+                    val request = parsed.request
+                    val existing = nudgeRepository.observeAll().first()
+                        .firstOrNull { it.name == request.name }
+                    if (existing != null) {
+                        Log.i(TAG, "Import name collision for nudge: ${request.name}")
+                        _importStatus.update { ImportStatus.NameCollision(request, existing.id) }
+                    } else {
+                        val nudgeId = importNudge.execute(request)
+                        Log.i(TAG, "Imported nudge from backup: $nudgeId")
+                        _importStatus.update { ImportStatus.Success(nudgeId) }
+                    }
                 }
             }
+        }
+    }
+
+    fun confirmImportRename(newName: String) {
+        val collision = _importStatus.value as? ImportStatus.NameCollision ?: return
+        _importStatus.update { ImportStatus.InProgress }
+        viewModelScope.launch {
+            val nudgeId = importNudge.execute(collision.pendingRequest.copy(name = newName))
+            Log.i(TAG, "Imported renamed nudge as \"$newName\": $nudgeId")
+            _importStatus.update { ImportStatus.Success(nudgeId) }
+        }
+    }
+
+    fun confirmImportReplace() {
+        val collision = _importStatus.value as? ImportStatus.NameCollision ?: return
+        _importStatus.update { ImportStatus.InProgress }
+        viewModelScope.launch {
+            deleteNudge.execute(collision.existingNudgeId)
+            val nudgeId = importNudge.execute(collision.pendingRequest)
+            Log.i(TAG, "Replaced nudge ${collision.existingNudgeId} with imported: $nudgeId")
+            _importStatus.update { ImportStatus.Success(nudgeId) }
         }
     }
 

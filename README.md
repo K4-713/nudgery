@@ -79,3 +79,6 @@ To get to the Settings page, tap the Settings (gear) icon from the main page. He
 # Fabricated Questions
 ## What happens to my nudge schedule when I change timezones?
 Your nudge will fire on schedule, local to whatever your phone's time is. If you want to be asked a question at 9am, you will be asked at 9am wherever you are.
+
+## What happens if you restore a nudge that already exists?
+If there's a name collision, you will be given the opportunity to either rename the incoming nudge, or replace the existing one.
