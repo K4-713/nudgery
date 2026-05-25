@@ -21,7 +21,7 @@ internal fun MissedDot(modifier: Modifier = Modifier) {
         painter = painterResource(R.drawable.ic_missed_alert),
         contentDescription = stringResource(R.string.nudge_missed_indicator),
         tint = Color.Unspecified,
-        modifier = modifier.size(12.dp)
+        modifier = modifier.size(20.dp)
     )
 }
 
