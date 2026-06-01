@@ -347,7 +347,7 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 | `BarChart` | `HorizontalBarChart` | Custom Compose `Column`/`Row` layout; proportional `Box` fills with `primary` color; label truncated to 80dp |
 | `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label` |
 | `PackedBubble` | `PackedBubbleChart` | Custom Canvas with d3-style front-chain circle packing; radius ∝ `sqrt(NamedCount.count)` (area encodes frequency); cluster scaled to fit; bold centered word with count beneath |
-| `CalendarHeatMap` | `CalendarHeatMapChart` | Custom Canvas grid; Monday-anchored week columns × 7 rows; cell color interpolated from `surfaceVariant` → `primary` by intensity |
+| `CalendarHeatMap` | `CalendarHeatMapChart` | Custom Canvas grid; layout varies by `HeatMapGranularity` (`SINGLE_DAY` strip, `DAY` Monday-anchored 7-row grid, `WEEK`/`MONTH` single rows); cell color interpolated through the active `ChartPalette` by intensity (value ÷ max). When values exceed 0/1 a gradient scale bar labels the color→value mapping; tapping a cell outlines it and shows its exact date and value |
 
 `CartesianChartModelProducer` is created with `remember` and updated via `LaunchedEffect` on data change. M3 color theming is applied automatically by `vico-compose-m3`.
 

@@ -199,6 +199,7 @@
     <string name="settings_palette_ember_description">Recommended for tritanopia</string>
 
     <!-- Heat map legend -->
+    <string name="heatmap_no_data">no data</string>
     <string name="heatmap_legend_day">1 square = 1 day</string>
     <string name="heatmap_legend_week">1 square = 1 week</string>
     <string name="heatmap_legend_month">1 square = 1 month</string>

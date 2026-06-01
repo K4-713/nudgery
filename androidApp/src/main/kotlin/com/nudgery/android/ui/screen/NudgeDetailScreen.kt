@@ -81,8 +81,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerRow
@@ -707,6 +714,25 @@ private fun CalendarHeatMapChart(
         }
     }
 
+    // The color→value scale is only meaningful once cells hold something other than 0 or 1; a plain
+    // yes/no-once-a-day map (only 0s and 1s) needs no legend.
+    val showValueScale = remember(counts, granularity, weekCells, monthCells) {
+        val values = when (granularity) {
+            HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> counts.map { it.value }
+            HeatMapGranularity.WEEK -> weekCells.mapNotNull { it.second }
+            HeatMapGranularity.MONTH -> monthCells.mapNotNull { it.second }
+        }
+        values.any { it != 0.0 && it != 1.0 }
+    }
+    val gradientStops = if (isDark) paletteStops.darkStops else paletteStops.lightStops
+    // Subtle ring marking the tapped cell — visible on any palette color without dominating it.
+    val outlineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+
+    // Cell selected by tapping; shows its exact value. Reset when the data or granularity changes.
+    var selectedCell by remember(counts, granularity, windowStart, windowEnd) {
+        mutableStateOf<SelectedHeatCell?>(null)
+    }
+
     val scrollState = rememberScrollState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -760,15 +786,26 @@ private fun CalendarHeatMapChart(
 
             val labelStyle = TextStyle(fontSize = 9.sp, color = labelColor)
 
+            val tapModifier = Modifier.pointerInput(granularity, cellPx, gapPx, labelAreaPx, counts) {
+                detectTapGestures { offset ->
+                    selectedCell = hitTestHeatCell(
+                        offset, granularity, cellPx, gapPx, labelAreaPx,
+                        singleDayCells, dayGridWeeks, weekCells, monthCells, countByDate
+                    )
+                }
+            }
+
             Canvas(
-                modifier = if (needsScroll)
+                modifier = (if (needsScroll)
                     Modifier
                         .horizontalScroll(scrollState)
                         .width(with(density) { contentWidthPx.toDp() })
                         .height(with(density) { availableHeightPx.toDp() })
                 else
                     Modifier.fillMaxSize()
+                ).then(tapModifier)
             ) {
+                val selectedDate = selectedCell?.date
                 when (granularity) {
                     HeatMapGranularity.SINGLE_DAY -> {
                         if (singleDayCells.isEmpty()) return@Canvas
@@ -806,6 +843,15 @@ private fun CalendarHeatMapChart(
                                 size = Size(cellPx, cellPx),
                                 cornerRadius = CornerRadius(cellPx * 0.15f)
                             )
+                            if (date == selectedDate) {
+                                drawRoundRect(
+                                    color = outlineColor,
+                                    topLeft = Offset(x, y),
+                                    size = Size(cellPx, cellPx),
+                                    cornerRadius = CornerRadius(cellPx * 0.15f),
+                                    style = Stroke(width = 1.5.dp.toPx())
+                                )
+                            }
                         }
                     }
                     HeatMapGranularity.DAY -> {
@@ -828,6 +874,7 @@ private fun CalendarHeatMapChart(
                             for (dayIdx in 0..6) {
                                 val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
                                 val rawCount = countByDate[date]
+                                val cellTopLeft = Offset(weekX, labelAreaPx + dayIdx * (cellPx + gapPx))
                                 drawRoundRect(
                                     color = when {
                                         rawCount == null -> emptyCellColor
@@ -836,10 +883,19 @@ private fun CalendarHeatMapChart(
                                             (rawCount / maxValue).toFloat().coerceIn(0f, 1f), isDark
                                         )
                                     },
-                                    topLeft = Offset(weekX, labelAreaPx + dayIdx * (cellPx + gapPx)),
+                                    topLeft = cellTopLeft,
                                     size = Size(cellPx, cellPx),
                                     cornerRadius = CornerRadius(cellPx * 0.15f)
                                 )
+                                if (date == selectedDate) {
+                                    drawRoundRect(
+                                        color = outlineColor,
+                                        topLeft = cellTopLeft,
+                                        size = Size(cellPx, cellPx),
+                                        cornerRadius = CornerRadius(cellPx * 0.15f),
+                                        style = Stroke(width = 1.5.dp.toPx())
+                                    )
+                                }
                             }
                         }
                     }
@@ -872,6 +928,15 @@ private fun CalendarHeatMapChart(
                                 size = Size(cellPx, cellPx),
                                 cornerRadius = CornerRadius(cellPx * 0.15f)
                             )
+                            if (weekStart == selectedDate) {
+                                drawRoundRect(
+                                    color = outlineColor,
+                                    topLeft = Offset(x, labelAreaPx),
+                                    size = Size(cellPx, cellPx),
+                                    cornerRadius = CornerRadius(cellPx * 0.15f),
+                                    style = Stroke(width = 1.5.dp.toPx())
+                                )
+                            }
                         }
                     }
                     HeatMapGranularity.MONTH -> {
@@ -901,25 +966,129 @@ private fun CalendarHeatMapChart(
                                 size = Size(cellPx, cellPx),
                                 cornerRadius = CornerRadius(cellPx * 0.15f)
                             )
+                            if (monthStart == selectedDate) {
+                                drawRoundRect(
+                                    color = outlineColor,
+                                    topLeft = Offset(x, labelAreaPx),
+                                    size = Size(cellPx, cellPx),
+                                    cornerRadius = CornerRadius(cellPx * 0.15f),
+                                    style = Stroke(width = 1.5.dp.toPx())
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        Text(
-            text = stringResource(
-                when (granularity) {
-                    HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> R.string.heatmap_legend_day
-                    HeatMapGranularity.WEEK -> R.string.heatmap_legend_week
-                    HeatMapGranularity.MONTH -> R.string.heatmap_legend_month
+        val noDataText = stringResource(R.string.heatmap_no_data)
+        Column(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+            // Exact value of the tapped cell.
+            selectedCell?.let { sel ->
+                Text(
+                    text = "${heatCellDateLabel(sel.date, granularity)} · " +
+                        (sel.value?.let { formatHeatValue(it) } ?: noDataText),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Color→value scale: cold end is 0, hot end is the maximum cell value.
+                if (showValueScale) {
+                    Text("0", style = MaterialTheme.typography.labelSmall, color = labelColor)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .height(8.dp)
+                            .width(64.dp)
+                            .background(Brush.horizontalGradient(gradientStops), RoundedCornerShape(2.dp))
+                    )
+                    Text(
+                        text = formatHeatValue(maxValue),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor
+                    )
                 }
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            color = labelColor,
-            modifier = Modifier.align(Alignment.End).padding(top = 2.dp)
-        )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = stringResource(
+                        when (granularity) {
+                            HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> R.string.heatmap_legend_day
+                            HeatMapGranularity.WEEK -> R.string.heatmap_legend_week
+                            HeatMapGranularity.MONTH -> R.string.heatmap_legend_month
+                        }
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = labelColor
+                )
+            }
+        }
     }
+}
+
+/** A heat map cell selected by tapping; [value] is null when no data was recorded for that period. */
+private data class SelectedHeatCell(val date: LocalDate, val value: Double?)
+
+/** Maps a tap [offset] (in the chart's content coordinate space) to the cell it landed on. */
+private fun hitTestHeatCell(
+    offset: Offset,
+    granularity: HeatMapGranularity,
+    cellPx: Float,
+    gapPx: Float,
+    labelAreaPx: Float,
+    singleDayCells: List<Pair<LocalDate, Double?>>,
+    dayGridWeeks: List<LocalDate>,
+    weekCells: List<Pair<LocalDate, Double?>>,
+    monthCells: List<Pair<LocalDate, Double?>>,
+    countByDate: Map<LocalDate, Double>
+): SelectedHeatCell? {
+    val step = cellPx + gapPx
+    if (step <= 0f || offset.x < 0f) return null
+    val column = (offset.x / step).toInt()
+    val yInGrid = offset.y - labelAreaPx
+    if (yInGrid < 0f) return null
+    val row = (yInGrid / step).toInt()
+
+    return when (granularity) {
+        HeatMapGranularity.SINGLE_DAY -> {
+            if (row !in 0 until SINGLE_DAY_GRID_ROWS) return null
+            val index = column * SINGLE_DAY_GRID_ROWS + row
+            singleDayCells.getOrNull(index)?.let { SelectedHeatCell(it.first, it.second) }
+        }
+        HeatMapGranularity.DAY -> {
+            if (row !in 0..6) return null
+            val weekStart = dayGridWeeks.getOrNull(column) ?: return null
+            val date = weekStart.plus(row, DateTimeUnit.DAY)
+            SelectedHeatCell(date, countByDate[date])
+        }
+        HeatMapGranularity.WEEK -> {
+            if (row != 0) return null
+            weekCells.getOrNull(column)?.let { SelectedHeatCell(it.first, it.second) }
+        }
+        HeatMapGranularity.MONTH -> {
+            if (row != 0) return null
+            monthCells.getOrNull(column)?.let { SelectedHeatCell(it.first, it.second) }
+        }
+    }
+}
+
+/** Human-readable label for a selected cell's period, matching its granularity. */
+private fun heatCellDateLabel(date: LocalDate, granularity: HeatMapGranularity): String {
+    val month = date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+    return when (granularity) {
+        HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> "$month ${date.dayOfMonth}"
+        HeatMapGranularity.WEEK -> "Week of $month ${date.dayOfMonth}"
+        HeatMapGranularity.MONTH -> "$month ${date.year}"
+    }
+}
+
+/** Formats a heat map value as a whole number when integral, otherwise to one decimal place. */
+private fun formatHeatValue(value: Double): String {
+    val rounded = (value * 10).roundToInt() / 10.0
+    return if (rounded == floor(rounded)) rounded.toInt().toString() else rounded.toString()
 }
 
 @Composable
