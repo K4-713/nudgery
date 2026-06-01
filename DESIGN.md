@@ -105,7 +105,16 @@ Palette was chosen with deuteranopia/protanopia (red-green color blindness) in m
 
 Three heat map palettes are available and user-selectable from Settings. All three are designed as smooth cold-to-hot scales that read naturally without any accessibility accommodation — the colorblind variants are not degraded versions, just axes chosen to remain distinguishable under specific simulations.
 
-Each palette defines seven evenly-spaced color stops for both dark and light mode. Intensity is interpolated linearly between adjacent stops. Empty cells (no data) always use `surfaceVariant` from the active Material 3 theme, keeping them visually distinct from low-intensity data rather than blending in.
+Each palette defines seven evenly-spaced color stops for both dark and light mode. Intensity is interpolated linearly between adjacent stops.
+
+### Null vs. Zero Values
+
+Where possible, charts visually distinguish between a period with **no data recorded** (null) and a period where data was recorded but the value is **explicitly zero** — for example, a day where the user answered a YES/NO nudge but all answers were "No", giving a yes-count of zero.
+
+- **Null (no data):** The cell renders in `surfaceVariant`, which matches the chart container background. The grid skeleton is still readable, but blank periods produce no visual noise — they simply disappear into the surface.
+- **Zero (recorded, value is zero):** The cell renders one small step away from the container background: `lerp(surfaceVariant, Color.White, 0.1f)` in dark mode and `lerp(surfaceVariant, Color.Black, 0.1f)` in light mode. Subtle enough not to compete with real data, but distinguishable on close inspection.
+
+This distinction is implemented in the calendar heat map for all three granularities (day, week, month). Other chart types — line graphs, bar/column charts, and word clouds — simply omit periods with no data and do not have a corresponding null state to represent.
 
 **Validation:** Adjacent stops in each palette are tested against Viénot 1999 colorblind simulation matrices (deuteranopia, protanopia, and tritanopia) applied in sRGB space. Separation is measured as Euclidean distance in sRGB. The general-purpose SPECTRUM palette requires ≥ 0.06 minimum distance; the purpose-built colorblind palettes (HORIZON, EMBER) require ≥ 0.10 (or ≥ 0.08 for Ember light under tritanopia). These thresholds are enforced by automated tests.
 

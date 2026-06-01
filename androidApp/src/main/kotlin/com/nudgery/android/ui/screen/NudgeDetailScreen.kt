@@ -70,6 +70,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -641,6 +643,8 @@ private fun CalendarHeatMapChart(
     val emptyCellColor = MaterialTheme.colorScheme.surfaceVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val zeroCellColor = if (isDark) lerp(emptyCellColor, Color.White, 0.1f)
+                        else lerp(emptyCellColor, Color.Black, 0.1f)
     val paletteStops = palette.paletteStops
 
     val countByDate = remember(counts) { counts.associate { it.date to it.value } }
@@ -668,8 +672,8 @@ private fun CalendarHeatMapChart(
     val maxValue = remember(counts, granularity, weekCells, monthCells) {
         when (granularity) {
             HeatMapGranularity.DAY -> counts.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
-            HeatMapGranularity.WEEK -> weekCells.maxOfOrNull { it.second }?.coerceAtLeast(1.0) ?: 1.0
-            HeatMapGranularity.MONTH -> monthCells.maxOfOrNull { it.second }?.coerceAtLeast(1.0) ?: 1.0
+            HeatMapGranularity.WEEK -> weekCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
+            HeatMapGranularity.MONTH -> monthCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
         }
     }
 
@@ -702,11 +706,15 @@ private fun CalendarHeatMapChart(
                         }
                         for (dayIdx in 0..6) {
                             val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
-                            val rawCount = countByDate[date] ?: 0.0
-                            val intensity = (rawCount / maxValue).toFloat().coerceIn(0f, 1f)
+                            val rawCount = countByDate[date]
                             drawRoundRect(
-                                color = if (intensity <= 0f) emptyCellColor
-                                        else paletteStops.colorAt(intensity, isDark),
+                                color = when {
+                                    rawCount == null -> emptyCellColor
+                                    rawCount <= 0.0 -> zeroCellColor
+                                    else -> paletteStops.colorAt(
+                                        (rawCount / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                    )
+                                },
                                 topLeft = Offset(weekX, labelAreaHeight + dayIdx * (cellSize + gapPx)),
                                 size = Size(cellSize, cellSize),
                                 cornerRadius = CornerRadius(cellSize * 0.15f)
@@ -733,10 +741,14 @@ private fun CalendarHeatMapChart(
                                 .lowercase().replaceFirstChar { it.uppercase() }
                             drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(x, 0f))
                         }
-                        val intensity = (value / maxValue).toFloat().coerceIn(0f, 1f)
                         drawRoundRect(
-                            color = if (intensity <= 0f) emptyCellColor
-                                    else paletteStops.colorAt(intensity, isDark),
+                            color = when {
+                                value == null -> emptyCellColor
+                                value <= 0.0 -> zeroCellColor
+                                else -> paletteStops.colorAt(
+                                    (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                )
+                            },
                             topLeft = Offset(x, labelAreaHeight),
                             size = Size(cellSize, cellSize),
                             cornerRadius = CornerRadius(cellSize * 0.15f)
@@ -763,10 +775,14 @@ private fun CalendarHeatMapChart(
                                 topLeft = Offset(x, 0f)
                             )
                         }
-                        val intensity = (value / maxValue).toFloat().coerceIn(0f, 1f)
                         drawRoundRect(
-                            color = if (intensity <= 0f) emptyCellColor
-                                    else paletteStops.colorAt(intensity, isDark),
+                            color = when {
+                                value == null -> emptyCellColor
+                                value <= 0.0 -> zeroCellColor
+                                else -> paletteStops.colorAt(
+                                    (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                )
+                            },
                             topLeft = Offset(x, labelAreaHeight),
                             size = Size(cellSize, cellSize),
                             cornerRadius = CornerRadius(cellSize * 0.15f)
@@ -1169,17 +1185,17 @@ private fun buildWeekCells(
     counts: List<DailyCount>,
     windowStart: LocalDate,
     windowEnd: LocalDate
-): List<Pair<LocalDate, Double>> {
+): List<Pair<LocalDate, Double?>> {
     val weeklyMap = mutableMapOf<LocalDate, Double>()
     counts.forEach { dc ->
         val weekMonday = dc.date.minus(dc.date.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
         weeklyMap[weekMonday] = (weeklyMap[weekMonday] ?: 0.0) + dc.value
     }
     val gridStart = windowStart.minus(windowStart.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
-    val result = mutableListOf<Pair<LocalDate, Double>>()
+    val result = mutableListOf<Pair<LocalDate, Double?>>()
     var week = gridStart
     while (week <= windowEnd) {
-        result.add(week to (weeklyMap[week] ?: 0.0))
+        result.add(week to weeklyMap[week])  // null = no data recorded this week
         week = week.plus(7, DateTimeUnit.DAY)
     }
     return result
@@ -1189,17 +1205,17 @@ private fun buildMonthCells(
     counts: List<DailyCount>,
     windowStart: LocalDate,
     windowEnd: LocalDate
-): List<Pair<LocalDate, Double>> {
+): List<Pair<LocalDate, Double?>> {
     val monthlyMap = mutableMapOf<LocalDate, Double>()
     counts.forEach { dc ->
         val monthStart = LocalDate(dc.date.year, dc.date.month, 1)
         monthlyMap[monthStart] = (monthlyMap[monthStart] ?: 0.0) + dc.value
     }
     val gridStart = LocalDate(windowStart.year, windowStart.month, 1)
-    val result = mutableListOf<Pair<LocalDate, Double>>()
+    val result = mutableListOf<Pair<LocalDate, Double?>>()
     var month = gridStart
     while (month <= windowEnd) {
-        result.add(month to (monthlyMap[month] ?: 0.0))
+        result.add(month to monthlyMap[month])  // null = no data recorded this month
         month = month.plus(1, DateTimeUnit.MONTH)
     }
     return result
