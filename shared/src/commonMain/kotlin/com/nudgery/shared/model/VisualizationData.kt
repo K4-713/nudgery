@@ -23,7 +23,9 @@ sealed class VisualizationData {
         val dailyCounts: List<DailyCount>,
         val windowStart: LocalDate,
         val windowEnd: LocalDate,
-        val granularity: HeatMapGranularity
+        val granularity: HeatMapGranularity,
+        /** When true, the chart sizes cells to fit the entire dataset in view without scrolling. */
+        val fillViewport: Boolean = false
     ) : VisualizationData()
     data class LineGraph(
         val points: List<DataPoint>,

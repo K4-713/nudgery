@@ -625,7 +625,8 @@ private fun NudgeryChart(
                     windowStart = visualization.windowStart,
                     windowEnd = visualization.windowEnd,
                     granularity = visualization.granularity,
-                    palette = chartPalette
+                    palette = chartPalette,
+                    fillViewport = visualization.fillViewport
                 )
                 is VisualizationData.LineGraph -> LineGraphChart(
                     points = visualization.points,
@@ -649,7 +650,8 @@ private fun CalendarHeatMapChart(
     windowStart: LocalDate,
     windowEnd: LocalDate,
     granularity: HeatMapGranularity,
-    palette: ChartPalettePreference
+    palette: ChartPalettePreference,
+    fillViewport: Boolean = false
 ) {
     val textMeasurer = rememberTextMeasurer()
     val emptyCellColor = MaterialTheme.colorScheme.surfaceVariant
@@ -729,17 +731,26 @@ private fun CalendarHeatMapChart(
                 (availableWidthPx - gapPx * (numberOfCells - 1)) / numberOfCells
             else availableWidthPx
 
-            // SINGLE_DAY uses a 3-row × 4-column grid; size cells to fill that target viewport.
-            val cellPx = if (granularity == HeatMapGranularity.SINGLE_DAY) {
-                val targetCellByWidth = (availableWidthPx - gapPx * (SINGLE_DAY_GRID_VISIBLE_COLS - 1)) / SINGLE_DAY_GRID_VISIBLE_COLS
-                val maxCellByHeightForGrid = (availableHeightPx - labelAreaPx - gapPx * (SINGLE_DAY_GRID_ROWS - 1)) / SINGLE_DAY_GRID_ROWS
-                minOf(maxCellByHeightForGrid, maxOf(targetCellByWidth, minCellPx))
-            } else {
-                minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
+            val maxCellByHeightForSingleDayGrid =
+                (availableHeightPx - labelAreaPx - gapPx * (SINGLE_DAY_GRID_ROWS - 1)) / SINGLE_DAY_GRID_ROWS
+
+            val cellPx = when {
+                granularity == HeatMapGranularity.SINGLE_DAY && fillViewport ->
+                    // Fit all columns in view; height still limits individual cell size.
+                    minOf(maxCellByHeightForSingleDayGrid, naturalCellByWidth.coerceAtLeast(0f))
+                granularity == HeatMapGranularity.SINGLE_DAY ->
+                    // Weekly mode: target SINGLE_DAY_GRID_VISIBLE_COLS columns per screen, then scroll.
+                    minOf(maxCellByHeightForSingleDayGrid,
+                        maxOf((availableWidthPx - gapPx * (SINGLE_DAY_GRID_VISIBLE_COLS - 1)) / SINGLE_DAY_GRID_VISIBLE_COLS, minCellPx))
+                fillViewport ->
+                    // All other granularities: shrink cells as needed so all data fits without scrolling.
+                    minOf(maxCellByHeight, naturalCellByWidth.coerceAtLeast(0f))
+                else ->
+                    minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
             }
             val contentWidthPx = if (numberOfCells > 0)
                 numberOfCells * (cellPx + gapPx) - gapPx else 0f
-            val needsScroll = contentWidthPx > availableWidthPx
+            val needsScroll = !fillViewport && contentWidthPx > availableWidthPx
 
             LaunchedEffect(contentWidthPx) {
                 if (needsScroll) scrollState.scrollTo(scrollState.maxValue)
