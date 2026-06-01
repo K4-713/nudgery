@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerRow
+import com.nudgery.android.viewmodel.FollowUpVisualization
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -306,6 +307,16 @@ fun NudgeDetailScreen(
                         onTimeframeSelect = { viewModel.selectTimeframe(it) },
                         onExport = { format -> viewModel.exportAnswers(format) },
                         onExpandChart = { showFullScreenChart = true },
+                        chartPalette = chartPalette
+                    )
+                }
+            }
+
+            // Follow-up charts (one card per follow-up question with charatable data)
+            uiState.followUpVisualizations.forEach { followUp ->
+                item(key = followUp.questionId) {
+                    FollowUpChartSection(
+                        followUp = followUp,
                         chartPalette = chartPalette
                     )
                 }
@@ -943,6 +954,53 @@ private fun TagCloudChart(entries: List<NamedCount>) {
                 color = MaterialTheme.colorScheme.primary
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FollowUpChartSection(
+    followUp: FollowUpVisualization,
+    chartPalette: ChartPalettePreference
+) {
+    var selectedChartIndex by rememberSaveable(followUp.questionId) { mutableStateOf(0) }
+    var showTypePicker by remember { mutableStateOf(false) }
+    val safeIndex = selectedChartIndex.coerceAtMost(followUp.visualizations.lastIndex)
+
+    Card {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = followUp.questionText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Row(verticalAlignment = Alignment.Top) {
+                Box(modifier = Modifier.weight(1f)) {
+                    NudgeryChart(
+                        visualization = followUp.visualizations[safeIndex],
+                        chartPalette = chartPalette
+                    )
+                }
+                if (followUp.visualizations.size > 1) {
+                    IconButton(onClick = { showTypePicker = true }) {
+                        Icon(
+                            Icons.Outlined.BarChart,
+                            contentDescription = stringResource(R.string.detail_edit_chart_type)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showTypePicker) {
+        ChartTypePickerSheet(
+            visualizations = followUp.visualizations,
+            safeIndex = safeIndex,
+            onSelectIndex = { selectedChartIndex = it },
+            onDismiss = { showTypePicker = false }
+        )
     }
 }
 

@@ -4,6 +4,7 @@ import com.nudgery.shared.model.Answer
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
 import com.nudgery.shared.model.Timeframe
+import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.model.VisualizationData
 import com.nudgery.shared.usecase.CreateNudgeRequest
 import com.nudgery.shared.usecase.CreateNudgeResult
@@ -26,6 +27,7 @@ import kotlinx.datetime.toInstant
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class VisualizationDataTest {
@@ -332,6 +334,103 @@ class VisualizationDataTest {
         assertEquals(1.0, heatMap.dailyCounts.sumOf { it.value })
     }
 
+    // --- TEXT (word cloud) ---
+
+    @Test
+    fun TDD_textFollowUpQuestionProvidesTagCloud() = runTest {
+        // README: Follow-up questions can be TEXT type; word cloud is the available visualization
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        repos.answerRepository.insert(
+            Answer(id = "ans-text-1", nudgeId = nudgeId, questionId = followUpId,
+                value = "Flying over colorful mountains", scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(), isHidden = false)
+        )
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+
+        assertTrue(charts.any { it is VisualizationData.TagCloud },
+            "TEXT question should produce a TagCloud")
+    }
+
+    @Test
+    fun TDD_textWordCloudExcludesStopWords() = runTest {
+        // Stop words (function words like "the", "was", "and") should be filtered from the word cloud
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        repos.answerRepository.insert(
+            Answer(id = "ans-text-stop", nudgeId = nudgeId, questionId = followUpId,
+                value = "the dragon was flying and breathing fire", scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(), isHidden = false)
+        )
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
+        val words = cloud.entries.map { it.label }
+
+        assertTrue("the" !in words, "Stop word 'the' should be excluded")
+        assertTrue("was" !in words, "Stop word 'was' should be excluded")
+        assertTrue("and" !in words, "Stop word 'and' should be excluded")
+        assertTrue("dragon" in words, "Content word 'dragon' should be included")
+        assertTrue("fire" in words, "Content word 'fire' should be included")
+    }
+
+    @Test
+    fun TDD_textWordCloudExcludesShortWords() = runTest {
+        // Words under 3 characters are filtered to remove noise like "ok", "hi", "ha"
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        repos.answerRepository.insert(
+            Answer(id = "ans-text-short", nudgeId = nudgeId, questionId = followUpId,
+                value = "ok so a dragon appeared", scheduledAt = Clock.System.now(),
+                answeredAt = Clock.System.now(), isHidden = false)
+        )
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
+        val words = cloud.entries.map { it.label }
+
+        assertTrue("ok" !in words, "Short word 'ok' (2 chars) should be excluded")
+        assertTrue("a" !in words, "Short word 'a' (1 char) should be excluded")
+        assertTrue("so" !in words, "Short word 'so' (2 chars) should be excluded")
+        assertTrue("dragon" in words, "Longer word 'dragon' should be included")
+    }
+
+    @Test
+    fun TDD_textWordCloudCountsWordFrequencyAcrossAnswers() = runTest {
+        // The same word appearing in multiple answers should be summed across all of them
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        val now = Clock.System.now()
+        repos.answerRepository.insert(Answer(id = "ans-freq-1", nudgeId = nudgeId, questionId = followUpId,
+            value = "chasing dragon through forest", scheduledAt = now, answeredAt = now, isHidden = false))
+        repos.answerRepository.insert(Answer(id = "ans-freq-2", nudgeId = nudgeId, questionId = followUpId,
+            value = "the dragon returned breathing fire", scheduledAt = now, answeredAt = now, isHidden = false))
+        repos.answerRepository.insert(Answer(id = "ans-freq-3", nudgeId = nudgeId, questionId = followUpId,
+            value = "forest was peaceful without dragon", scheduledAt = now, answeredAt = now, isHidden = false))
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
+        val dragonEntry = cloud.entries.find { it.label == "dragon" }
+
+        assertNotNull(dragonEntry, "'dragon' should appear in the word cloud")
+        assertEquals(3, dragonEntry!!.count, "'dragon' appears once per answer, total should be 3")
+    }
+
+    @Test
+    fun TDD_textWordCloudStripsLeadingAndTrailingPunctuation() = runTest {
+        // Punctuation attached to words should not prevent frequency matching ("running," == "running")
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        val now = Clock.System.now()
+        repos.answerRepository.insert(Answer(id = "ans-punct-1", nudgeId = nudgeId, questionId = followUpId,
+            value = "running, through the forest.", scheduledAt = now, answeredAt = now, isHidden = false))
+        repos.answerRepository.insert(Answer(id = "ans-punct-2", nudgeId = nudgeId, questionId = followUpId,
+            value = "running through darkness", scheduledAt = now, answeredAt = now, isHidden = false))
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
+        val runningEntry = cloud.entries.find { it.label == "running" }
+
+        assertNotNull(runningEntry, "'running' should appear in the word cloud")
+        assertEquals(2, runningEntry!!.count, "'running,' and 'running' should both count as 'running'")
+    }
+
     @Test
     fun TDD_hiddenAnswersExcludedFromVisualizationAggregates() = runTest {
         // README "Editing Nudges": "Hidden rows no longer appear in the data visualization"
@@ -345,5 +444,25 @@ class VisualizationDataTest {
         val heatMap = charts.filterIsInstance<VisualizationData.CalendarHeatMap>().first()
         assertEquals(0.0, heatMap.dailyCounts.sumOf { it.value },
             "Hidden answer should not appear in visualization data")
+    }
+
+    private suspend fun createNudgeWithTextFollowUp(): Pair<String, String> {
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Did you have a dream?", QuestionType.YES_NO),
+                followUpQuestions = listOf(
+                    QuestionRequest(
+                        text = "Describe the dream",
+                        type = QuestionType.TEXT,
+                        triggerAnswerValue = "YES",
+                        triggerOperator = TriggerOperator.EQ
+                    )
+                ),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val followUpId = repos.questionRepository.getByNudgeId(result.nudgeId)
+            .first { !it.isMainQuestion }.id
+        return result.nudgeId to followUpId
     }
 }

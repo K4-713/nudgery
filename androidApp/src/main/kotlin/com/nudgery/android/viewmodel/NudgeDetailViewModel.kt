@@ -37,6 +37,12 @@ import kotlinx.datetime.TimeZone
 
 private const val TAG = "NudgeDetailViewModel"
 
+data class FollowUpVisualization(
+    val questionId: String,
+    val questionText: String,
+    val visualizations: List<VisualizationData>
+)
+
 data class AnswerRow(
     val answerId: String,
     val questionText: String,
@@ -59,6 +65,7 @@ data class NudgeDetailUiState(
     val answers: List<AnswerRow> = emptyList(),
     val hasMissedNotification: Boolean = false,
     val visualizations: List<VisualizationData> = emptyList(),
+    val followUpVisualizations: List<FollowUpVisualization> = emptyList(),
     val selectedTimeframe: Timeframe = Timeframe.WEEKLY,
     val exportContent: String? = null,
     val exportFormat: ExportFormat = ExportFormat.CSV,
@@ -86,9 +93,11 @@ class NudgeDetailViewModel(
     private val _uiState = MutableStateFlow(NudgeDetailUiState())
     val uiState: StateFlow<NudgeDetailUiState> = _uiState.asStateFlow()
 
-    // Maps used to join answers with display text; updated in loadStaticData()
+    // Maps used to join answers with display text; updated in loadNudgeData()
     private val _questionMap = MutableStateFlow<Map<String, Question>>(emptyMap())
     private val _optionTextMap = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    private var followUpQuestions: List<Question> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -197,6 +206,7 @@ class NudgeDetailViewModel(
 
         _questionMap.value = questions.associateBy { it.id }
         _optionTextMap.value = optionTextMap
+        followUpQuestions = questions.filter { !it.isMainQuestion }
 
         _uiState.update {
             it.copy(
@@ -207,7 +217,7 @@ class NudgeDetailViewModel(
                 schedule = schedule,
                 nextFireTime = nextFire,
                 mainQuestionId = mainQuestion?.id,
-                followUpCount = questions.count { q -> !q.isMainQuestion }
+                followUpCount = followUpQuestions.size
             )
         }
 
@@ -218,15 +228,32 @@ class NudgeDetailViewModel(
         val questionId = _uiState.value.mainQuestionId ?: return
         val timeframe = _uiState.value.selectedTimeframe
         viewModelScope.launch {
+            val now = Clock.System.now()
+            val tz = TimeZone.currentSystemDefault()
             val visualizations = getVisualizationData.execute(
                 nudgeId = nudgeId,
                 questionId = questionId,
                 timeframe = timeframe,
-                now = Clock.System.now(),
-                timeZone = TimeZone.currentSystemDefault()
+                now = now,
+                timeZone = tz
             )
-            _uiState.update { it.copy(visualizations = visualizations) }
-            Log.i(TAG, "Loaded ${visualizations.size} visualizations for $timeframe")
+            val followUpVizs = followUpQuestions.mapNotNull { question ->
+                val vizs = getVisualizationData.execute(
+                    nudgeId = nudgeId,
+                    questionId = question.id,
+                    timeframe = timeframe,
+                    now = now,
+                    timeZone = tz
+                )
+                if (vizs.isEmpty()) null
+                else FollowUpVisualization(
+                    questionId = question.id,
+                    questionText = question.text,
+                    visualizations = vizs
+                )
+            }
+            _uiState.update { it.copy(visualizations = visualizations, followUpVisualizations = followUpVizs) }
+            Log.i(TAG, "Loaded ${visualizations.size} main + ${followUpVizs.size} follow-up visualizations for $timeframe")
         }
     }
 

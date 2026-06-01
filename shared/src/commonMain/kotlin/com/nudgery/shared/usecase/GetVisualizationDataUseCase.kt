@@ -11,6 +11,7 @@ import com.nudgery.shared.model.VisualizationData
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
+import com.nudgery.shared.util.STOP_WORDS
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
@@ -55,7 +56,7 @@ class GetVisualizationDataUseCase(
             QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today, granularity)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
-            QuestionType.TEXT -> emptyList()
+            QuestionType.TEXT -> buildTextCharts(answers)
         }
     }
 
@@ -148,6 +149,22 @@ class GetVisualizationDataUseCase(
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity)
         )
     }
+
+    private fun buildTextCharts(answers: List<Answer>): List<VisualizationData> {
+        val wordCounts = answers
+            .flatMap { tokenizeText(it.value) }
+            .groupingBy { it }
+            .eachCount()
+            .map { (word, count) -> NamedCount(word, count) }
+            .sortedByDescending { it.count }
+        return if (wordCounts.isEmpty()) emptyList()
+        else listOf(VisualizationData.TagCloud(wordCounts))
+    }
+
+    private fun tokenizeText(text: String): List<String> =
+        text.split(Regex("\\s+"))
+            .map { token -> token.lowercase().trim { !it.isLetter() } }
+            .filter { word -> word.length >= 3 && word !in STOP_WORDS }
 
     private suspend fun buildOptionCharts(
         answers: List<Answer>,
