@@ -631,7 +631,7 @@ private fun NudgeryChart(
                 )
                 is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
                 is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
-                is VisualizationData.TagCloud -> TagCloudChart(visualization.entries)
+                is VisualizationData.TagCloud -> TagCloudChart(visualization.entries, chartPalette)
             }
         }
     }
@@ -982,17 +982,43 @@ private fun NamedCountChart(entries: List<NamedCount>) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TagCloudChart(entries: List<NamedCount>) {
-    val max = entries.maxOfOrNull { it.count }?.toFloat() ?: 1f
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun TagCloudChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
+    if (entries.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
+        }
+        return
+    }
+    val max = entries.maxOf { it.count }.toFloat()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val stops = palette.paletteStops
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         entries.forEach { entry ->
-            val scale = 0.7f + (entry.count / max) * 0.6f
-            Text(
-                text = entry.label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize * scale,
-                color = MaterialTheme.colorScheme.primary
-            )
+            val intensity = (entry.count / max).coerceIn(0f, 1f)
+            val bubbleColor = stops.colorAt(intensity, isDark)
+            val textColor = if (bubbleColor.luminance() > 0.4f) Color.Black else Color.White
+            val fontSize = (11f + intensity * 12f).sp
+            val horizontalPadding = (8f + intensity * 8f).dp
+            val verticalPadding = (5f + intensity * 4f).dp
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .background(bubbleColor, CircleShape)
+                    .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+            ) {
+                Text(
+                    text = entry.label,
+                    fontSize = fontSize,
+                    color = textColor,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
