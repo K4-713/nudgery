@@ -109,6 +109,13 @@ class UpdateNudgeUseCase(
             updatedNudge = updatedNudge.copy(updatedAt = now)
         }
 
+        if (request.optionReorder != null && mainQuestion != null) {
+            request.optionReorder.forEachIndexed { newIndex, optionId ->
+                questionOptionRepository.updateOrderIndex(optionId, newIndex)
+            }
+            updatedNudge = updatedNudge.copy(updatedAt = now)
+        }
+
         if (request.followUpReplacements != null) {
             applyFollowUpReplacements(nudge = updatedNudge, replacements = request.followUpReplacements)
             updatedNudge = updatedNudge.copy(updatedAt = now)
@@ -236,11 +243,17 @@ class UpdateNudgeUseCase(
             )
 
             val optionUpdateMap = request.optionUpdates.associateBy { it.optionId }
-            questionOptionRepository.getByQuestionId(oldMainQuestion.id).forEach { option ->
+            val existingOptions = questionOptionRepository.getByQuestionId(oldMainQuestion.id)
+                .sortedBy { it.orderIndex }
+            val orderedOptions = request.optionReorder
+                ?.mapNotNull { id -> existingOptions.find { it.id == id } }
+                ?: existingOptions
+            orderedOptions.forEachIndexed { newIndex, option ->
                 questionOptionRepository.insert(
                     option.copy(
                         id = generateUuid(),
                         questionId = newMainQuestionId,
+                        orderIndex = newIndex,
                         text = optionUpdateMap[option.id]?.newText ?: option.text
                     )
                 )

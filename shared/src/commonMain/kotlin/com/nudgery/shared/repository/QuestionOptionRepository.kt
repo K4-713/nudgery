@@ -6,5 +6,6 @@ interface QuestionOptionRepository {
     suspend fun getByQuestionId(questionId: String): List<QuestionOption>
     suspend fun insert(option: QuestionOption)
     suspend fun updateText(optionId: String, text: String)
+    suspend fun updateOrderIndex(optionId: String, orderIndex: Int)
     suspend fun deleteByQuestionId(questionId: String)
 }

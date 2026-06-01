@@ -4,6 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -93,7 +99,8 @@ fun EditNudgeScreen(
                         onOptionChange = { index, text ->
                             val optionId = formState.options.getOrNull(index)?.optionId ?: return@EditQuestionStep
                             viewModel.updateOption(optionId, text)
-                        }
+                        },
+                        onOptionReorder = { from, to -> viewModel.reorderOption(from, to) }
                     )
                     1 -> FollowUpStep(
                         mainQuestion = QuestionFormState(
@@ -145,7 +152,8 @@ private fun EditQuestionStep(
     questionText: String,
     onQuestionTextChange: (String) -> Unit,
     options: List<String>,
-    onOptionChange: (Int, String) -> Unit
+    onOptionChange: (Int, String) -> Unit,
+    onOptionReorder: (fromIndex: Int, toIndex: Int) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.step_question_title), style = MaterialTheme.typography.titleMedium)
@@ -172,12 +180,26 @@ private fun EditQuestionStep(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             options.forEachIndexed { index, option ->
-                OutlinedTextField(
-                    value = option,
-                    onValueChange = { onOptionChange(index, it) },
-                    placeholder = { Text(stringResource(R.string.option_hint)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = option,
+                        onValueChange = { onOptionChange(index, it) },
+                        placeholder = { Text(stringResource(R.string.option_hint)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        enabled = index > 0,
+                        onClick = { onOptionReorder(index, index - 1) }
+                    ) {
+                        Icon(Icons.Outlined.ArrowUpward, contentDescription = stringResource(R.string.option_move_up))
+                    }
+                    IconButton(
+                        enabled = index < options.lastIndex,
+                        onClick = { onOptionReorder(index, index + 1) }
+                    ) {
+                        Icon(Icons.Outlined.ArrowDownward, contentDescription = stringResource(R.string.option_move_down))
+                    }
+                }
             }
         }
     }

@@ -106,6 +106,10 @@ class FakeQuestionOptionRepository : QuestionOptionRepository {
         val i = options.indexOfFirst { it.id == optionId }
         if (i >= 0) options[i] = options[i].copy(text = text)
     }
+    override suspend fun updateOrderIndex(optionId: String, orderIndex: Int) {
+        val i = options.indexOfFirst { it.id == optionId }
+        if (i >= 0) options[i] = options[i].copy(orderIndex = orderIndex)
+    }
     override suspend fun deleteByQuestionId(questionId: String) {
         options.removeAll { it.questionId == questionId }
     }

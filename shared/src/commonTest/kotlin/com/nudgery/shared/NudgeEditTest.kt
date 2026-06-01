@@ -273,4 +273,72 @@ class NudgeEditTest {
         val updatedQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
         assertEquals("Did you work out?", updatedQuestion.text)
     }
+
+    @Test
+    fun TDD_optionOrderPersistedOnUpdate() = runTest {
+        // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
+        val nudgeId = createOptionNudge(listOf("Alpha", "Beta", "Gamma"))
+        val mainQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        val options = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).sortedBy { it.orderIndex }
+
+        // Reorder: Gamma, Alpha, Beta
+        val result = updateNudge.execute(
+            UpdateNudgeRequest(
+                nudgeId = nudgeId,
+                optionReorder = listOf(options[2].id, options[0].id, options[1].id)
+            )
+        )
+
+        assertIs<UpdateNudgeResult.Success>(result)
+        val reordered = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).sortedBy { it.orderIndex }
+        assertEquals(listOf("Gamma", "Alpha", "Beta"), reordered.map { it.text })
+    }
+
+    @Test
+    fun TDD_optionReorderPreservesOptionIds() = runTest {
+        // Option IDs must not change on reorder — existing answers reference them
+        val nudgeId = createOptionNudge(listOf("Alpha", "Beta", "Gamma"))
+        val mainQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        val originalOptions = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).sortedBy { it.orderIndex }
+        val originalIds = originalOptions.map { it.id }.toSet()
+
+        updateNudge.execute(
+            UpdateNudgeRequest(
+                nudgeId = nudgeId,
+                optionReorder = listOf(originalOptions[2].id, originalOptions[0].id, originalOptions[1].id)
+            )
+        )
+
+        val reorderedIds = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).map { it.id }.toSet()
+        assertEquals(originalIds, reorderedIds, "Option IDs must be unchanged after reorder")
+    }
+
+    @Test
+    fun TDD_optionReorderDoesNotTriggerSplitDialog() = runTest {
+        // Reordering is cosmetic — it does not change the semantic meaning of historical answers,
+        // so it must not require a split (no new nudge should be created).
+        val nudgeId = createOptionNudge(listOf("Alpha", "Beta", "Gamma"))
+        val mainQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        val options = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).sortedBy { it.orderIndex }
+
+        updateNudge.execute(
+            UpdateNudgeRequest(
+                nudgeId = nudgeId,
+                optionReorder = listOf(options[2].id, options[0].id, options[1].id),
+                splitEdit = false
+            )
+        )
+
+        val allNudges = repos.nudgeRepository.observeAll().first()
+        assertEquals(1, allNudges.size, "Reorder must not create a split nudge")
+    }
+
+    private suspend fun createOptionNudge(options: List<String>): String {
+        return (createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Which do you prefer?", QuestionType.OPTION_SINGLE, options),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success).nudgeId
+    }
 }

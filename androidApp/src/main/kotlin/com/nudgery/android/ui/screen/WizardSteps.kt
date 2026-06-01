@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
@@ -197,6 +199,26 @@ private fun OptionListEditor(
                     placeholder = { Text(stringResource(R.string.option_hint)) },
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(
+                    enabled = index > 0,
+                    onClick = {
+                        val reordered = options.toMutableList()
+                        reordered.add(index - 1, reordered.removeAt(index))
+                        onOptionsChange(reordered)
+                    }
+                ) {
+                    Icon(Icons.Outlined.ArrowUpward, contentDescription = stringResource(R.string.option_move_up))
+                }
+                IconButton(
+                    enabled = index < options.lastIndex,
+                    onClick = {
+                        val reordered = options.toMutableList()
+                        reordered.add(index + 1, reordered.removeAt(index))
+                        onOptionsChange(reordered)
+                    }
+                ) {
+                    Icon(Icons.Outlined.ArrowDownward, contentDescription = stringResource(R.string.option_move_down))
+                }
                 IconButton(
                     onClick = { onOptionsChange(options.toMutableList().also { it.removeAt(index) }) }
                 ) {

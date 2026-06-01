@@ -45,12 +45,15 @@ data class EditNudgeFormState(
     val mainQuestionScaleMin: Int = 0,
     val mainQuestionScaleMax: Int = 10,
     val options: List<OptionEditState> = emptyList(),
+    val originalOptionOrder: List<String> = emptyList(),
     val followUps: List<EditableFollowUp> = emptyList(),
     val schedule: ScheduleFormState = ScheduleFormState(),
     val showSplitDialog: Boolean = false,
     val isSubmitting: Boolean = false,
     val result: UpdateNudgeResult? = null
 ) {
+    val hasOrderChanged: Boolean
+        get() = originalOptionOrder.isNotEmpty() && options.map { it.optionId } != originalOptionOrder
     val questionOrOptionChanged: Boolean
         get() = mainQuestionText != originalMainQuestionText || options.any { it.isChanged }
 }
@@ -97,6 +100,15 @@ class EditNudgeViewModel(
 
     fun setMainQuestionText(text: String) {
         _formState.update { it.copy(mainQuestionText = text) }
+    }
+
+    fun reorderOption(fromIndex: Int, toIndex: Int) {
+        _formState.update { state ->
+            if (fromIndex !in state.options.indices || toIndex !in state.options.indices) return@update state
+            val reordered = state.options.toMutableList()
+            reordered.add(toIndex, reordered.removeAt(fromIndex))
+            state.copy(options = reordered)
+        }
     }
 
     fun updateOption(optionId: String, newText: String) {
@@ -147,6 +159,7 @@ class EditNudgeViewModel(
                     optionUpdates = state.options
                         .filter { it.isChanged }
                         .map { UpdateOptionRequest(it.optionId, it.text) },
+                    optionReorder = if (state.hasOrderChanged) state.options.map { it.optionId } else null,
                     schedule = state.schedule.toRequest(),
                     splitEdit = splitEdit,
                     followUpReplacements = state.followUps.map { ef ->
@@ -224,6 +237,7 @@ class EditNudgeViewModel(
                 mainQuestionScaleMin = mainQuestion?.scaleMin ?: 0,
                 mainQuestionScaleMax = mainQuestion?.scaleMax ?: 10,
                 options = editableOptions,
+                originalOptionOrder = editableOptions.map { it.optionId },
                 followUps = followUps,
                 schedule = scheduleForm
             )

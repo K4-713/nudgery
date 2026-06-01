@@ -57,6 +57,7 @@ data class UpdateNudgeRequest(
     val isEnabled: Boolean? = null,
     val mainQuestionText: String? = null,
     val optionUpdates: List<UpdateOptionRequest> = emptyList(),
+    val optionReorder: List<String>? = null,  // option IDs in desired order; null = no change
     val schedule: ScheduleRequest? = null,
     val splitEdit: Boolean = false,
     val followUpReplacements: List<FollowUpReplacement>? = null

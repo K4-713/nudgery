@@ -16,5 +16,8 @@ VALUES (:id, :questionId, :text, :orderIndex);
 updateText:
 UPDATE QuestionOption SET text = :text WHERE id = :id;
 
+updateOrderIndex:
+UPDATE QuestionOption SET orderIndex = :orderIndex WHERE id = :id;
+
 deleteByQuestionId:
 DELETE FROM QuestionOption WHERE questionId = :questionId;
