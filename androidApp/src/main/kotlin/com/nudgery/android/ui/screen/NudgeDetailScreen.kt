@@ -325,6 +325,8 @@ fun NudgeDetailScreen(
                 item(key = followUp.questionId) {
                     FollowUpChartSection(
                         followUp = followUp,
+                        selectedTimeframe = uiState.selectedTimeframe,
+                        onTimeframeSelect = { viewModel.selectTimeframe(it) },
                         chartPalette = chartPalette
                     )
                 }
@@ -535,7 +537,8 @@ private fun FullScreenChartDialog(
     selectedTimeframe: Timeframe,
     onTimeframeSelect: (Timeframe) -> Unit,
     onDismiss: () -> Unit,
-    chartPalette: ChartPalettePreference
+    chartPalette: ChartPalettePreference,
+    title: String? = null
 ) {
     var showTypePicker by remember { mutableStateOf(false) }
     val safeIndex = selectedIndex.coerceAtMost(visualizations.lastIndex)
@@ -551,7 +554,7 @@ private fun FullScreenChartDialog(
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text(visualizationLabel(visualizations[safeIndex])) },
+                        title = { Text(title ?: visualizationLabel(visualizations[safeIndex])) },
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
                                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.nav_back))
@@ -731,6 +734,7 @@ private fun CalendarHeatMapChart(
                     HeatMapGranularity.DAY -> {
                         if (dayGridWeeks.isEmpty()) return@Canvas
                         var currentMonth = -1
+                        var lastLabelEnd = Float.NEGATIVE_INFINITY
                         dayGridWeeks.forEachIndexed { weekIdx, weekStart ->
                             val weekX = weekIdx * (cellPx + gapPx)
                             val weekMonth = weekStart.monthNumber
@@ -738,7 +742,11 @@ private fun CalendarHeatMapChart(
                                 currentMonth = weekMonth
                                 val label = weekStart.month.name.take(3)
                                     .lowercase().replaceFirstChar { it.uppercase() }
-                                drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(weekX, 0f))
+                                val measured = textMeasurer.measure(label, labelStyle)
+                                if (weekX >= lastLabelEnd + 4.dp.toPx()) {
+                                    drawText(measured, topLeft = Offset(weekX, 0f))
+                                    lastLabelEnd = weekX + measured.size.width
+                                }
                             }
                             for (dayIdx in 0..6) {
                                 val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
@@ -761,6 +769,7 @@ private fun CalendarHeatMapChart(
                     HeatMapGranularity.WEEK -> {
                         if (weekCells.isEmpty()) return@Canvas
                         var currentMonth = -1
+                        var lastLabelEnd = Float.NEGATIVE_INFINITY
                         weekCells.forEachIndexed { idx, (weekStart, value) ->
                             val x = idx * (cellPx + gapPx)
                             val weekMonth = weekStart.monthNumber
@@ -768,7 +777,11 @@ private fun CalendarHeatMapChart(
                                 currentMonth = weekMonth
                                 val label = weekStart.month.name.take(3)
                                     .lowercase().replaceFirstChar { it.uppercase() }
-                                drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(x, 0f))
+                                val measured = textMeasurer.measure(label, labelStyle)
+                                if (x >= lastLabelEnd + 4.dp.toPx()) {
+                                    drawText(measured, topLeft = Offset(x, 0f))
+                                    lastLabelEnd = x + measured.size.width
+                                }
                             }
                             drawRoundRect(
                                 color = when {
@@ -787,15 +800,17 @@ private fun CalendarHeatMapChart(
                     HeatMapGranularity.MONTH -> {
                         if (monthCells.isEmpty()) return@Canvas
                         var currentYear = -1
+                        var lastLabelEnd = Float.NEGATIVE_INFINITY
                         monthCells.forEachIndexed { idx, (monthStart, value) ->
                             val x = idx * (cellPx + gapPx)
                             val year = monthStart.year
                             if (idx == 0 || year != currentYear) {
                                 currentYear = year
-                                drawText(
-                                    textMeasurer.measure(year.toString(), labelStyle),
-                                    topLeft = Offset(x, 0f)
-                                )
+                                val measured = textMeasurer.measure(year.toString(), labelStyle)
+                                if (x >= lastLabelEnd + 4.dp.toPx()) {
+                                    drawText(measured, topLeft = Offset(x, 0f))
+                                    lastLabelEnd = x + measured.size.width
+                                }
                             }
                             drawRoundRect(
                                 color = when {
@@ -1040,10 +1055,13 @@ private fun TagCloudChart(entries: List<NamedCount>, palette: ChartPalettePrefer
 @Composable
 private fun FollowUpChartSection(
     followUp: FollowUpVisualization,
+    selectedTimeframe: Timeframe,
+    onTimeframeSelect: (Timeframe) -> Unit,
     chartPalette: ChartPalettePreference
 ) {
     var selectedChartIndex by rememberSaveable(followUp.questionId) { mutableStateOf(0) }
     var showTypePicker by remember { mutableStateOf(false) }
+    var showFullScreen by remember { mutableStateOf(false) }
     val safeIndex = selectedChartIndex.coerceAtMost(followUp.visualizations.lastIndex)
 
     Card {
@@ -1061,12 +1079,14 @@ private fun FollowUpChartSection(
                         chartPalette = chartPalette
                     )
                 }
-                if (followUp.visualizations.size > 1) {
-                    IconButton(onClick = { showTypePicker = true }) {
-                        Icon(
-                            Icons.Outlined.BarChart,
-                            contentDescription = stringResource(R.string.detail_edit_chart_type)
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (followUp.visualizations.size > 1) {
+                        IconButton(onClick = { showTypePicker = true }) {
+                            Icon(Icons.Outlined.BarChart, contentDescription = stringResource(R.string.detail_edit_chart_type))
+                        }
+                    }
+                    IconButton(onClick = { showFullScreen = true }) {
+                        Icon(Icons.Outlined.ZoomIn, contentDescription = stringResource(R.string.detail_expand_chart))
                     }
                 }
             }
@@ -1079,6 +1099,19 @@ private fun FollowUpChartSection(
             safeIndex = safeIndex,
             onSelectIndex = { selectedChartIndex = it },
             onDismiss = { showTypePicker = false }
+        )
+    }
+
+    if (showFullScreen) {
+        FullScreenChartDialog(
+            visualizations = followUp.visualizations,
+            selectedIndex = selectedChartIndex,
+            onSelectIndex = { selectedChartIndex = it },
+            selectedTimeframe = selectedTimeframe,
+            onTimeframeSelect = onTimeframeSelect,
+            onDismiss = { showFullScreen = false },
+            chartPalette = chartPalette,
+            title = followUp.questionText
         )
     }
 }
