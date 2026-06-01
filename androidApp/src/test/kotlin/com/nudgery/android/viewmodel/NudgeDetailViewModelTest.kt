@@ -14,6 +14,7 @@ import com.nudgery.shared.usecase.CreateNudgeResult
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.QuestionRequest
 import com.nudgery.shared.usecase.ScheduleRequest
+import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.VisualizationData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -173,18 +174,16 @@ class NudgeDetailViewModelTest {
 
     @Test
     fun TDD_selectTimeframe_updatesVisualizationData() = runTest {
-        // Selecting a different timeframe must reload chart data for that window
+        // All historical data is visible regardless of timeframe; switching timeframe
+        // reloads the chart data with a different granularity.
         val nudgeId = createNudge("Did you see any cool birds today?")
         val questions = repos.questionRepo.getByNudgeId(nudgeId)
         val questionId = questions.first().id
         val now = Clock.System.now()
 
-        // One answer from today (inside weekly range)
         repos.answerRepo.insert(makeAnswer(nudgeId, questionId, "YES", id = "recent"))
-        // One answer from 60 days ago (outside weekly range, inside all-time)
         repos.answerRepo.insert(makeAnswer(nudgeId, questionId, "YES", id = "old",
             scheduledAt = now - 60.days))
-
 
         val viewModel = buildViewModel(nudgeId)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
@@ -192,16 +191,20 @@ class NudgeDetailViewModelTest {
 
         val weeklyHeatMap = viewModel.uiState.value.visualizations
             .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
-        assertEquals("WEEKLY should only include the recent answer",
-            1.0, weeklyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+        assertEquals("WEEKLY should include all answers regardless of age",
+            2.0, weeklyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+        assertEquals("WEEKLY should use single-day strip granularity",
+            HeatMapGranularity.SINGLE_DAY, weeklyHeatMap.granularity)
 
-        viewModel.selectTimeframe(Timeframe.ALL_TIME)
+        viewModel.selectTimeframe(Timeframe.YEARLY)
         advanceUntilIdle()
 
-        val allTimeHeatMap = viewModel.uiState.value.visualizations
+        val yearlyHeatMap = viewModel.uiState.value.visualizations
             .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
-        assertEquals("ALL_TIME should include both answers",
-            2.0, allTimeHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+        assertEquals("YEARLY should also include all answers",
+            2.0, yearlyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+        assertEquals("YEARLY should use week granularity",
+            HeatMapGranularity.WEEK, yearlyHeatMap.granularity)
     }
 
     @Test

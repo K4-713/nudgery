@@ -16,10 +16,8 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.until
 
@@ -39,21 +37,17 @@ class GetVisualizationDataUseCase(
             ?: return emptyList()
 
         val today = now.toLocalDateTime(timeZone).date
-        val (windowStart, since) = computeWindow(timeframe, today, timeZone)
-        val answers = answerRepository.getVisibleByNudgeIdSince(nudgeId, since)
+        val answers = answerRepository.getVisibleByNudgeIdSince(nudgeId, Instant.DISTANT_PAST)
             .filter { it.questionId == questionId }
 
-        val effectiveWindowStart = if (timeframe == Timeframe.ALL_TIME) {
-            answers.minOfOrNull { it.scheduledAt.toLocalDateTime(timeZone).date } ?: today
-        } else {
-            windowStart
-        }
+        val windowStart = answers.minOfOrNull { it.scheduledAt.toLocalDateTime(timeZone).date } ?: today
+        val windowEnd = today
 
-        val granularity = computeGranularity(timeframe, effectiveWindowStart, today)
+        val granularity = computeGranularity(timeframe, windowStart, windowEnd)
 
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, effectiveWindowStart, today, granularity)
-            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, effectiveWindowStart, today, granularity)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity)
+            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
             QuestionType.TEXT -> buildTextCharts(answers)
@@ -65,7 +59,8 @@ class GetVisualizationDataUseCase(
         windowStart: LocalDate,
         windowEnd: LocalDate
     ): HeatMapGranularity = when (timeframe) {
-        Timeframe.WEEKLY, Timeframe.MONTHLY -> HeatMapGranularity.DAY
+        Timeframe.WEEKLY -> HeatMapGranularity.SINGLE_DAY
+        Timeframe.MONTHLY -> HeatMapGranularity.DAY
         Timeframe.YEARLY -> HeatMapGranularity.WEEK
         Timeframe.ALL_TIME -> {
             val days = windowStart.until(windowEnd, DateTimeUnit.DAY)
@@ -75,26 +70,6 @@ class GetVisualizationDataUseCase(
                 else -> HeatMapGranularity.MONTH
             }
         }
-    }
-
-    private fun computeWindow(
-        timeframe: Timeframe,
-        today: LocalDate,
-        timeZone: TimeZone
-    ): Pair<LocalDate, Instant> = when (timeframe) {
-        Timeframe.WEEKLY -> {
-            val start = today.minus(7, DateTimeUnit.DAY)
-            start to start.atStartOfDayIn(timeZone)
-        }
-        Timeframe.MONTHLY -> {
-            val start = LocalDate(today.year, today.month, 1)
-            start to start.atStartOfDayIn(timeZone)
-        }
-        Timeframe.YEARLY -> {
-            val start = LocalDate(today.year, Month.JANUARY, 1)
-            start to start.atStartOfDayIn(timeZone)
-        }
-        Timeframe.ALL_TIME -> today to Instant.DISTANT_PAST
     }
 
     private fun buildYesNoCharts(

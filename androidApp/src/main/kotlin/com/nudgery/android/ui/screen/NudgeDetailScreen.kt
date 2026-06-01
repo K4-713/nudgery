@@ -640,6 +640,9 @@ private fun NudgeryChart(
     }
 }
 
+private const val SINGLE_DAY_GRID_ROWS = 3
+private const val SINGLE_DAY_GRID_VISIBLE_COLS = 4
+
 @Composable
 private fun CalendarHeatMapChart(
     counts: List<DailyCount>,
@@ -671,6 +674,18 @@ private fun CalendarHeatMapChart(
         }
     }
 
+    // One entry per calendar day; only built when granularity == SINGLE_DAY.
+    val singleDayCells = remember(counts, windowStart, windowEnd, granularity) {
+        if (granularity != HeatMapGranularity.SINGLE_DAY) return@remember emptyList<Pair<LocalDate, Double?>>()
+        buildList {
+            var date = windowStart
+            while (date <= windowEnd) {
+                add(date to countByDate[date])
+                date = date.plus(1, DateTimeUnit.DAY)
+            }
+        }
+    }
+
     val weekCells = remember(counts, windowStart, windowEnd) {
         buildWeekCells(counts, windowStart, windowEnd)
     }
@@ -679,8 +694,9 @@ private fun CalendarHeatMapChart(
         buildMonthCells(counts, windowStart, windowEnd)
     }
 
-    val maxValue = remember(counts, granularity, weekCells, monthCells) {
+    val maxValue = remember(counts, granularity, singleDayCells, weekCells, monthCells) {
         when (granularity) {
+            HeatMapGranularity.SINGLE_DAY -> singleDayCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
             HeatMapGranularity.DAY -> counts.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
             HeatMapGranularity.WEEK -> weekCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
             HeatMapGranularity.MONTH -> monthCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
@@ -699,6 +715,9 @@ private fun CalendarHeatMapChart(
             val minCellPx = with(density) { 14.dp.toPx() }
 
             val numberOfCells = when (granularity) {
+                // Number of columns in the grid (each column holds SINGLE_DAY_GRID_ROWS days).
+                HeatMapGranularity.SINGLE_DAY ->
+                    (singleDayCells.size + SINGLE_DAY_GRID_ROWS - 1) / SINGLE_DAY_GRID_ROWS
                 HeatMapGranularity.DAY -> dayGridWeeks.size
                 HeatMapGranularity.WEEK -> weekCells.size
                 HeatMapGranularity.MONTH -> monthCells.size
@@ -710,7 +729,14 @@ private fun CalendarHeatMapChart(
                 (availableWidthPx - gapPx * (numberOfCells - 1)) / numberOfCells
             else availableWidthPx
 
-            val cellPx = minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
+            // SINGLE_DAY uses a 3-row × 4-column grid; size cells to fill that target viewport.
+            val cellPx = if (granularity == HeatMapGranularity.SINGLE_DAY) {
+                val targetCellByWidth = (availableWidthPx - gapPx * (SINGLE_DAY_GRID_VISIBLE_COLS - 1)) / SINGLE_DAY_GRID_VISIBLE_COLS
+                val maxCellByHeightForGrid = (availableHeightPx - labelAreaPx - gapPx * (SINGLE_DAY_GRID_ROWS - 1)) / SINGLE_DAY_GRID_ROWS
+                minOf(maxCellByHeightForGrid, maxOf(targetCellByWidth, minCellPx))
+            } else {
+                minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
+            }
             val contentWidthPx = if (numberOfCells > 0)
                 numberOfCells * (cellPx + gapPx) - gapPx else 0f
             val needsScroll = contentWidthPx > availableWidthPx
@@ -731,6 +757,44 @@ private fun CalendarHeatMapChart(
                     Modifier.fillMaxSize()
             ) {
                 when (granularity) {
+                    HeatMapGranularity.SINGLE_DAY -> {
+                        if (singleDayCells.isEmpty()) return@Canvas
+                        // Column-major layout: each column holds SINGLE_DAY_GRID_ROWS days
+                        // stacked top-to-bottom, columns progress left (oldest) to right (newest).
+                        var currentMonth = -1
+                        var lastLabelEnd = Float.NEGATIVE_INFINITY
+                        singleDayCells.forEachIndexed { dayIdx, (date, value) ->
+                            val colIdx = dayIdx / SINGLE_DAY_GRID_ROWS
+                            val rowIdx = dayIdx % SINGLE_DAY_GRID_ROWS
+                            val x = colIdx * (cellPx + gapPx)
+                            val y = labelAreaPx + rowIdx * (cellPx + gapPx)
+                            if (rowIdx == 0) {
+                                val month = date.monthNumber
+                                if (colIdx == 0 || month != currentMonth) {
+                                    currentMonth = month
+                                    val label = date.month.name.take(3)
+                                        .lowercase().replaceFirstChar { it.uppercase() }
+                                    val measured = textMeasurer.measure(label, labelStyle)
+                                    if (x >= lastLabelEnd + 4.dp.toPx()) {
+                                        drawText(measured, topLeft = Offset(x, 0f))
+                                        lastLabelEnd = x + measured.size.width
+                                    }
+                                }
+                            }
+                            drawRoundRect(
+                                color = when {
+                                    value == null -> emptyCellColor
+                                    value <= 0.0 -> zeroCellColor
+                                    else -> paletteStops.colorAt(
+                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                    )
+                                },
+                                topLeft = Offset(x, y),
+                                size = Size(cellPx, cellPx),
+                                cornerRadius = CornerRadius(cellPx * 0.15f)
+                            )
+                        }
+                    }
                     HeatMapGranularity.DAY -> {
                         if (dayGridWeeks.isEmpty()) return@Canvas
                         var currentMonth = -1
@@ -833,7 +897,7 @@ private fun CalendarHeatMapChart(
         Text(
             text = stringResource(
                 when (granularity) {
-                    HeatMapGranularity.DAY -> R.string.heatmap_legend_day
+                    HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> R.string.heatmap_legend_day
                     HeatMapGranularity.WEEK -> R.string.heatmap_legend_week
                     HeatMapGranularity.MONTH -> R.string.heatmap_legend_month
                 }

@@ -9,7 +9,14 @@ data class DataPoint(val at: Instant, val value: Double)
 
 data class NamedCount(val label: String, val count: Int)
 
-enum class HeatMapGranularity { DAY, WEEK, MONTH }
+enum class HeatMapGranularity {
+    /** One cell per day, rendered as a single horizontal strip (8 days visible per screen). */
+    SINGLE_DAY,
+    /** One cell per day, rendered as a 7-row Mon–Sun grid (GitHub contribution graph style). */
+    DAY,
+    WEEK,
+    MONTH
+}
 
 sealed class VisualizationData {
     data class CalendarHeatMap(
