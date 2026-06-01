@@ -333,6 +333,78 @@ class NudgeEditTest {
         assertEquals(1, allNudges.size, "Reorder must not create a split nudge")
     }
 
+    @Test
+    fun TDD_newOptionAddedInPlaceOnUpdate() = runTest {
+        // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
+        val nudgeId = createOptionNudge(listOf("Red", "Blue"))
+        val mainQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+
+        val result = updateNudge.execute(
+            UpdateNudgeRequest(nudgeId = nudgeId, newOptions = listOf("Green"))
+        )
+
+        assertIs<UpdateNudgeResult.Success>(result)
+        val options = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).sortedBy { it.orderIndex }
+        assertEquals(listOf("Red", "Blue", "Green"), options.map { it.text })
+    }
+
+    @Test
+    fun TDD_newOptionDoesNotTriggerSplitDialog() = runTest {
+        // Adding a new option doesn't change the meaning of existing answers, so no split is needed.
+        val nudgeId = createOptionNudge(listOf("Red", "Blue"))
+
+        updateNudge.execute(
+            UpdateNudgeRequest(nudgeId = nudgeId, newOptions = listOf("Green"), splitEdit = false)
+        )
+
+        val allNudges = repos.nudgeRepository.observeAll().first()
+        assertEquals(1, allNudges.size, "Adding an option must not create a split nudge")
+    }
+
+    @Test
+    fun TDD_removedOptionDeletedInPlaceOnUpdate() = runTest {
+        // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
+        val nudgeId = createOptionNudge(listOf("Red", "Blue", "Green"))
+        val mainQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        val blueId = repos.questionOptionRepository.getByQuestionId(mainQuestion.id)
+            .first { it.text == "Blue" }.id
+
+        val result = updateNudge.execute(
+            UpdateNudgeRequest(nudgeId = nudgeId, removedOptionIds = setOf(blueId), splitEdit = false)
+        )
+
+        assertIs<UpdateNudgeResult.Success>(result)
+        val remaining = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).map { it.text }
+        assertFalse("Blue" in remaining, "Removed option should be deleted")
+        assertTrue("Red" in remaining)
+        assertTrue("Green" in remaining)
+    }
+
+    @Test
+    fun TDD_removedOptionExcludedFromSplitNudge() = runTest {
+        // When splitting, the new nudge should not include the removed option.
+        val nudgeId = createOptionNudge(listOf("Red", "Blue", "Green"))
+        val mainQuestion = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        val blueId = repos.questionOptionRepository.getByQuestionId(mainQuestion.id)
+            .first { it.text == "Blue" }.id
+
+        val result = updateNudge.execute(
+            UpdateNudgeRequest(nudgeId = nudgeId, removedOptionIds = setOf(blueId), splitEdit = true)
+        )
+
+        assertIs<UpdateNudgeResult.Success>(result)
+        val newNudgeId = result.nudgeId
+        assertFalse(newNudgeId == nudgeId, "Split should create a new nudge")
+        val newMainQuestion = repos.questionRepository.getByNudgeId(newNudgeId).first { it.isMainQuestion }
+        val newOptions = repos.questionOptionRepository.getByQuestionId(newMainQuestion.id).map { it.text }
+        assertFalse("Blue" in newOptions, "Removed option must not appear in split nudge")
+        assertTrue("Red" in newOptions)
+        assertTrue("Green" in newOptions)
+        // Original nudge should still have all options (disabled but data preserved)
+        val originalOptions = repos.questionOptionRepository.getByQuestionId(mainQuestion.id).map { it.text }
+        assertTrue("Blue" in originalOptions, "Original nudge preserves all options")
+    }
+
     private suspend fun createOptionNudge(options: List<String>): String {
         return (createNudge.execute(
             CreateNudgeRequest(

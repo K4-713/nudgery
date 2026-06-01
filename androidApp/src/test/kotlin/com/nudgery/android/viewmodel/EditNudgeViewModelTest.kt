@@ -200,6 +200,66 @@ class EditNudgeViewModelTest {
         assertTrue("Follow-up should have been deleted", followUps.isEmpty())
     }
 
+    @Test
+    fun TDD_addOptionAppearsInFormState() = runTest {
+        // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
+        val nudgeId = createNudge("Feeling?", withOptions = listOf("Good", "Bad"))
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+        assertEquals(2, viewModel.formState.value.options.size)
+
+        viewModel.addOption()
+
+        assertEquals(3, viewModel.formState.value.options.size)
+        assertTrue("New option should have no DB id", viewModel.formState.value.options.last().isNew)
+    }
+
+    @Test
+    fun TDD_removeExistingOptionTracksRemovedId() = runTest {
+        // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
+        val nudgeId = createNudge("Feeling?", withOptions = listOf("Good", "Bad"))
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+        val removedId = viewModel.formState.value.options[0].optionId!!
+
+        viewModel.removeOption(0)
+
+        assertEquals(1, viewModel.formState.value.options.size)
+        assertTrue(removedId in viewModel.formState.value.removedOptionIds)
+    }
+
+    @Test
+    fun TDD_removingOptionTriggersSplitDialog() = runTest {
+        // Removing an option changes what existing answers mean — split dialog must be shown
+        val nudgeId = createNudge("Feeling?", withOptions = listOf("Good", "Bad"))
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.removeOption(0)
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertTrue("Removing an option should trigger the split dialog",
+            viewModel.formState.value.showSplitDialog)
+    }
+
+    @Test
+    fun TDD_addingOptionDoesNotTriggerSplitDialog() = runTest {
+        // Adding a new option doesn't change the meaning of existing answers — no split needed
+        val nudgeId = createNudge("Feeling?", withOptions = listOf("Good", "Bad"))
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.addOption()
+        viewModel.updateOptionAt(2, "Okay")
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertFalse("Adding an option must not trigger split dialog",
+            viewModel.formState.value.showSplitDialog)
+        assertTrue("Save should succeed", viewModel.formState.value.result is UpdateNudgeResult.Success)
+    }
+
     private fun buildViewModel(nudgeId: String) = EditNudgeViewModel(
         nudgeId = nudgeId,
         nudgeRepository = repos.nudgeRepo,
@@ -209,7 +269,11 @@ class EditNudgeViewModelTest {
         updateNudge = repos.updateNudgeUseCase()
     )
 
-    private suspend fun createNudge(questionText: String, withFollowUp: Boolean = false): String {
+    private suspend fun createNudge(
+        questionText: String,
+        withFollowUp: Boolean = false,
+        withOptions: List<String> = emptyList()
+    ): String {
         val useCase = CreateNudgeUseCase(
             repos.nudgeRepo, repos.questionRepo, repos.optionRepo, repos.scheduleRepo, repos.scheduler
         )
@@ -221,9 +285,10 @@ class EditNudgeViewModelTest {
                 triggerOperator = com.nudgery.shared.model.TriggerOperator.EQ
             )
         ) else emptyList()
+        val mainType = if (withOptions.isNotEmpty()) QuestionType.OPTION_SINGLE else QuestionType.YES_NO
         return (useCase.execute(
             CreateNudgeRequest(
-                mainQuestion = QuestionRequest(questionText, QuestionType.YES_NO),
+                mainQuestion = QuestionRequest(questionText, mainType, withOptions),
                 followUpQuestions = followUps,
                 schedule = ScheduleRequest(
                     type = ScheduleType.DAILY,

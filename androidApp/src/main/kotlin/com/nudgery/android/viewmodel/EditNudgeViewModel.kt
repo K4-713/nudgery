@@ -22,11 +22,12 @@ import kotlinx.coroutines.launch
 private const val TAG = "EditNudgeViewModel"
 
 data class OptionEditState(
-    val optionId: String,
+    val optionId: String?,  // null = new option not yet in the DB
     val text: String,
-    val originalText: String
+    val originalText: String = ""
 ) {
-    val isChanged: Boolean get() = text != originalText
+    val isNew: Boolean get() = optionId == null
+    val isChanged: Boolean get() = !isNew && text != originalText
 }
 
 data class EditableFollowUp(
@@ -46,6 +47,7 @@ data class EditNudgeFormState(
     val mainQuestionScaleMax: Int = 10,
     val options: List<OptionEditState> = emptyList(),
     val originalOptionOrder: List<String> = emptyList(),
+    val removedOptionIds: Set<String> = emptySet(),
     val followUps: List<EditableFollowUp> = emptyList(),
     val schedule: ScheduleFormState = ScheduleFormState(),
     val showSplitDialog: Boolean = false,
@@ -53,9 +55,11 @@ data class EditNudgeFormState(
     val result: UpdateNudgeResult? = null
 ) {
     val hasOrderChanged: Boolean
-        get() = originalOptionOrder.isNotEmpty() && options.map { it.optionId } != originalOptionOrder
+        get() = originalOptionOrder.isNotEmpty() && options.mapNotNull { it.optionId } != originalOptionOrder
     val questionOrOptionChanged: Boolean
-        get() = mainQuestionText != originalMainQuestionText || options.any { it.isChanged }
+        get() = mainQuestionText != originalMainQuestionText ||
+                options.any { it.isChanged } ||
+                removedOptionIds.isNotEmpty()
 }
 
 class EditNudgeViewModel(
@@ -102,6 +106,26 @@ class EditNudgeViewModel(
         _formState.update { it.copy(mainQuestionText = text) }
     }
 
+    fun addOption() {
+        _formState.update { state ->
+            state.copy(options = state.options + OptionEditState(optionId = null, text = ""))
+        }
+    }
+
+    fun removeOption(index: Int) {
+        _formState.update { state ->
+            val target = state.options.getOrNull(index) ?: return@update state
+            val updatedRemoved = if (target.optionId != null)
+                state.removedOptionIds + target.optionId
+            else
+                state.removedOptionIds
+            state.copy(
+                options = state.options.toMutableList().also { it.removeAt(index) },
+                removedOptionIds = updatedRemoved
+            )
+        }
+    }
+
     fun reorderOption(fromIndex: Int, toIndex: Int) {
         _formState.update { state ->
             if (fromIndex !in state.options.indices || toIndex !in state.options.indices) return@update state
@@ -111,10 +135,11 @@ class EditNudgeViewModel(
         }
     }
 
-    fun updateOption(optionId: String, newText: String) {
+    fun updateOptionAt(index: Int, newText: String) {
         _formState.update { state ->
-            state.copy(options = state.options.map { opt ->
-                if (opt.optionId == optionId) opt.copy(text = newText) else opt
+            if (index !in state.options.indices) return@update state
+            state.copy(options = state.options.toMutableList().also { list ->
+                list[index] = list[index].copy(text = newText)
             })
         }
     }
@@ -158,8 +183,10 @@ class EditNudgeViewModel(
                     mainQuestionText = state.mainQuestionText.takeIf { it != state.originalMainQuestionText },
                     optionUpdates = state.options
                         .filter { it.isChanged }
-                        .map { UpdateOptionRequest(it.optionId, it.text) },
-                    optionReorder = if (state.hasOrderChanged) state.options.map { it.optionId } else null,
+                        .map { UpdateOptionRequest(it.optionId!!, it.text) },
+                    optionReorder = if (state.hasOrderChanged) state.options.mapNotNull { it.optionId } else null,
+                    newOptions = state.options.filter { it.isNew }.map { it.text }.filter { it.isNotBlank() },
+                    removedOptionIds = state.removedOptionIds,
                     schedule = state.schedule.toRequest(),
                     splitEdit = splitEdit,
                     followUpReplacements = state.followUps.map { ef ->
@@ -237,7 +264,7 @@ class EditNudgeViewModel(
                 mainQuestionScaleMin = mainQuestion?.scaleMin ?: 0,
                 mainQuestionScaleMax = mainQuestion?.scaleMax ?: 10,
                 options = editableOptions,
-                originalOptionOrder = editableOptions.map { it.optionId },
+                originalOptionOrder = editableOptions.mapNotNull { it.optionId },
                 followUps = followUps,
                 schedule = scheduleForm
             )

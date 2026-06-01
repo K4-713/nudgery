@@ -34,6 +34,7 @@ class UpdateNudgeUseCase(
 
         val hasTextChanges = (request.mainQuestionText != null && request.mainQuestionText != mainQuestion?.text)
             || request.optionUpdates.isNotEmpty()
+            || request.removedOptionIds.isNotEmpty()
 
         if (hasTextChanges && request.splitEdit) {
             val newNudgeId = createSplitNudge(nudge, questions, request, existingSchedule, now)
@@ -109,9 +110,25 @@ class UpdateNudgeUseCase(
             updatedNudge = updatedNudge.copy(updatedAt = now)
         }
 
+        if (request.removedOptionIds.isNotEmpty() && mainQuestion != null) {
+            request.removedOptionIds.forEach { questionOptionRepository.deleteById(it) }
+            updatedNudge = updatedNudge.copy(updatedAt = now)
+        }
+
         if (request.optionReorder != null && mainQuestion != null) {
             request.optionReorder.forEachIndexed { newIndex, optionId ->
                 questionOptionRepository.updateOrderIndex(optionId, newIndex)
+            }
+            updatedNudge = updatedNudge.copy(updatedAt = now)
+        }
+
+        if (request.newOptions.isNotEmpty() && mainQuestion != null) {
+            val existingOptions = questionOptionRepository.getByQuestionId(mainQuestion.id)
+            val nextIndex = if (existingOptions.isEmpty()) 0 else existingOptions.maxOf { it.orderIndex } + 1
+            request.newOptions.forEachIndexed { idx, text ->
+                questionOptionRepository.insert(
+                    QuestionOption(id = generateUuid(), questionId = mainQuestion.id, text = text, orderIndex = nextIndex + idx)
+                )
             }
             updatedNudge = updatedNudge.copy(updatedAt = now)
         }
@@ -245,6 +262,7 @@ class UpdateNudgeUseCase(
             val optionUpdateMap = request.optionUpdates.associateBy { it.optionId }
             val existingOptions = questionOptionRepository.getByQuestionId(oldMainQuestion.id)
                 .sortedBy { it.orderIndex }
+                .filter { it.id !in request.removedOptionIds }
             val orderedOptions = request.optionReorder
                 ?.mapNotNull { id -> existingOptions.find { it.id == id } }
                 ?: existingOptions
@@ -256,6 +274,11 @@ class UpdateNudgeUseCase(
                         orderIndex = newIndex,
                         text = optionUpdateMap[option.id]?.newText ?: option.text
                     )
+                )
+            }
+            request.newOptions.forEachIndexed { idx, text ->
+                questionOptionRepository.insert(
+                    QuestionOption(id = generateUuid(), questionId = newMainQuestionId, text = text, orderIndex = orderedOptions.size + idx)
                 )
             }
 

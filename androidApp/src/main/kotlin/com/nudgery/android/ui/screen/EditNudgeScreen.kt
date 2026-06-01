@@ -8,8 +8,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -96,11 +98,11 @@ fun EditNudgeScreen(
                         questionText = formState.mainQuestionText,
                         onQuestionTextChange = { viewModel.setMainQuestionText(it) },
                         options = formState.options.map { it.text },
-                        onOptionChange = { index, text ->
-                            val optionId = formState.options.getOrNull(index)?.optionId ?: return@EditQuestionStep
-                            viewModel.updateOption(optionId, text)
-                        },
-                        onOptionReorder = { from, to -> viewModel.reorderOption(from, to) }
+                        onOptionChange = { index, text -> viewModel.updateOptionAt(index, text) },
+                        onOptionReorder = { from, to -> viewModel.reorderOption(from, to) },
+                        onOptionRemove = { index -> viewModel.removeOption(index) },
+                        onOptionAdd = { viewModel.addOption() },
+                        canAddOption = formState.options.size < 16
                     )
                     1 -> FollowUpStep(
                         mainQuestion = QuestionFormState(
@@ -153,7 +155,10 @@ private fun EditQuestionStep(
     onQuestionTextChange: (String) -> Unit,
     options: List<String>,
     onOptionChange: (Int, String) -> Unit,
-    onOptionReorder: (fromIndex: Int, toIndex: Int) -> Unit
+    onOptionReorder: (fromIndex: Int, toIndex: Int) -> Unit,
+    onOptionRemove: (Int) -> Unit,
+    onOptionAdd: () -> Unit,
+    canAddOption: Boolean
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.step_question_title), style = MaterialTheme.typography.titleMedium)
@@ -199,7 +204,16 @@ private fun EditQuestionStep(
                     ) {
                         Icon(Icons.Outlined.ArrowDownward, contentDescription = stringResource(R.string.option_move_down))
                     }
+                    IconButton(onClick = { onOptionRemove(index) }) {
+                        Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.option_remove))
+                    }
                 }
+            }
+        }
+
+        if (options.isNotEmpty() && canAddOption) {
+            TextButton(onClick = onOptionAdd) {
+                Text(stringResource(R.string.option_add))
             }
         }
     }
