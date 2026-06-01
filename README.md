@@ -28,7 +28,8 @@ After the questions are finished, you can edit the schedule for your Nudge to as
 * Daily: Pick a time of day (defaults to noon in your phone's timezone, which will move with your and your phone in case of travel), and the active days of the week
 * Weekly: Pick the day of the week, and local time
 * Monthly: Pick the day of the month, and local time
-* Hourly: Define the hours of the day you want to receive these nudges, and the active days of the week
+* Hourly: Pick the time of your first nudge of the day (hour and minute) and the time of your last nudge, plus the active days of the week. Starting the hour and minute you chose for the first nudge, you'll be nudged once an hour until your last nudge time on enabled days. 
+  * Note: If your schedule contains a date change (going past midnight), nudges on days you don't have enabled will still fire if that particular run started on an enabled day, and you won't get nudged after midnight on days that are enabled if the previous day wouldn't have started a run.
 
 Save the Nudge. It will appear on the main screen in the list with the rest of your Nudges, indicating the Nudge's name, schedule, next nudge date and time, and whether or not it is enabled. 
 
@@ -82,3 +83,6 @@ Your nudge will fire on schedule, local to whatever your phone's time is. If you
 
 ## What happens if you restore a nudge that already exists?
 If there's a name collision, you will be given the opportunity to either rename the incoming nudge, or replace the existing one.
+
+## What happens if I set up an hourly nudge to start at 9pm and end at 7am Monday through Friday, and it's Saturday at 1am?
+We're thinking of the hourly nudge run as a single unit of multiple questions that only start on days you have enabled, at the first nudge time you have selected. So, you'll get your Saturday 1am question, because it's part of a run that was scheduled to start on the previous day. Monday 1am is the other side of that: That run would have had to start Sunday, which is not enabled, so you will get no early Monday morning nudges. We see you, night owls.

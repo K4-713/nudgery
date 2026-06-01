@@ -2,6 +2,8 @@ package com.nudgery.android.viewmodel
 
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.model.buildHourlyWindow
+import com.nudgery.shared.model.orderedHourlyWindow
 import com.nudgery.shared.usecase.ScheduleRequest
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalTime
@@ -25,10 +27,13 @@ fun DayOfWeek.toAbbreviation(): String = when (this) {
 
 data class ScheduleFormState(
     val type: ScheduleType = ScheduleType.DAILY,
+    // For HOURLY this is the first nudge of the day; its minute is shared by every hourly nudge.
     val timeOfDay: LocalTime = LocalTime(12, 0),
     val activeDaysOfWeek: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
     val dayOfMonth: Int = 1,
-    val activeHours: Set<Int> = (8..20).toSet()
+    // HOURLY only: the hour of the last nudge of the day. With timeOfDay's hour as the start, this
+    // defines the (possibly midnight-wrapping) window. The last nudge fires at timeOfDay's minute.
+    val hourlyEndHour: Int = 20
 ) {
     fun toRequest() = ScheduleRequest(
         type = type,
@@ -38,7 +43,8 @@ data class ScheduleFormState(
             else -> null
         },
         dayOfMonth = if (type == ScheduleType.MONTHLY) dayOfMonth else null,
-        activeHours = if (type == ScheduleType.HOURLY) activeHours else null
+        activeHours = if (type == ScheduleType.HOURLY)
+            buildHourlyWindow(timeOfDay.hour, hourlyEndHour).toSet() else null
     )
 
     fun toDescription(): String = when (type) {
@@ -58,20 +64,34 @@ data class ScheduleFormState(
         }
         ScheduleType.MONTHLY -> "Monthly on day $dayOfMonth at ${timeOfDay.toDisplayString()}"
         ScheduleType.HOURLY -> {
-            val hours = activeHours.sorted().joinToString(", ") { h ->
-                if (h == 0) "12 AM" else if (h < 12) "$h AM" else if (h == 12) "12 PM" else "${h - 12} PM"
+            val daysLabel = when (activeDaysOfWeek) {
+                ALL_DAYS -> "Every Day"
+                WEEKDAYS -> "Weekdays"
+                WEEKENDS -> "Weekends"
+                else -> activeDaysOfWeek.sortedBy { it.ordinal }.joinToString(", ") { it.toAbbreviation() }
             }
-            "Hourly: $hours"
+            val lastTime = LocalTime(hourlyEndHour, timeOfDay.minute)
+            "Hourly, ${timeOfDay.toDisplayString()}–${lastTime.toDisplayString()}, $daysLabel"
         }
     }
 
     companion object {
-        fun fromSchedule(schedule: Schedule) = ScheduleFormState(
-            type = schedule.type,
-            timeOfDay = schedule.timeOfDay,
-            activeDaysOfWeek = schedule.activeDaysOfWeek ?: DayOfWeek.entries.toSet(),
-            dayOfMonth = schedule.dayOfMonth ?: 1,
-            activeHours = schedule.activeHours ?: (8..20).toSet()
-        )
+        fun fromSchedule(schedule: Schedule): ScheduleFormState {
+            val window = orderedHourlyWindow(schedule.activeHours ?: emptySet())
+            // Normalize the first nudge time to the window's actual start hour (keeping the stored
+            // minute) so the form's start matches the stored window even for legacy schedules.
+            val timeOfDay = if (schedule.type == ScheduleType.HOURLY && window.isNotEmpty()) {
+                LocalTime(window.first(), schedule.timeOfDay.minute)
+            } else {
+                schedule.timeOfDay
+            }
+            return ScheduleFormState(
+                type = schedule.type,
+                timeOfDay = timeOfDay,
+                activeDaysOfWeek = schedule.activeDaysOfWeek ?: DayOfWeek.entries.toSet(),
+                dayOfMonth = schedule.dayOfMonth ?: 1,
+                hourlyEndHour = window.lastOrNull() ?: 20
+            )
+        }
     }
 }

@@ -94,8 +94,8 @@ class ScheduleTest {
     @Test
     fun TDD_hourlyScheduleHasActiveHoursAndActiveDaysOfWeek() {
         // README "Setting Up a Nudge" > Scheduling:
-        //   "Hourly: Define the hours of the day you want to receive these nudges,
-        //    and the active days of the week"
+        //   "Hourly: Pick the time of your first nudge of the day ... and the time of your last
+        //    nudge, plus the active days of the week. You'll be nudged once an hour..."
         val schedule = makeSchedule(
             type = ScheduleType.HOURLY,
             activeDaysOfWeek = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
@@ -208,6 +208,51 @@ class ScheduleTest {
         assertEquals(1, localFire.monthNumber)
         assertEquals(6, localFire.dayOfMonth)
         assertEquals(12, localFire.hour)
+        assertEquals(0, localFire.minute)
+    }
+
+    @Test
+    fun TDD_hourlyNudgesFireAtTheChosenMinute() {
+        // README "Setting Up a Nudge" > Scheduling:
+        //   "You'll be nudged once an hour, on the minute you chose for the first nudge"
+        val schedule = makeSchedule(
+            type = ScheduleType.HOURLY,
+            timeOfDay = LocalTime(8, 30), // first nudge 8:30 — every hourly nudge fires at :30
+            activeDaysOfWeek = DayOfWeek.entries.toSet(),
+            activeHours = setOf(8, 9, 10, 11)
+        )
+        // Monday 2025-01-06 at 08:45 UTC (just past the 8:30 nudge)
+        val now = LocalDateTime(2025, 1, 6, 8, 45).toInstant(TimeZone.UTC)
+        val localFire = computeNextFireTime.execute(schedule, now, TimeZone.UTC)
+            .toLocalDateTime(TimeZone.UTC)
+
+        // Next nudge is 9:30 the same day — at the chosen minute, not on the hour
+        assertEquals(6, localFire.dayOfMonth)
+        assertEquals(9, localFire.hour)
+        assertEquals(30, localFire.minute)
+    }
+
+    @Test
+    fun TDD_hourlyWindowWrappingMidnightAnchorsToStartDay() {
+        // README "Setting Up a Nudge" > Scheduling:
+        //   "The window may wrap past midnight ... when it does, the after-midnight nudges belong
+        //    to the day the window started on, so they still fire even if the following day isn't
+        //    active."
+        val schedule = makeSchedule(
+            type = ScheduleType.HOURLY,
+            timeOfDay = LocalTime(20, 0),            // first nudge 8:00 PM
+            activeDaysOfWeek = setOf(DayOfWeek.MONDAY), // Monday only; Tuesday is NOT active
+            activeHours = setOf(20, 21, 22, 23, 0, 1, 2) // 8 PM through 2 AM, wrapping midnight
+        )
+        // Monday 2025-01-06 at 23:30 UTC — within Monday's session, just before midnight
+        val now = LocalDateTime(2025, 1, 6, 23, 30).toInstant(TimeZone.UTC)
+        val localFire = computeNextFireTime.execute(schedule, now, TimeZone.UTC)
+            .toLocalDateTime(TimeZone.UTC)
+
+        // Next nudge is Tuesday 00:00 — it belongs to Monday's session and fires even though
+        // Tuesday is not an active day.
+        assertEquals(7, localFire.dayOfMonth) // Tuesday 2025-01-07
+        assertEquals(0, localFire.hour)
         assertEquals(0, localFire.minute)
     }
 }

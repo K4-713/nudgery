@@ -165,10 +165,10 @@ One schedule per `Nudge`.
 | id | UUID | |
 | nudgeId | UUID | FK → Nudge |
 | type | ScheduleType | `DAILY`, `WEEKLY`, `MONTHLY`, `HOURLY` |
-| timeOfDay | LocalTime | Local time; follows device timezone including travel |
-| activeDaysOfWeek | Set\<DayOfWeek\>? | Used by `DAILY` and `HOURLY` |
+| timeOfDay | LocalTime | Local time; follows device timezone including travel. For `HOURLY` this is the first nudge of the day — its hour is the window start and its minute is the minute every hourly nudge fires at |
+| activeDaysOfWeek | Set\<DayOfWeek\>? | Used by `DAILY` and `HOURLY`. For `HOURLY` these are the days a window *starts* on (see below) |
 | dayOfMonth | Int? | Used by `MONTHLY` |
-| activeHours | Set\<Int\>? | Hours of day (0–23) used by `HOURLY` |
+| activeHours | Set\<Int\>? | `HOURLY` only: the set of hours (0–23) in the first-nudge-to-last-nudge window, which may wrap past midnight. Order is recovered from the set by `orderedHourlyWindow` (start = the hour after the largest cyclic gap). A window is anchored to the day it starts on: post-midnight hours fire as part of the start day's session regardless of the next day's active state. `ComputeNextFireTimeUseCase.computeNextHourly` fires each hour at `timeOfDay`'s minute |
 
 ### Answer
 One row per question answered per notification event.

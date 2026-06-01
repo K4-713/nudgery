@@ -2,6 +2,7 @@ package com.nudgery.shared.usecase
 
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.ScheduleType
+import com.nudgery.shared.model.orderedHourlyWindow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
@@ -10,6 +11,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -99,19 +101,34 @@ class ComputeNextFireTimeUseCase {
         timeZone: TimeZone
     ): Instant {
         val activeDays = schedule.activeDaysOfWeek ?: DayOfWeek.entries.toSet()
-        val activeHours = schedule.activeHours ?: emptySet()
-        var candidate = localNow.date
-        repeat(8) {
-            if (candidate.dayOfWeek in activeDays) {
-                for (hour in activeHours.sorted()) {
-                    val candidateDateTime = LocalDateTime(candidate, LocalTime(hour, 0))
+        val window = orderedHourlyWindow(schedule.activeHours ?: emptySet())
+        if (window.isEmpty() || activeDays.isEmpty()) {
+            error("Could not compute next hourly fire time — no active hours or days")
+        }
+        val minute = schedule.timeOfDay.minute
+
+        // Each session is anchored to the day it starts on (an active day). Hours after the window
+        // wraps past midnight belong to that same start day's session, so we generate every fire
+        // for a start day before moving on. We begin one day in the past so a session started
+        // yesterday whose post-midnight tail is still ahead of `now` is not missed.
+        var startDay = localNow.date.minus(1, DateTimeUnit.DAY)
+        repeat(10) {
+            if (startDay.dayOfWeek in activeDays) {
+                var previousHour = -1
+                var dayOffset = 0
+                for (hour in window) {
+                    // A drop in the hour value means the window has wrapped into the next calendar day.
+                    if (previousHour >= 0 && hour <= previousHour) dayOffset++
+                    previousHour = hour
+                    val fireDate = startDay.plus(dayOffset, DateTimeUnit.DAY)
+                    val candidateDateTime = LocalDateTime(fireDate, LocalTime(hour, minute))
                     if (candidateDateTime > localNow) {
                         return candidateDateTime.toInstant(timeZone)
                     }
                 }
             }
-            candidate = candidate.plus(1, DateTimeUnit.DAY)
+            startDay = startDay.plus(1, DateTimeUnit.DAY)
         }
-        error("Could not compute next hourly fire time — no active hour found within 8 days")
+        error("Could not compute next hourly fire time — no active day found within range")
     }
 }

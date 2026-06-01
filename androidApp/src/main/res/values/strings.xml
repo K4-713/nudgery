@@ -83,7 +83,8 @@
     <string name="schedule_time_of_day">Time of day</string>
     <string name="schedule_active_days">Active days</string>
     <string name="schedule_day_of_month">Day of month</string>
-    <string name="schedule_active_hours">Active hours</string>
+    <string name="schedule_hourly_first">First nudge time</string>
+    <string name="schedule_hourly_last">Last nudge time</string>
     <string name="nudge_enabled">Enabled</string>
 
     <!-- Nudge detail screen -->

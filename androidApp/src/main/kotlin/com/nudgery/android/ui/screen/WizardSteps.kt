@@ -453,53 +453,27 @@ fun ScheduleStep(
             }
         }
 
-        // Time of day
-        var showTimePicker by remember { mutableStateOf(false) }
-        val timePickerState = rememberTimePickerState(
-            initialHour = schedule.timeOfDay.hour,
-            initialMinute = schedule.timeOfDay.minute,
-            is24Hour = false
-        )
-
-        if (showTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showTimePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        onScheduleChange(schedule.copy(
-                            timeOfDay = LocalTime(timePickerState.hour, timePickerState.minute)
-                        ))
-                        showTimePicker = false
-                    }) { Text(stringResource(R.string.action_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showTimePicker = false }) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                },
-                text = { TimePicker(state = timePickerState) }
+        // Time of day. HOURLY uses a first/last nudge pair (the last nudge's minute is locked to
+        // the first); every other type uses a single time-of-day field.
+        if (schedule.type == ScheduleType.HOURLY) {
+            ScheduleTimeField(
+                label = stringResource(R.string.schedule_hourly_first),
+                time = schedule.timeOfDay,
+                onTimeChange = { onScheduleChange(schedule.copy(timeOfDay = it)) }
+            )
+            ScheduleTimeField(
+                label = stringResource(R.string.schedule_hourly_last),
+                time = LocalTime(schedule.hourlyEndHour, schedule.timeOfDay.minute),
+                lockMinuteTo = schedule.timeOfDay.minute,
+                onTimeChange = { onScheduleChange(schedule.copy(hourlyEndHour = it.hour)) }
+            )
+        } else {
+            ScheduleTimeField(
+                label = stringResource(R.string.schedule_time_of_day),
+                time = schedule.timeOfDay,
+                onTimeChange = { onScheduleChange(schedule.copy(timeOfDay = it)) }
             )
         }
-
-        val timeFieldInteraction = remember { MutableInteractionSource() }
-        val timeFieldPressed by timeFieldInteraction.collectIsPressedAsState()
-        LaunchedEffect(timeFieldPressed) {
-            if (timeFieldPressed) showTimePicker = true
-        }
-
-        OutlinedTextField(
-            value = schedule.timeOfDay.let {
-                val h = if (it.hour % 12 == 0) 12 else it.hour % 12
-                val period = if (it.hour < 12) "AM" else "PM"
-                if (it.minute == 0) "$h $period" else "$h:${it.minute.toString().padStart(2, '0')} $period"
-            },
-            onValueChange = {},
-            label = { Text(stringResource(R.string.schedule_time_of_day)) },
-            trailingIcon = { Icon(Icons.Outlined.Schedule, contentDescription = null) },
-            readOnly = true,
-            interactionSource = timeFieldInteraction,
-            modifier = Modifier.fillMaxWidth()
-        )
 
         // Active days (DAILY + HOURLY)
         if (schedule.type == ScheduleType.DAILY || schedule.type == ScheduleType.HOURLY) {
@@ -546,4 +520,64 @@ fun ScheduleStep(
             Switch(checked = isEnabled, onCheckedChange = onEnabledChange)
         }
     }
+}
+
+/**
+ * A read-only field that opens a time picker when tapped. When [lockMinuteTo] is non-null the
+ * picked minute is ignored and replaced with that value (used for the hourly "last nudge" field,
+ * whose minute is locked to the first nudge's minute).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScheduleTimeField(
+    label: String,
+    time: LocalTime,
+    onTimeChange: (LocalTime) -> Unit,
+    lockMinuteTo: Int? = null
+) {
+    var showPicker by remember { mutableStateOf(false) }
+
+    if (showPicker) {
+        val pickerState = rememberTimePickerState(
+            initialHour = time.hour,
+            initialMinute = lockMinuteTo ?: time.minute,
+            is24Hour = false
+        )
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeChange(LocalTime(pickerState.hour, lockMinuteTo ?: pickerState.minute))
+                    showPicker = false
+                }) { Text(stringResource(R.string.action_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            text = { TimePicker(state = pickerState) }
+        )
+    }
+
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    LaunchedEffect(pressed) {
+        if (pressed) showPicker = true
+    }
+
+    val h = if (time.hour % 12 == 0) 12 else time.hour % 12
+    val period = if (time.hour < 12) "AM" else "PM"
+    val display = if (time.minute == 0) "$h $period"
+        else "$h:${time.minute.toString().padStart(2, '0')} $period"
+
+    OutlinedTextField(
+        value = display,
+        onValueChange = {},
+        label = { Text(label) },
+        trailingIcon = { Icon(Icons.Outlined.Schedule, contentDescription = null) },
+        readOnly = true,
+        interactionSource = interaction,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
