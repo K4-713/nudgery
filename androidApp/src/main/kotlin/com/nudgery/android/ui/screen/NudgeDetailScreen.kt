@@ -3,7 +3,9 @@ package com.nudgery.android.ui.screen
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
@@ -51,6 +53,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -119,6 +122,7 @@ import android.content.Intent
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.core.content.FileProvider
 import com.nudgery.shared.model.ExportFormat
 import org.koin.androidx.compose.koinViewModel
@@ -646,6 +650,7 @@ private fun CalendarHeatMapChart(
     val zeroCellColor = if (isDark) lerp(emptyCellColor, Color.White, 0.1f)
                         else lerp(emptyCellColor, Color.Black, 0.1f)
     val paletteStops = palette.paletteStops
+    val density = LocalDensity.current
 
     val countByDate = remember(counts) { counts.associate { it.date to it.value } }
 
@@ -677,116 +682,132 @@ private fun CalendarHeatMapChart(
         }
     }
 
+    val scrollState = rememberScrollState()
+
     Column(modifier = Modifier.fillMaxSize()) {
-        Canvas(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            val gapPx = 2.dp.toPx()
-            val labelAreaHeight = 16.dp.toPx()
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val availableWidthPx = constraints.maxWidth.toFloat()
+            val availableHeightPx = constraints.maxHeight.toFloat()
+
+            val gapPx = with(density) { 2.dp.toPx() }
+            val labelAreaPx = with(density) { 16.dp.toPx() }
+            val minCellPx = with(density) { 14.dp.toPx() }
+
+            val numberOfCells = when (granularity) {
+                HeatMapGranularity.DAY -> dayGridWeeks.size
+                HeatMapGranularity.WEEK -> weekCells.size
+                HeatMapGranularity.MONTH -> monthCells.size
+            }
+            val numberOfRows = if (granularity == HeatMapGranularity.DAY) 7 else 1
+
+            val maxCellByHeight = (availableHeightPx - labelAreaPx - gapPx * (numberOfRows - 1)) / numberOfRows
+            val naturalCellByWidth = if (numberOfCells > 1)
+                (availableWidthPx - gapPx * (numberOfCells - 1)) / numberOfCells
+            else availableWidthPx
+
+            val cellPx = minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
+            val contentWidthPx = if (numberOfCells > 0)
+                numberOfCells * (cellPx + gapPx) - gapPx else 0f
+            val needsScroll = contentWidthPx > availableWidthPx
+
+            LaunchedEffect(contentWidthPx) {
+                if (needsScroll) scrollState.scrollTo(scrollState.maxValue)
+            }
+
             val labelStyle = TextStyle(fontSize = 9.sp, color = labelColor)
 
-            when (granularity) {
-                HeatMapGranularity.DAY -> {
-                    val totalWeeks = dayGridWeeks.size
-                    if (totalWeeks == 0) return@Canvas
-                    val gridHeight = size.height - labelAreaHeight
-                    val cellByHeight = (gridHeight - gapPx * 6) / 7f
-                    val cellByWidth = if (totalWeeks > 1)
-                        (size.width - gapPx * (totalWeeks - 1)) / totalWeeks.toFloat()
-                    else size.width
-                    val cellSize = minOf(cellByHeight, cellByWidth)
-
-                    var currentMonth = -1
-                    dayGridWeeks.forEachIndexed { weekIdx, weekStart ->
-                        val weekX = weekIdx * (cellSize + gapPx)
-                        val weekMonth = weekStart.monthNumber
-                        if (weekIdx == 0 || weekMonth != currentMonth) {
-                            currentMonth = weekMonth
-                            val label = weekStart.month.name.take(3)
-                                .lowercase().replaceFirstChar { it.uppercase() }
-                            drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(weekX, 0f))
+            Canvas(
+                modifier = if (needsScroll)
+                    Modifier
+                        .horizontalScroll(scrollState)
+                        .width(with(density) { contentWidthPx.toDp() })
+                        .height(with(density) { availableHeightPx.toDp() })
+                else
+                    Modifier.fillMaxSize()
+            ) {
+                when (granularity) {
+                    HeatMapGranularity.DAY -> {
+                        if (dayGridWeeks.isEmpty()) return@Canvas
+                        var currentMonth = -1
+                        dayGridWeeks.forEachIndexed { weekIdx, weekStart ->
+                            val weekX = weekIdx * (cellPx + gapPx)
+                            val weekMonth = weekStart.monthNumber
+                            if (weekIdx == 0 || weekMonth != currentMonth) {
+                                currentMonth = weekMonth
+                                val label = weekStart.month.name.take(3)
+                                    .lowercase().replaceFirstChar { it.uppercase() }
+                                drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(weekX, 0f))
+                            }
+                            for (dayIdx in 0..6) {
+                                val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
+                                val rawCount = countByDate[date]
+                                drawRoundRect(
+                                    color = when {
+                                        rawCount == null -> emptyCellColor
+                                        rawCount <= 0.0 -> zeroCellColor
+                                        else -> paletteStops.colorAt(
+                                            (rawCount / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                        )
+                                    },
+                                    topLeft = Offset(weekX, labelAreaPx + dayIdx * (cellPx + gapPx)),
+                                    size = Size(cellPx, cellPx),
+                                    cornerRadius = CornerRadius(cellPx * 0.15f)
+                                )
+                            }
                         }
-                        for (dayIdx in 0..6) {
-                            val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
-                            val rawCount = countByDate[date]
+                    }
+                    HeatMapGranularity.WEEK -> {
+                        if (weekCells.isEmpty()) return@Canvas
+                        var currentMonth = -1
+                        weekCells.forEachIndexed { idx, (weekStart, value) ->
+                            val x = idx * (cellPx + gapPx)
+                            val weekMonth = weekStart.monthNumber
+                            if (idx == 0 || weekMonth != currentMonth) {
+                                currentMonth = weekMonth
+                                val label = weekStart.month.name.take(3)
+                                    .lowercase().replaceFirstChar { it.uppercase() }
+                                drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(x, 0f))
+                            }
                             drawRoundRect(
                                 color = when {
-                                    rawCount == null -> emptyCellColor
-                                    rawCount <= 0.0 -> zeroCellColor
+                                    value == null -> emptyCellColor
+                                    value <= 0.0 -> zeroCellColor
                                     else -> paletteStops.colorAt(
-                                        (rawCount / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
                                     )
                                 },
-                                topLeft = Offset(weekX, labelAreaHeight + dayIdx * (cellSize + gapPx)),
-                                size = Size(cellSize, cellSize),
-                                cornerRadius = CornerRadius(cellSize * 0.15f)
+                                topLeft = Offset(x, labelAreaPx),
+                                size = Size(cellPx, cellPx),
+                                cornerRadius = CornerRadius(cellPx * 0.15f)
                             )
                         }
                     }
-                }
-                HeatMapGranularity.WEEK -> {
-                    val totalCells = weekCells.size
-                    if (totalCells == 0) return@Canvas
-                    val gridHeight = size.height - labelAreaHeight
-                    val cellByWidth = if (totalCells > 1)
-                        (size.width - gapPx * (totalCells - 1)) / totalCells.toFloat()
-                    else size.width
-                    val cellSize = minOf(gridHeight, cellByWidth)
-
-                    var currentMonth = -1
-                    weekCells.forEachIndexed { idx, (weekStart, value) ->
-                        val x = idx * (cellSize + gapPx)
-                        val weekMonth = weekStart.monthNumber
-                        if (idx == 0 || weekMonth != currentMonth) {
-                            currentMonth = weekMonth
-                            val label = weekStart.month.name.take(3)
-                                .lowercase().replaceFirstChar { it.uppercase() }
-                            drawText(textMeasurer.measure(label, labelStyle), topLeft = Offset(x, 0f))
-                        }
-                        drawRoundRect(
-                            color = when {
-                                value == null -> emptyCellColor
-                                value <= 0.0 -> zeroCellColor
-                                else -> paletteStops.colorAt(
-                                    (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                    HeatMapGranularity.MONTH -> {
+                        if (monthCells.isEmpty()) return@Canvas
+                        var currentYear = -1
+                        monthCells.forEachIndexed { idx, (monthStart, value) ->
+                            val x = idx * (cellPx + gapPx)
+                            val year = monthStart.year
+                            if (idx == 0 || year != currentYear) {
+                                currentYear = year
+                                drawText(
+                                    textMeasurer.measure(year.toString(), labelStyle),
+                                    topLeft = Offset(x, 0f)
                                 )
-                            },
-                            topLeft = Offset(x, labelAreaHeight),
-                            size = Size(cellSize, cellSize),
-                            cornerRadius = CornerRadius(cellSize * 0.15f)
-                        )
-                    }
-                }
-                HeatMapGranularity.MONTH -> {
-                    val totalCells = monthCells.size
-                    if (totalCells == 0) return@Canvas
-                    val gridHeight = size.height - labelAreaHeight
-                    val cellByWidth = if (totalCells > 1)
-                        (size.width - gapPx * (totalCells - 1)) / totalCells.toFloat()
-                    else size.width
-                    val cellSize = minOf(gridHeight, cellByWidth)
-
-                    var currentYear = -1
-                    monthCells.forEachIndexed { idx, (monthStart, value) ->
-                        val x = idx * (cellSize + gapPx)
-                        val year = monthStart.year
-                        if (idx == 0 || year != currentYear) {
-                            currentYear = year
-                            drawText(
-                                textMeasurer.measure(year.toString(), labelStyle),
-                                topLeft = Offset(x, 0f)
+                            }
+                            drawRoundRect(
+                                color = when {
+                                    value == null -> emptyCellColor
+                                    value <= 0.0 -> zeroCellColor
+                                    else -> paletteStops.colorAt(
+                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
+                                    )
+                                },
+                                topLeft = Offset(x, labelAreaPx),
+                                size = Size(cellPx, cellPx),
+                                cornerRadius = CornerRadius(cellPx * 0.15f)
                             )
                         }
-                        drawRoundRect(
-                            color = when {
-                                value == null -> emptyCellColor
-                                value <= 0.0 -> zeroCellColor
-                                else -> paletteStops.colorAt(
-                                    (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
-                                )
-                            },
-                            topLeft = Offset(x, labelAreaHeight),
-                            size = Size(cellSize, cellSize),
-                            cornerRadius = CornerRadius(cellSize * 0.15f)
-                        )
                     }
                 }
             }
