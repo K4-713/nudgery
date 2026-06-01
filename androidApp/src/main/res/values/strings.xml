@@ -156,17 +156,23 @@
     <string name="settings_exact_alarm_not_granted">Not granted — notifications may be delayed</string>
     <string name="settings_exact_alarm_open_settings">Open Settings</string>
 
-    <!-- Settings: import nudge -->
-    <string name="settings_import">Import</string>
-    <string name="settings_import_button">Import Nudge from Backup</string>
+    <!-- Settings: backup &amp; import -->
+    <string name="settings_import">Backup &amp; Restore</string>
+    <string name="settings_import_button">Import from Backup</string>
     <string name="settings_import_success">Nudge imported successfully.</string>
     <string name="settings_import_failure">Could not import backup: %1$s</string>
     <string name="settings_import_in_progress">Importing…</string>
+    <string name="settings_backup_all_button">Back Up All Nudges</string>
+    <string name="settings_backup_all_empty">There are no nudges to back up yet.</string>
+    <string name="settings_import_all_success">Imported %1$d nudges.</string>
+    <string name="settings_import_skipped">Skipped %1$d.</string>
+    <string name="settings_import_unreadable">%1$d could not be read.</string>
     <string name="import_collision_title">Nudge Already Exists</string>
-    <string name="import_collision_body">A nudge named \"%1$s\" already exists. Enter a new name to keep both, or replace the existing nudge and its history.</string>
-    <string name="import_collision_rename_label">New name</string>
-    <string name="import_collision_rename">Import as Renamed</string>
+    <string name="import_collision_body">A nudge named \"%1$s\" already exists. Do you want to replace it, import as a copy, or skip it?</string>
+    <string name="import_collision_repeat_all">Repeat for all</string>
     <string name="import_collision_replace">Replace</string>
+    <string name="import_collision_copy">Import as Copy</string>
+    <string name="import_collision_skip">Skip</string>
 
     <!-- About screen -->
     <string name="about_title">About Nudgery</string>

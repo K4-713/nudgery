@@ -223,6 +223,7 @@ class TestViewModelRepositories {
         importNudge = importNudgeUseCase(),
         deleteNudge = deleteNudgeUseCase(),
         nudgeRepository = nudgeRepo,
-        backupParser = NudgeBackupParser()
+        backupParser = NudgeBackupParser(),
+        exportAnswers = exportAnswersUseCase()
     )
 }

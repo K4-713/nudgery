@@ -63,9 +63,13 @@ While you cannot edit Nudge answer data once entered, you can select individual 
 ## Nudge Backup and Restore
 Nudges can be manually backed up and restored through the data download button on the Nudge detail page, to the right of the main chart. When you back up a Nudge, everything about that Nudge will be saved, including name, question and subquestion text, all answer data, enabled status, and schedule.
 
-To back up a Nudge, go to that nudge's detail page, tap the Download icon to the right of the main chart, and choose the "Back up nudge (JSON)" option. You will then be able to send the backup file wherever you'd like: Files, Email, Drive, etc. 
+To back up a Nudge, go to that nudge's detail page, tap the Download icon to the right of the main chart, and choose the "Back up nudge (JSON)" option. The backup file is named after the Nudge (for example, "Good Dog Sightings.json"; a Nudge named entirely with emoji is named after the emoji instead, like "dog-face.json"). You will then be able to send the backup file wherever you'd like: Files, Email, Drive, etc.
 
-To restore a nudge that you have backed up, tap the Settings icon on the main screen, tap "Import Nudge from Backup", and choose the correct nudge backup file to restore (you may have to move it to your device first). Restoring a Nudge re-creates the one you backed up, with all settings and data intact.
+To back up every Nudge at once, open Settings and tap "Back Up All Nudges". This produces a single ZIP archive (named like "nudgery-backup-2026-06-01.zip") containing one JSON file per Nudge, each named after its Nudge.
+
+To restore, tap the Settings icon on the main screen, tap "Import from Backup", and choose either a single Nudge's JSON backup or a full backup ZIP (you may have to move it to your device first). A single JSON restores that one Nudge; a ZIP restores every Nudge inside it. Restoring re-creates each Nudge with all settings and data intact.
+
+If an incoming Nudge's name matches one you already have, Nudgery asks what to do for that Nudge: **Replace** the existing one, **Import as a copy** (kept under a numbered name so both survive), or **Skip** it. When you're restoring many Nudges at once, you're asked for each collision in turn, and a "Repeat for all" checkbox lets you apply the same choice to the rest of the batch.
 
 
 ## Settings
@@ -75,7 +79,8 @@ To get to the Settings page, tap the Settings (gear) icon from the main page. He
 * Make text more bold than usual, which can help with readability.
 * Choose a chart palette that works for you, for things like heat map charts. Several options are available to improve accessibility, including Full Spectrum, Blue to Orange, and Purple to Red.
 * Alarm permissions diagnostic information. Depending on your specific phone software, we may need a specific permission to set exact notification "alarms", if you want exact nudge notification schedules. This section tells you if the app has all the permissions it needs to work the best, and how to allow it if you haven't (and want to).
-* Import a Nudge from a backup, which will fully restore everything about a Nudge and its related data at the time the backup was saved.
+* Back up all of your Nudges at once into a single ZIP archive.
+* Import from a backup — either a single Nudge's JSON or a full backup ZIP — which fully restores everything about each Nudge and its related data at the time the backup was saved.
 
 # Fabricated Questions
 ## What happens to my nudge schedule when I change timezones?
@@ -85,4 +90,8 @@ Your nudge will fire on schedule, local to whatever your phone's time is. If you
 If there's a name collision, you will be given the opportunity to either rename the incoming nudge, or replace the existing one.
 
 ## What happens if I set up an hourly nudge to start at 9pm and end at 7am Monday through Friday, and it's Saturday at 1am?
-We're thinking of the hourly nudge run as a single unit of multiple questions that only start on days you have enabled, at the first nudge time you have selected. So, you'll get your Saturday 1am question, because it's part of a run that was scheduled to start on the previous day. Monday 1am is the other side of that: That run would have had to start Sunday, which is not enabled, so you will get no early Monday morning nudges. We see you, night owls.
+We're thinking of the hourly nudge run as a single unit of multiple questions that only start on days you have enabled, at the first nudge time you have selected. So, you'll get your Saturday 1am question, because it's part of a run that was scheduled to start on the previous day. Monday 1am is the other side of that: That run would have had to start Sunday, which in this case is not enabled, so: No early Monday morning nudges. 
+We see you, night owls. In fact, we probably are you.
+
+## Is this a health app?
+Not exactly. You can ask yourself anything you want using Nudgery, so there's a good chance that there will be questions relating to your mental or physical health. But, Nudgery is as much of a health app as a blank diary is a medical record: It depends completely on who it belongs to, and what they decide to put in it.

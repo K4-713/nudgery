@@ -60,6 +60,8 @@ class SettingsViewModelTest {
         return nudge
     }
 
+    private suspend fun nudgeNames() = repos.nudgeRepo.observeAll().first().map { it.name }
+
     @Test
     fun TDD_import_whenNoNameConflict_succeeds() = runTest {
         // Settings: importing a backup with a unique name completes immediately
@@ -68,12 +70,15 @@ class SettingsViewModelTest {
         viewModel.importNudgeFromBackup(backupJson("Brand New Nudge"))
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.Success)
+        val status = viewModel.uiState.value.importStatus
+        assertTrue("Expected BulkSuccess but got $status", status is ImportStatus.BulkSuccess)
+        assertEquals(1, (status as ImportStatus.BulkSuccess).imported)
+        assertTrue(nudgeNames().contains("Brand New Nudge"))
     }
 
     @Test
-    fun TDD_import_whenNameAlreadyExists_showsCollisionState() = runTest {
-        // Settings: if a nudge with the same name exists, import pauses for user confirmation
+    fun TDD_import_whenNameAlreadyExists_promptsCollision() = runTest {
+        // "ask every time a nudge is imported with a name collision"
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         insertNudgeNamed("Exercise")
 
@@ -81,103 +86,119 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         val status = viewModel.uiState.value.importStatus
-        assertTrue("Expected NameCollision but got $status", status is ImportStatus.NameCollision)
-    }
-
-    @Test
-    fun TDD_import_collision_holdsIncomingNameInState() = runTest {
-        // The collision state must carry the original name so the dialog can display it
-        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
-        insertNudgeNamed("Exercise")
-
-        viewModel.importNudgeFromBackup(backupJson("Exercise"))
-        advanceUntilIdle()
-
-        val status = viewModel.uiState.value.importStatus as ImportStatus.NameCollision
-        assertEquals("Exercise", status.pendingRequest.name)
-    }
-
-    @Test
-    fun TDD_import_collision_doesNotCreateNudgeYet() = runTest {
-        // No nudge should be persisted while the collision dialog is pending
-        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
-        insertNudgeNamed("Exercise")
-
-        viewModel.importNudgeFromBackup(backupJson("Exercise"))
-        advanceUntilIdle()
-
+        assertTrue("Expected Collision but got $status", status is ImportStatus.Collision)
+        assertEquals("Exercise", (status as ImportStatus.Collision).incomingName)
+        assertTrue("Single import has nothing more to repeat over", !status.hasMore)
+        // Nothing persisted while awaiting the decision
         assertEquals(1, repos.nudgeRepo.observeAll().first().size)
     }
 
     @Test
-    fun TDD_import_rename_importsNudgeWithNewName() = runTest {
-        // Settings: confirming a rename imports the nudge under the new name
-        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
-        insertNudgeNamed("Exercise")
-        viewModel.importNudgeFromBackup(backupJson("Exercise"))
-        advanceUntilIdle()
-
-        viewModel.confirmImportRename("Exercise (copy)")
-        advanceUntilIdle()
-
-        val imported = repos.nudgeRepo.observeAll().first().find { it.name == "Exercise (copy)" }
-        assertNotNull("Nudge with new name should exist", imported)
-    }
-
-    @Test
-    fun TDD_import_rename_statusBecomesSuccess() = runTest {
-        // After rename confirmation, status should transition to Success
-        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
-        insertNudgeNamed("Exercise")
-        viewModel.importNudgeFromBackup(backupJson("Exercise"))
-        advanceUntilIdle()
-
-        viewModel.confirmImportRename("Exercise (copy)")
-        advanceUntilIdle()
-
-        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.Success)
-    }
-
-    @Test
-    fun TDD_import_replace_deletesExistingNudge() = runTest {
-        // Settings: confirming replace removes the existing nudge
+    fun TDD_collision_replace_removesExistingAndKeepsName() = runTest {
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         val existing = insertNudgeNamed("Exercise")
         viewModel.importNudgeFromBackup(backupJson("Exercise"))
         advanceUntilIdle()
 
-        viewModel.confirmImportReplace()
+        viewModel.resolveCollision(CollisionResolution.REPLACE, repeatForAll = false)
         advanceUntilIdle()
 
-        assertNull(repos.nudgeRepo.getById(existing.id))
+        assertNull("Existing nudge should be replaced", repos.nudgeRepo.getById(existing.id))
+        assertEquals(listOf("Exercise"), nudgeNames())
+        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.BulkSuccess)
     }
 
     @Test
-    fun TDD_import_replace_createsNudgeWithOriginalName() = runTest {
-        // Settings: replacing keeps the original name on the newly imported nudge
+    fun TDD_collision_copy_importsAsRenamedCopy() = runTest {
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         insertNudgeNamed("Exercise")
         viewModel.importNudgeFromBackup(backupJson("Exercise"))
         advanceUntilIdle()
 
-        viewModel.confirmImportReplace()
+        viewModel.resolveCollision(CollisionResolution.COPY, repeatForAll = false)
         advanceUntilIdle()
 
-        val imported = repos.nudgeRepo.observeAll().first().find { it.name == "Exercise" }
-        assertNotNull("Replaced nudge should exist with original name", imported)
+        val names = nudgeNames()
+        assertTrue("Original kept", names.contains("Exercise"))
+        assertTrue("Copy added with disambiguated name", names.contains("Exercise (2)"))
     }
 
     @Test
-    fun TDD_import_replace_statusBecomesSuccess() = runTest {
-        // After replace confirmation, status should transition to Success
+    fun TDD_collision_skip_importsNothing() = runTest {
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         insertNudgeNamed("Exercise")
         viewModel.importNudgeFromBackup(backupJson("Exercise"))
         advanceUntilIdle()
 
-        viewModel.confirmImportReplace()
+        viewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false)
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.Success)
+        assertEquals(listOf("Exercise"), nudgeNames())
+        val status = viewModel.uiState.value.importStatus as ImportStatus.BulkSuccess
+        assertEquals(0, status.imported)
+        assertEquals(1, status.skipped)
+    }
+
+    @Test
+    fun TDD_batchImport_promptsForEachCollisionSeparately() = runTest {
+        // "it should happen for each one if it's a batch import"
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        insertNudgeNamed("Alpha")
+        insertNudgeNamed("Beta")
+
+        viewModel.importAllFromBackups(listOf(backupJson("Alpha"), backupJson("Beta")))
+        advanceUntilIdle()
+
+        // First collision (Alpha), more remain
+        val first = viewModel.uiState.value.importStatus as ImportStatus.Collision
+        assertEquals("Alpha", first.incomingName)
+        assertTrue("More collisions remain in the batch", first.hasMore)
+
+        viewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false)
+        advanceUntilIdle()
+
+        // Second collision (Beta) is then prompted on its own
+        val second = viewModel.uiState.value.importStatus as ImportStatus.Collision
+        assertEquals("Beta", second.incomingName)
+        assertTrue("Last item, nothing more", !second.hasMore)
+    }
+
+    @Test
+    fun TDD_batchImport_repeatForAll_appliesChoiceToRemaining() = runTest {
+        // "a checkbox for 'Repeat for all'"
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        insertNudgeNamed("Alpha")
+        insertNudgeNamed("Beta")
+
+        viewModel.importAllFromBackups(listOf(backupJson("Alpha"), backupJson("Beta")))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.Collision)
+
+        viewModel.resolveCollision(CollisionResolution.COPY, repeatForAll = true)
+        advanceUntilIdle()
+
+        // No second prompt; both imported as copies
+        val status = viewModel.uiState.value.importStatus
+        assertTrue("Should finish without a second prompt, got $status", status is ImportStatus.BulkSuccess)
+        val names = nudgeNames()
+        assertTrue(names.contains("Alpha (2)"))
+        assertTrue(names.contains("Beta (2)"))
+        assertEquals(2, (status as ImportStatus.BulkSuccess).imported)
+    }
+
+    @Test
+    fun TDD_batchImport_nonCollidingEntriesImportWithoutPrompting() = runTest {
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        insertNudgeNamed("Alpha")
+
+        viewModel.importAllFromBackups(listOf(backupJson("Alpha"), backupJson("Carol")))
+        advanceUntilIdle()
+
+        // Only the colliding Alpha prompts; Carol will import once we skip Alpha
+        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.Collision)
+        viewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false)
+        advanceUntilIdle()
+
+        assertTrue("New, non-colliding nudge imported", nudgeNames().contains("Carol"))
     }
 }

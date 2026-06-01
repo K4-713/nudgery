@@ -92,6 +92,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import com.nudgery.android.R
+import com.nudgery.android.backup.nudgeBackupFileName
 import com.nudgery.android.viewmodel.AnswerRow
 import com.nudgery.android.viewmodel.FollowUpVisualization
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -167,10 +168,11 @@ fun NudgeDetailScreen(
     LaunchedEffect(uiState.exportContent) {
         val content = uiState.exportContent ?: return@LaunchedEffect
         val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
+        val base = nudgeBackupFileName(uiState.nudgeName)
         val (fileName, mimeType) = when (uiState.exportFormat) {
-            ExportFormat.CSV -> "nudgery-export.csv" to "text/csv"
-            ExportFormat.TSV -> "nudgery-export.tsv" to "text/tab-separated-values"
-            ExportFormat.JSON -> "nudgery-backup.json" to "application/json"
+            ExportFormat.CSV -> "$base.csv" to "text/csv"
+            ExportFormat.TSV -> "$base.tsv" to "text/tab-separated-values"
+            ExportFormat.JSON -> "$base.json" to "application/json"
         }
         val file = File(exportDir, fileName)
         file.writeText(content)

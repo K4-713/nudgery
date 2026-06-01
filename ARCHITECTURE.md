@@ -321,6 +321,12 @@ The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background
 
 CSV, TSV, and JSON backup export logic lives in `shared/commonMain` so it is available to both platforms without duplication. CSV and TSV export produces one row per `Answer`, joined with its `Question`, `Nudge`, and any relevant `QuestionOption` text. JSON backup (`ExportFormat.JSON_BACKUP`) serializes the complete nudge — questions, options, schedule, and all answer history — for round-trip import via `ImportNudgeUseCase`.
 
+Exported files are named after the nudge via `nudgeBackupFileName` (`androidApp/backup/`): readable characters from the name, falling back to the Unicode names of the emoji (`java.lang.Character.getName`) for all-emoji names, and to `"nudge"` otherwise.
+
+**Back up / restore all (Android):** `SettingsViewModel.exportAllNudges()` serializes every nudge to its own JSON (filenames de-duplicated with `disambiguateName`); `SettingsScreen` zips the entries into a single `nudgery-backup-<date>.zip` and shares it. The import picker inspects the chosen file's bytes — a ZIP (`PK` magic) feeds every contained JSON into the importer, while a plain JSON is imported as a batch of one.
+
+Import runs as a resumable `ImportSession`: each entry whose name is free imports immediately; each name collision pauses with `ImportStatus.Collision` for the user to choose `CollisionResolution.REPLACE` / `COPY` / `SKIP` (COPY uses `disambiguateName`). A "repeat for all" choice sets `applyToAll` so the rest of the batch resolves without further prompts. The session ends with `ImportStatus.BulkSuccess(imported, skipped, failed)`; a single unreadable file instead yields `ImportStatus.Failure` with the parse error.
+
 ---
 
 ## Visualizations

@@ -1,10 +1,13 @@
 package com.nudgery.android.ui.screen
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.core.content.FileProvider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,12 +23,12 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -53,9 +56,17 @@ import com.nudgery.android.R
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.android.ui.theme.paletteStops
+import com.nudgery.android.viewmodel.CollisionResolution
 import com.nudgery.android.viewmodel.ImportStatus
 import com.nudgery.android.viewmodel.SettingsViewModel
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.koin.androidx.compose.koinViewModel
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,8 +87,22 @@ fun SettingsScreen(
 
     LaunchedEffect(importStatus) {
         when (importStatus) {
-            is ImportStatus.Success -> {
-                snackbarHostState.showSnackbar(importSuccessMessage)
+            is ImportStatus.BulkSuccess -> {
+                val message = if (importStatus.imported == 1 &&
+                    importStatus.skipped == 0 && importStatus.failed == 0) {
+                    importSuccessMessage
+                } else buildString {
+                    append(context.getString(R.string.settings_import_all_success, importStatus.imported))
+                    if (importStatus.skipped > 0) {
+                        append(" ")
+                        append(context.getString(R.string.settings_import_skipped, importStatus.skipped))
+                    }
+                    if (importStatus.failed > 0) {
+                        append(" ")
+                        append(context.getString(R.string.settings_import_unreadable, importStatus.failed))
+                    }
+                }
+                snackbarHostState.showSnackbar(message)
                 viewModel.clearImportStatus()
             }
             is ImportStatus.Failure -> {
@@ -90,23 +115,57 @@ fun SettingsScreen(
         }
     }
 
-    if (importStatus is ImportStatus.NameCollision) {
+    // When "back up all" has serialized every nudge, zip the per-nudge JSONs and share the archive.
+    val backupAllFiles by viewModel.backupAllFiles.collectAsState()
+    val backupEmptyMessage = stringResource(R.string.settings_backup_all_empty)
+    LaunchedEffect(backupAllFiles) {
+        val entries = backupAllFiles ?: return@LaunchedEffect
+        if (entries.isEmpty()) {
+            snackbarHostState.showSnackbar(backupEmptyMessage)
+            viewModel.clearBackupAll()
+            return@LaunchedEffect
+        }
+        val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
+        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val zipFile = File(exportDir, "nudgery-backup-$today.zip")
+        ZipOutputStream(zipFile.outputStream().buffered()).use { zos ->
+            entries.forEach { entry ->
+                zos.putNextEntry(ZipEntry(entry.fileName))
+                zos.write(entry.content.toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+            }
+        }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", zipFile)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, null))
+        viewModel.clearBackupAll()
+    }
+
+    if (importStatus is ImportStatus.Collision) {
         ImportCollisionDialog(
-            existingName = importStatus.pendingRequest.name,
-            onRename = { viewModel.confirmImportRename(it) },
-            onReplace = { viewModel.confirmImportReplace() },
-            onDismiss = { viewModel.clearImportStatus() }
+            incomingName = importStatus.incomingName,
+            showRepeatForAll = importStatus.hasMore,
+            onResolve = { resolution, repeatForAll -> viewModel.resolveCollision(resolution, repeatForAll) },
+            // Dismissing (back / tap-outside) skips just this one and continues the batch.
+            onDismiss = { viewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false) }
         )
     }
 
+    // Accepts either a single-nudge JSON backup or an all-nudges ZIP; the file content decides which.
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null) {
-            val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
-            if (content != null) {
-                viewModel.importNudgeFromBackup(content)
-            }
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: return@rememberLauncherForActivityResult
+        if (looksLikeZip(bytes)) {
+            viewModel.importAllFromBackups(readJsonEntriesFromZip(bytes))
+        } else {
+            viewModel.importNudgeFromBackup(bytes.toString(Charsets.UTF_8))
         }
     }
 
@@ -220,7 +279,19 @@ fun SettingsScreen(
 
             val isImporting = uiState.importStatus is ImportStatus.InProgress
             TextButton(
-                onClick = { filePicker.launch("application/json") },
+                onClick = { viewModel.exportAllNudges() },
+                enabled = backupAllFiles == null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_backup_all_button),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            TextButton(
+                onClick = { filePicker.launch("application/*") },
                 enabled = !isImporting,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -294,44 +365,42 @@ private fun ExactAlarmDiagnosticRow() {
 
 @Composable
 private fun ImportCollisionDialog(
-    existingName: String,
-    onRename: (String) -> Unit,
-    onReplace: () -> Unit,
+    incomingName: String,
+    showRepeatForAll: Boolean,
+    onResolve: (CollisionResolution, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var newName by remember(existingName) { mutableStateOf(existingName) }
+    var repeatForAll by remember(incomingName) { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.import_collision_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.import_collision_body, existingName))
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text(stringResource(R.string.import_collision_rename_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text(stringResource(R.string.import_collision_body, incomingName))
+                if (showRepeatForAll) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { repeatForAll = !repeatForAll }
+                    ) {
+                        Checkbox(checked = repeatForAll, onCheckedChange = { repeatForAll = it })
+                        Text(stringResource(R.string.import_collision_repeat_all))
+                    }
+                }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = { onRename(newName) },
-                enabled = newName.isNotBlank() && newName != existingName
-            ) {
-                Text(stringResource(R.string.import_collision_rename))
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-                Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onReplace) {
+            Column(horizontalAlignment = Alignment.End) {
+                TextButton(onClick = { onResolve(CollisionResolution.REPLACE, repeatForAll) }) {
                     Text(stringResource(R.string.import_collision_replace))
+                }
+                TextButton(onClick = { onResolve(CollisionResolution.COPY, repeatForAll) }) {
+                    Text(stringResource(R.string.import_collision_copy))
+                }
+                TextButton(onClick = { onResolve(CollisionResolution.SKIP, repeatForAll) }) {
+                    Text(stringResource(R.string.import_collision_skip))
                 }
             }
         }
@@ -405,4 +474,24 @@ private fun PaletteOption(
                 .background(Brush.horizontalGradient(stops))
         )
     }
+}
+
+/** True if [bytes] begin with the ZIP local-file-header magic ("PK"). */
+private fun looksLikeZip(bytes: ByteArray): Boolean =
+    bytes.size >= 2 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte()
+
+/** Reads the UTF-8 contents of every ".json" entry in a ZIP backup. */
+private fun readJsonEntriesFromZip(bytes: ByteArray): List<String> {
+    val contents = mutableListOf<String>()
+    ZipInputStream(bytes.inputStream()).use { zis ->
+        var entry: ZipEntry? = zis.nextEntry
+        while (entry != null) {
+            if (!entry.isDirectory && entry.name.endsWith(".json", ignoreCase = true)) {
+                contents.add(zis.readBytes().toString(Charsets.UTF_8))
+            }
+            zis.closeEntry()
+            entry = zis.nextEntry
+        }
+    }
+    return contents
 }
