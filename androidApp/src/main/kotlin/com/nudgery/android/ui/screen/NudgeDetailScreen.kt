@@ -650,7 +650,10 @@ private fun NudgeryChart(
     }
 }
 
-private const val SINGLE_DAY_GRID_ROWS = 3
+// The weekly (SINGLE_DAY) heat map lays days out in a short, wide grid: 2 rows keeps the squares
+// large and lets ~SINGLE_DAY_GRID_VISIBLE_COLS columns fill the card's 16:9 width (≈8 days/screen),
+// scrolling for older days.
+private const val SINGLE_DAY_GRID_ROWS = 2
 private const val SINGLE_DAY_GRID_VISIBLE_COLS = 4
 
 @Composable
