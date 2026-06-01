@@ -334,8 +334,8 @@ Charts are rendered in the platform UI layer (not shared), since charting librar
 | YES_NO | Calendar heat map, line graph (daily yes count), column chart |
 | SCALE | Line graph, calendar heat map (daily average) |
 | NUMBER | Line graph, calendar heat map (daily average) |
-| OPTION_SINGLE | Bar chart, column chart, tag cloud |
-| OPTION_MULTI | Bar chart, tag cloud |
+| OPTION_SINGLE | Bar chart, column chart, packed bubble chart |
+| OPTION_MULTI | Bar chart, packed bubble chart |
 
 **Android rendering:**
 
@@ -346,7 +346,7 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 | `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at` |
 | `BarChart` | `HorizontalBarChart` | Custom Compose `Column`/`Row` layout; proportional `Box` fills with `primary` color; label truncated to 80dp |
 | `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label` |
-| `TagCloud` | `TagCloudChart` | Custom `FlowRow` with `fontSize` scaled proportionally to `NamedCount.count` |
+| `PackedBubble` | `PackedBubbleChart` | Custom Canvas with d3-style front-chain circle packing; radius ∝ `sqrt(NamedCount.count)` (area encodes frequency); cluster scaled to fit; bold centered word with count beneath |
 | `CalendarHeatMap` | `CalendarHeatMapChart` | Custom Canvas grid; Monday-anchored week columns × 7 rows; cell color interpolated from `surfaceVariant` → `primary` by intensity |
 
 `CartesianChartModelProducer` is created with `remember` and updated via `LaunchedEffect` on data change. M3 color theming is applied automatically by `vico-compose-m3`.

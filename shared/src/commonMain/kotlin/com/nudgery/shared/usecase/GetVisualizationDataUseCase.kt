@@ -137,7 +137,7 @@ class GetVisualizationDataUseCase(
             .map { (word, count) -> NamedCount(word, count) }
             .sortedByDescending { it.count }
         return if (wordCounts.isEmpty()) emptyList()
-        else listOf(VisualizationData.TagCloud(wordCounts))
+        else listOf(VisualizationData.PackedBubble(wordCounts))
     }
 
     private fun tokenizeText(text: String): List<String> =
@@ -162,7 +162,7 @@ class GetVisualizationDataUseCase(
         return buildList {
             add(VisualizationData.BarChart(optionCounts))
             if (includeColumnChart) add(VisualizationData.ColumnChart(optionCounts))
-            add(VisualizationData.TagCloud(optionCounts))
+            add(VisualizationData.PackedBubble(optionCounts))
         }
     }
 }

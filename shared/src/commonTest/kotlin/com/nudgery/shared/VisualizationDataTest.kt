@@ -166,7 +166,7 @@ class VisualizationDataTest {
 
     @Test
     fun TDD_optionSingleQuestionProvidesBarChartData() = runTest {
-        // README "Viewing Nudges": "OPTION_SINGLE | Bar chart, column chart, tag cloud"
+        // README "Viewing Nudges": "OPTION_SINGLE | Bar chart, column chart, packed bubble chart"
         val options = listOf("Good", "Okay", "Bad")
         val result = createNudge.execute(
             CreateNudgeRequest(
@@ -190,7 +190,7 @@ class VisualizationDataTest {
 
     @Test
     fun TDD_optionSingleQuestionProvidesColumnChartData() = runTest {
-        // README "Viewing Nudges": "OPTION_SINGLE | Bar chart, column chart, tag cloud"
+        // README "Viewing Nudges": "OPTION_SINGLE | Bar chart, column chart, packed bubble chart"
         val options = listOf("Good", "Okay", "Bad")
         val result = createNudge.execute(
             CreateNudgeRequest(
@@ -213,8 +213,8 @@ class VisualizationDataTest {
     }
 
     @Test
-    fun TDD_optionSingleQuestionProvidesTagCloudData() = runTest {
-        // README "Viewing Nudges": "OPTION_SINGLE | Bar chart, column chart, tag cloud"
+    fun TDD_optionSingleQuestionProvidesPackedBubbleData() = runTest {
+        // README "Viewing Nudges": "OPTION_SINGLE | Bar chart, column chart, packed bubble chart"
         val options = listOf("Good", "Okay", "Bad")
         val result = createNudge.execute(
             CreateNudgeRequest(
@@ -232,15 +232,15 @@ class VisualizationDataTest {
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
-        assertTrue(charts.any { it is VisualizationData.TagCloud },
-            "OPTION_SINGLE should provide a TagCloud")
+        assertTrue(charts.any { it is VisualizationData.PackedBubble },
+            "OPTION_SINGLE should provide a PackedBubble")
     }
 
     // --- OPTION_MULTI ---
 
     @Test
     fun TDD_optionMultiQuestionProvidesBarChartData() = runTest {
-        // README "Viewing Nudges": "OPTION_MULTI | Bar chart, tag cloud"
+        // README "Viewing Nudges": "OPTION_MULTI | Bar chart, packed bubble chart"
         val options = listOf("Headache", "Fatigue", "Nausea")
         val result = createNudge.execute(
             CreateNudgeRequest(
@@ -263,8 +263,8 @@ class VisualizationDataTest {
     }
 
     @Test
-    fun TDD_optionMultiQuestionProvidesTagCloudData() = runTest {
-        // README "Viewing Nudges": "OPTION_MULTI | Bar chart, tag cloud"
+    fun TDD_optionMultiQuestionProvidesPackedBubbleData() = runTest {
+        // README "Viewing Nudges": "OPTION_MULTI | Bar chart, packed bubble chart"
         val options = listOf("Headache", "Fatigue", "Nausea")
         val result = createNudge.execute(
             CreateNudgeRequest(
@@ -282,8 +282,8 @@ class VisualizationDataTest {
         )
 
         val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
-        assertTrue(charts.any { it is VisualizationData.TagCloud },
-            "OPTION_MULTI should provide a TagCloud")
+        assertTrue(charts.any { it is VisualizationData.PackedBubble },
+            "OPTION_MULTI should provide a PackedBubble")
     }
 
     // --- Timeframes ---
@@ -334,11 +334,11 @@ class VisualizationDataTest {
         assertEquals(1.0, heatMap.dailyCounts.sumOf { it.value })
     }
 
-    // --- TEXT (word cloud) ---
+    // --- TEXT (packed bubble) ---
 
     @Test
-    fun TDD_textFollowUpQuestionProvidesTagCloud() = runTest {
-        // README: Follow-up questions can be TEXT type; word cloud is the available visualization
+    fun TDD_textFollowUpQuestionProvidesPackedBubble() = runTest {
+        // README: Follow-up questions can be TEXT type; packed bubble chart is the available visualization
         val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
         repos.answerRepository.insert(
             Answer(id = "ans-text-1", nudgeId = nudgeId, questionId = followUpId,
@@ -348,13 +348,13 @@ class VisualizationDataTest {
 
         val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
 
-        assertTrue(charts.any { it is VisualizationData.TagCloud },
-            "TEXT question should produce a TagCloud")
+        assertTrue(charts.any { it is VisualizationData.PackedBubble },
+            "TEXT question should produce a PackedBubble")
     }
 
     @Test
-    fun TDD_textWordCloudExcludesStopWords() = runTest {
-        // Stop words (function words like "the", "was", "and") should be filtered from the word cloud
+    fun TDD_textPackedBubbleExcludesStopWords() = runTest {
+        // Stop words (function words like "the", "was", "and") should be filtered from the packed bubble chart
         val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
         repos.answerRepository.insert(
             Answer(id = "ans-text-stop", nudgeId = nudgeId, questionId = followUpId,
@@ -363,8 +363,8 @@ class VisualizationDataTest {
         )
 
         val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
-        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
-        val words = cloud.entries.map { it.label }
+        val bubbles = charts.filterIsInstance<VisualizationData.PackedBubble>().first()
+        val words = bubbles.entries.map { it.label }
 
         assertTrue("the" !in words, "Stop word 'the' should be excluded")
         assertTrue("was" !in words, "Stop word 'was' should be excluded")
@@ -374,7 +374,7 @@ class VisualizationDataTest {
     }
 
     @Test
-    fun TDD_textWordCloudExcludesShortWords() = runTest {
+    fun TDD_textPackedBubbleExcludesShortWords() = runTest {
         // Words under 3 characters are filtered to remove noise like "ok", "hi", "ha"
         val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
         repos.answerRepository.insert(
@@ -384,8 +384,8 @@ class VisualizationDataTest {
         )
 
         val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
-        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
-        val words = cloud.entries.map { it.label }
+        val bubbles = charts.filterIsInstance<VisualizationData.PackedBubble>().first()
+        val words = bubbles.entries.map { it.label }
 
         assertTrue("ok" !in words, "Short word 'ok' (2 chars) should be excluded")
         assertTrue("a" !in words, "Short word 'a' (1 char) should be excluded")
@@ -394,7 +394,7 @@ class VisualizationDataTest {
     }
 
     @Test
-    fun TDD_textWordCloudCountsWordFrequencyAcrossAnswers() = runTest {
+    fun TDD_textPackedBubbleCountsWordFrequencyAcrossAnswers() = runTest {
         // The same word appearing in multiple answers should be summed across all of them
         val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
         val now = Clock.System.now()
@@ -406,15 +406,15 @@ class VisualizationDataTest {
             value = "forest was peaceful without dragon", scheduledAt = now, answeredAt = now, isHidden = false))
 
         val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
-        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
-        val dragonEntry = cloud.entries.find { it.label == "dragon" }
+        val bubbles = charts.filterIsInstance<VisualizationData.PackedBubble>().first()
+        val dragonEntry = bubbles.entries.find { it.label == "dragon" }
 
-        assertNotNull(dragonEntry, "'dragon' should appear in the word cloud")
+        assertNotNull(dragonEntry, "'dragon' should appear in the packed bubble chart")
         assertEquals(3, dragonEntry!!.count, "'dragon' appears once per answer, total should be 3")
     }
 
     @Test
-    fun TDD_textWordCloudStripsLeadingAndTrailingPunctuation() = runTest {
+    fun TDD_textPackedBubbleStripsLeadingAndTrailingPunctuation() = runTest {
         // Punctuation attached to words should not prevent frequency matching ("running," == "running")
         val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
         val now = Clock.System.now()
@@ -424,10 +424,10 @@ class VisualizationDataTest {
             value = "running through darkness", scheduledAt = now, answeredAt = now, isHidden = false))
 
         val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
-        val cloud = charts.filterIsInstance<VisualizationData.TagCloud>().first()
-        val runningEntry = cloud.entries.find { it.label == "running" }
+        val bubbles = charts.filterIsInstance<VisualizationData.PackedBubble>().first()
+        val runningEntry = bubbles.entries.find { it.label == "running" }
 
-        assertNotNull(runningEntry, "'running' should appear in the word cloud")
+        assertNotNull(runningEntry, "'running' should appear in the packed bubble chart")
         assertEquals(2, runningEntry!!.count, "'running,' and 'running' should both count as 'running'")
     }
 

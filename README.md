@@ -46,8 +46,8 @@ The visualizations available for each main question will differ, based on the ma
 | YES_NO | Calendar heat map, line graph (daily yes count), column chart |
 | SCALE | Line graph, calendar heat map (daily average) |
 | NUMBER | Line graph, calendar heat map (daily average) |
-| OPTION_SINGLE | Bar chart, column chart, tag cloud |
-| OPTION_MULTI | Bar chart, tag cloud |
+| OPTION_SINGLE | Bar chart, column chart, packed bubble chart |
+| OPTION_MULTI | Bar chart, packed bubble chart |
 
 The timeframe can be switched between weekly, monthly, yearly, and all-time.
 

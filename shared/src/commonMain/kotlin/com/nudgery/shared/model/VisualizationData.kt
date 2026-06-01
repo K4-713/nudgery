@@ -34,5 +34,5 @@ sealed class VisualizationData {
     ) : VisualizationData()
     data class ColumnChart(val entries: List<NamedCount>) : VisualizationData()
     data class BarChart(val entries: List<NamedCount>) : VisualizationData()
-    data class TagCloud(val entries: List<NamedCount>) : VisualizationData()
+    data class PackedBubble(val entries: List<NamedCount>) : VisualizationData()
 }

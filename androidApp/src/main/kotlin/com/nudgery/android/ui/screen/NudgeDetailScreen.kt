@@ -21,10 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BarChart
@@ -65,7 +63,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -78,10 +75,15 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerRow
 import com.nudgery.android.viewmodel.FollowUpVisualization
@@ -525,7 +527,7 @@ private fun visualizationLabel(visualization: VisualizationData): String = when 
     is VisualizationData.LineGraph -> stringResource(R.string.chart_type_line_graph)
     is VisualizationData.BarChart -> stringResource(R.string.chart_type_bar_chart)
     is VisualizationData.ColumnChart -> stringResource(R.string.chart_type_column_chart)
-    is VisualizationData.TagCloud -> stringResource(R.string.chart_type_tag_cloud)
+    is VisualizationData.PackedBubble -> stringResource(R.string.chart_type_packed_bubble)
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -635,7 +637,7 @@ private fun NudgeryChart(
                 )
                 is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
                 is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
-                is VisualizationData.TagCloud -> TagCloudChart(visualization.entries, chartPalette)
+                is VisualizationData.PackedBubble -> PackedBubbleChart(visualization.entries, chartPalette)
             }
         }
     }
@@ -1070,60 +1072,240 @@ private fun NamedCountChart(entries: List<NamedCount>) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** Maximum number of bubbles drawn; keeps the busiest packed bubble charts legible. Entries are pre-sorted by count. */
+private const val MAX_BUBBLES = 25
+
 @Composable
-private fun TagCloudChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
+private fun PackedBubbleChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
     if (entries.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
         }
         return
     }
-    val max = entries.maxOf { it.count }.toFloat()
+    val textMeasurer = rememberTextMeasurer()
+    val maxCount = entries.maxOf { it.count }.toFloat()
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val stops = palette.paletteStops
 
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        entries.forEach { entry ->
-            val intensity = (entry.count / max).coerceIn(0f, 1f)
-            val bubbleColor = stops.colorAt(intensity, isDark)
-            val textColor = if (bubbleColor.luminance() > 0.4f) Color.Black else Color.White
-            val diameter = (40f + intensity * 36f).dp
-            val wordFontSize = (8f + intensity * 5f).sp
-            val countFontSize = (7f + intensity * 1f).sp
+    val shown = remember(entries) { entries.take(MAX_BUBBLES) }
 
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(diameter)
-                    .clip(CircleShape)
-                    .background(bubbleColor)
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
-                ) {
-                    Text(
-                        text = entry.label,
-                        fontSize = wordFontSize,
-                        color = textColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 4.dp)
+    // Pack once per data set. Radius scales with sqrt(count) so a bubble's *area* encodes
+    // frequency. Positions are packed tangentially around a center for an organic cluster.
+    val packed = remember(shown) {
+        val circles = shown.map { PackedCircle(it, sqrt(it.count.toDouble())) }
+        packSiblings(circles)
+        circles
+    }
+
+    val bounds = remember(packed) {
+        var minX = Double.MAX_VALUE
+        var minY = Double.MAX_VALUE
+        var maxX = -Double.MAX_VALUE
+        var maxY = -Double.MAX_VALUE
+        packed.forEach { c ->
+            minX = min(minX, c.x - c.r)
+            maxX = max(maxX, c.x + c.r)
+            minY = min(minY, c.y - c.r)
+            maxY = max(maxY, c.y + c.r)
+        }
+        PackBounds(minX, minY, maxX, maxY)
+    }
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        // Scale the packed cluster to fill the available space (works for both the small
+        // card thumbnail and the full-screen view), keeping its aspect ratio and centering it.
+        val contentW = (bounds.maxX - bounds.minX).coerceAtLeast(1e-6)
+        val contentH = (bounds.maxY - bounds.minY).coerceAtLeast(1e-6)
+        val scale = (minOf(size.width / contentW, size.height / contentH) * 0.98).toFloat()
+        val offsetX = (size.width - (contentW * scale).toFloat()) / 2f
+        val offsetY = (size.height - (contentH * scale).toFloat()) / 2f
+
+        packed.forEach { c ->
+            val cx = ((c.x - bounds.minX) * scale).toFloat() + offsetX
+            val cy = ((c.y - bounds.minY) * scale).toFloat() + offsetY
+            val r = (c.r * scale).toFloat()
+
+            val intensity = (c.entry.count / maxCount).coerceIn(0f, 1f)
+            val bubbleColor = stops.colorAt(intensity, isDark)
+            drawCircle(color = bubbleColor, radius = r, center = Offset(cx, cy))
+
+            // Only label bubbles big enough to read; smaller ones stay as plain dots (thumbnail).
+            if (r < 18f) return@forEach
+            val textColor = if (bubbleColor.luminance() > 0.4f) Color.Black else Color.White
+
+            val wordPx = (r * 0.5f).coerceIn(9f, 26f)
+            val wordLayout = textMeasurer.measure(
+                text = c.entry.label,
+                style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                constraints = Constraints(maxWidth = (r * 1.7f).toInt().coerceAtLeast(1))
+            )
+            // Word centered on the bubble's center.
+            drawText(
+                wordLayout,
+                topLeft = Offset(cx - wordLayout.size.width / 2f, cy - wordLayout.size.height / 2f)
+            )
+
+            // Count tucked just beneath the word, only when there is room.
+            if (r >= 26f) {
+                val countLayout = textMeasurer.measure(
+                    text = c.entry.count.toString(),
+                    style = TextStyle(color = textColor.copy(alpha = 0.8f), fontSize = (wordPx * 0.7f).toSp()),
+                    maxLines = 1
+                )
+                drawText(
+                    countLayout,
+                    topLeft = Offset(
+                        cx - countLayout.size.width / 2f,
+                        cy + wordLayout.size.height / 2f + 1f
                     )
-                    Text(
-                        text = entry.count.toString(),
-                        fontSize = countFontSize,
-                        color = textColor.copy(alpha = 0.75f)
-                    )
-                }
+                )
             }
         }
     }
+}
+
+/** A circle in the packing layout. Position is filled in by [packSiblings]; [r] encodes frequency. */
+private class PackedCircle(val entry: NamedCount, val r: Double) {
+    var x: Double = 0.0
+    var y: Double = 0.0
+}
+
+private class PackBounds(val minX: Double, val minY: Double, val maxX: Double, val maxY: Double)
+
+/** Front-chain node wrapping a [PackedCircle] in a circular doubly-linked list. */
+private class PackNode(val circle: PackedCircle) {
+    var prev: PackNode? = null
+    var next: PackNode? = null
+}
+
+/**
+ * Positions [circles] tangentially with no overlaps, nestled around a shared center, by porting
+ * d3-hierarchy's front-chain `packSiblings` algorithm. Mutates each circle's x/y in place.
+ */
+private fun packSiblings(circles: List<PackedCircle>) {
+    val n = circles.size
+    if (n == 0) return
+
+    val a = circles[0]
+    a.x = 0.0
+    a.y = 0.0
+    if (n == 1) return
+
+    val b = circles[1]
+    a.x = -b.r
+    b.x = a.r
+    b.y = 0.0
+    if (n == 2) return
+
+    val c = circles[2]
+    placeTangent(b, a, c)
+
+    // Initialize the front chain with the first three circles.
+    var nodeA = PackNode(a)
+    var nodeB = PackNode(b)
+    val nodeC = PackNode(c)
+    nodeA.next = nodeC; nodeC.prev = nodeA
+    nodeB.next = nodeA; nodeA.prev = nodeB
+    nodeC.next = nodeB; nodeB.prev = nodeC
+
+    var i = 3
+    outer@ while (i < n) {
+        val circle = circles[i]
+        placeTangent(nodeA.circle, nodeB.circle, circle)
+        val newNode = PackNode(circle)
+
+        // Walk outward from both ends of the chain, looking for the nearest collision.
+        var j = nodeB.next!!
+        var k = nodeA.prev!!
+        var sj = nodeB.circle.r
+        var sk = nodeA.circle.r
+        while (true) {
+            if (sj <= sk) {
+                if (intersects(j.circle, circle)) {
+                    nodeB = j
+                    nodeA.next = nodeB; nodeB.prev = nodeA
+                    continue@outer // retry placing the same circle without advancing i
+                }
+                sj += j.circle.r
+                j = j.next!!
+            } else {
+                if (intersects(k.circle, circle)) {
+                    nodeA = k
+                    nodeA.next = nodeB; nodeB.prev = nodeA
+                    continue@outer
+                }
+                sk += k.circle.r
+                k = k.prev!!
+            }
+            if (j === k.next) break
+        }
+
+        // No collision: splice the new circle into the chain between nodeA and nodeB.
+        val oldB = nodeB
+        newNode.prev = nodeA; newNode.next = oldB
+        nodeA.next = newNode; oldB.prev = newNode
+        nodeB = newNode
+
+        // Recompute the pair on the chain whose weighted midpoint is closest to the center,
+        // so the next circle grows from there.
+        var bestScore = score(nodeA)
+        var scan = newNode.next!!
+        while (scan !== newNode) {
+            val s = score(scan)
+            if (s < bestScore) {
+                nodeA = scan
+                bestScore = s
+            }
+            scan = scan.next!!
+        }
+        nodeB = nodeA.next!!
+        i++
+    }
+}
+
+/** Positions [target] tangent to the already-placed circles [c1] and [c2]. */
+private fun placeTangent(c1: PackedCircle, c2: PackedCircle, target: PackedCircle) {
+    val dx = c1.x - c2.x
+    val dy = c1.y - c2.y
+    val d2 = dx * dx + dy * dy
+    if (d2 != 0.0) {
+        val a2 = (c2.r + target.r) * (c2.r + target.r)
+        val b2 = (c1.r + target.r) * (c1.r + target.r)
+        if (a2 > b2) {
+            val x = (d2 + b2 - a2) / (2 * d2)
+            val y = sqrt(max(0.0, b2 / d2 - x * x))
+            target.x = c1.x - x * dx - y * dy
+            target.y = c1.y - x * dy + y * dx
+        } else {
+            val x = (d2 + a2 - b2) / (2 * d2)
+            val y = sqrt(max(0.0, a2 / d2 - x * x))
+            target.x = c2.x + x * dx - y * dy
+            target.y = c2.y + x * dy + y * dx
+        }
+    } else {
+        target.x = c2.x + target.r
+        target.y = c2.y
+    }
+}
+
+private fun intersects(a: PackedCircle, b: PackedCircle): Boolean {
+    val dr = a.r + b.r - 1e-6
+    val dx = b.x - a.x
+    val dy = b.y - a.y
+    return dr > 0.0 && dr * dr > dx * dx + dy * dy
+}
+
+/** Squared distance from the center to the radius-weighted midpoint of a node and its successor. */
+private fun score(node: PackNode): Double {
+    val a = node.circle
+    val b = node.next!!.circle
+    val ab = a.r + b.r
+    val dx = (a.x * b.r + b.x * a.r) / ab
+    val dy = (a.y * b.r + b.y * a.r) / ab
+    return dx * dx + dy * dy
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -22,3 +22,6 @@ local.properties
 *.keystore
 keystore.properties
 google-services.json
+
+# Screenshots - For sharing with the agent
+screenshots/
