@@ -994,30 +994,43 @@ private fun TagCloudChart(entries: List<NamedCount>, palette: ChartPalettePrefer
     val stops = palette.paletteStops
 
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         entries.forEach { entry ->
             val intensity = (entry.count / max).coerceIn(0f, 1f)
             val bubbleColor = stops.colorAt(intensity, isDark)
             val textColor = if (bubbleColor.luminance() > 0.4f) Color.Black else Color.White
-            val fontSize = (11f + intensity * 12f).sp
-            val horizontalPadding = (8f + intensity * 8f).dp
-            val verticalPadding = (5f + intensity * 4f).dp
+            val diameter = (40f + intensity * 36f).dp
+            val wordFontSize = (8f + intensity * 5f).sp
+            val countFontSize = (7f + intensity * 1f).sp
 
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .background(bubbleColor, CircleShape)
-                    .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+                    .size(diameter)
+                    .clip(CircleShape)
+                    .background(bubbleColor)
             ) {
-                Text(
-                    text = entry.label,
-                    fontSize = fontSize,
-                    color = textColor,
-                    maxLines = 1
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Text(
+                        text = entry.label,
+                        fontSize = wordFontSize,
+                        color = textColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    Text(
+                        text = entry.count.toString(),
+                        fontSize = countFontSize,
+                        color = textColor.copy(alpha = 0.75f)
+                    )
+                }
             }
         }
     }
