@@ -18,6 +18,9 @@ import kotlinx.datetime.Instant
 
 private const val TAG = "AnswerFormViewModel"
 
+// Koin viewModelOf resolves by type; null has no type info, so Instant? can't be injected directly.
+data class ScheduledAt(val instant: Instant?)
+
 data class AnswerFormQuestion(
     val question: Question,
     val options: List<QuestionOption>
@@ -37,7 +40,7 @@ data class AnswerFormUiState(
 
 class AnswerFormViewModel(
     private val nudgeId: String,
-    private val scheduledAt: Instant?,
+    private val scheduledAt: ScheduledAt,
     private val questionRepository: QuestionRepository,
     private val questionOptionRepository: QuestionOptionRepository,
     private val recordAnswer: RecordAnswerUseCase
@@ -96,7 +99,7 @@ class AnswerFormViewModel(
         _uiState.update { it.copy(isSubmitting = true) }
 
         viewModelScope.launch {
-            val effectiveScheduledAt = scheduledAt ?: Clock.System.now()
+            val effectiveScheduledAt = scheduledAt.instant ?: Clock.System.now()
             pendingAnswers.add(BufferedAnswer(currentQuestion.question.id, answer, effectiveScheduledAt))
             Log.d(TAG, "Buffered answer for question ${currentQuestion.question.id}: $answer")
 

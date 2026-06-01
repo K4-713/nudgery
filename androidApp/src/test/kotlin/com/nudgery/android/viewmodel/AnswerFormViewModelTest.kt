@@ -1,6 +1,7 @@
 package com.nudgery.android.viewmodel
 
 import com.nudgery.android.util.TestViewModelRepositories
+import com.nudgery.android.viewmodel.ScheduledAt
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
 import com.nudgery.shared.model.TriggerOperator
@@ -75,7 +76,7 @@ class AnswerFormViewModelTest {
     private fun buildViewModel(nudgeId: String, scheduledAt: Instant? = null) =
         AnswerFormViewModel(
             nudgeId = nudgeId,
-            scheduledAt = scheduledAt,
+            scheduledAt = ScheduledAt(scheduledAt),
             questionRepository = repos.questionRepo,
             questionOptionRepository = repos.optionRepo,
             recordAnswer = repos.recordAnswerUseCase()

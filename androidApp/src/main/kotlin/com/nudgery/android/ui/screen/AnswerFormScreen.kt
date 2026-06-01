@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerFormUiState
 import com.nudgery.android.viewmodel.AnswerFormViewModel
+import com.nudgery.android.viewmodel.ScheduledAt
 import com.nudgery.shared.model.QuestionType
 import kotlinx.datetime.Instant
 import org.koin.androidx.compose.koinViewModel
@@ -51,7 +52,7 @@ fun AnswerFormScreen(
     nudgeId: String,
     scheduledAt: Instant?,
     onDismiss: () -> Unit,
-    viewModel: AnswerFormViewModel = koinViewModel(parameters = { parametersOf(nudgeId, scheduledAt) })
+    viewModel: AnswerFormViewModel = koinViewModel(parameters = { parametersOf(nudgeId, ScheduledAt(scheduledAt)) })
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
