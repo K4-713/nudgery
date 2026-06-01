@@ -25,3 +25,7 @@ google-services.json
 
 # Screenshots - For sharing with the agent
 screenshots/
+
+# Generated sample nudge backups (produced by sample-nudges/gen_sample_nudges.py).
+# The generator script stays tracked; its output does not.
+sample-nudges/nudgery-*.json
