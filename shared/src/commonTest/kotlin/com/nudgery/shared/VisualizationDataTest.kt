@@ -432,6 +432,60 @@ class VisualizationDataTest {
     }
 
     @Test
+    fun TDD_textPackedBubbleTreatsEmojiAsWords() = runTest {
+        // Emoji-only answers must still chart: each emoji counts as a whole word
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        val now = Clock.System.now()
+        listOf("🐶", "🐶", "🐶", "🐱", "🐱").forEachIndexed { i, value ->
+            repos.answerRepository.insert(Answer(id = "ans-emoji-$i", nudgeId = nudgeId, questionId = followUpId,
+                value = value, scheduledAt = now, answeredAt = now, isHidden = false))
+        }
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        assertTrue(charts.isNotEmpty(), "Emoji-only answers should still produce a chart")
+        val bubbles = charts.filterIsInstance<VisualizationData.PackedBubble>().first()
+
+        val dog = bubbles.entries.find { it.label == "🐶" }
+        val cat = bubbles.entries.find { it.label == "🐱" }
+        assertNotNull(dog, "🐶 should be counted as a word")
+        assertNotNull(cat, "🐱 should be counted as a word")
+        assertEquals(3, dog!!.count, "🐶 appears in 3 answers")
+        assertEquals(2, cat!!.count, "🐱 appears in 2 answers")
+    }
+
+    @Test
+    fun TDD_textPackedBubbleSplitsAdjacentEmojiIntoSeparateWords() = runTest {
+        // Distinct emoji written without a space are counted as separate words
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        val now = Clock.System.now()
+        repos.answerRepository.insert(Answer(id = "ans-adj", nudgeId = nudgeId, questionId = followUpId,
+            value = "🐶🐱🐶", scheduledAt = now, answeredAt = now, isHidden = false))
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        val bubbles = charts.filterIsInstance<VisualizationData.PackedBubble>().first()
+
+        assertEquals(2, bubbles.entries.find { it.label == "🐶" }?.count,
+            "🐶 appears twice in the same answer and should be counted per-emoji")
+        assertEquals(1, bubbles.entries.find { it.label == "🐱" }?.count,
+            "🐱 should be its own word")
+    }
+
+    @Test
+    fun TDD_textPackedBubbleKeepsBothEmojiAndText() = runTest {
+        // A token mixing a word and an emoji contributes both
+        val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
+        val now = Clock.System.now()
+        repos.answerRepository.insert(Answer(id = "ans-mix", nudgeId = nudgeId, questionId = followUpId,
+            value = "great dream ✨", scheduledAt = now, answeredAt = now, isHidden = false))
+
+        val charts = getVisualizationData.execute(nudgeId, followUpId, Timeframe.ALL_TIME)
+        val words = charts.filterIsInstance<VisualizationData.PackedBubble>().first().entries.map { it.label }
+
+        assertTrue(words.contains("dream"), "text word kept")
+        assertTrue(words.contains("✨"), "emoji kept as its own word")
+    }
+
+    @Test
     fun TDD_hiddenAnswersExcludedFromVisualizationAggregates() = runTest {
         // README "Editing Nudges": "Hidden rows no longer appear in the data visualization"
         val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")

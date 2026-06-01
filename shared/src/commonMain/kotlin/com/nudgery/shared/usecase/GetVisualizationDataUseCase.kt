@@ -140,10 +140,94 @@ class GetVisualizationDataUseCase(
         else listOf(VisualizationData.PackedBubble(wordCounts))
     }
 
+    /**
+     * Splits free text into words for the packed bubble chart. Each whitespace-separated token can
+     * contribute both a letter "word" (lowercased, edge punctuation stripped, ≥ 3 chars, not a stop
+     * word) and one or more emoji words. Emoji are kept whole and are exempt from the length and
+     * stop-word filters, so an answer that is only an emoji still charts.
+     */
     private fun tokenizeText(text: String): List<String> =
-        text.split(Regex("\\s+"))
-            .map { token -> token.lowercase().trim { !it.isLetter() } }
-            .filter { word -> word.length >= 3 && word !in STOP_WORDS }
+        text.split(Regex("\\s+")).flatMap { token ->
+            buildList {
+                val letters = token.lowercase().trim { !it.isLetter() }
+                if (letters.length >= 3 && letters !in STOP_WORDS) add(letters)
+                addAll(extractEmojiWords(token))
+            }
+        }
+
+    /**
+     * Returns each individual emoji in [token] as its own word, so distinct emoji written without a
+     * space (e.g. 🐶🐱) become separate words. A single emoji's modifiers, variation selectors,
+     * ZWJ-joined parts, and regional-indicator (flag) pairs stay attached to that one emoji.
+     */
+    private fun extractEmojiWords(token: String): List<String> {
+        val words = mutableListOf<String>()
+        val current = StringBuilder()
+        var afterZwj = false       // previous code point was a zero-width joiner
+        var regionalRun = 0        // count of consecutive regional indicators in `current`
+
+        fun flush() {
+            if (current.isNotEmpty()) words.add(current.toString())
+            current.clear()
+            afterZwj = false
+            regionalRun = 0
+        }
+
+        var index = 0
+        while (index < token.length) {
+            val high = token[index]
+            val pairedLow = if (high.isHighSurrogate() && index + 1 < token.length) token[index + 1] else null
+            val (codePoint, charCount) = if (pairedLow != null && pairedLow.isLowSurrogate()) {
+                combineSurrogates(high, pairedLow) to 2
+            } else {
+                high.code to 1
+            }
+
+            when {
+                isEmojiJoiner(codePoint) -> {
+                    if (current.isNotEmpty()) {
+                        current.append(token, index, index + charCount)
+                        afterZwj = codePoint == 0x200D
+                        regionalRun = 0
+                    }
+                }
+                isEmojiStart(codePoint) -> {
+                    val regional = codePoint in 0x1F1E6..0x1F1FF
+                    val continuesCurrent = current.isEmpty() ||
+                        afterZwj ||                          // ZWJ sequence continues this emoji
+                        (regional && regionalRun == 1)       // second half of a flag
+                    if (!continuesCurrent) flush()
+                    current.append(token, index, index + charCount)
+                    afterZwj = false
+                    regionalRun = if (regional) regionalRun + 1 else 0
+                }
+                else -> flush()
+            }
+            index += charCount
+        }
+        flush()
+        return words
+    }
+
+    private fun combineSurrogates(high: Char, low: Char): Int =
+        0x10000 + ((high.code - 0xD800) shl 10) + (low.code - 0xDC00)
+
+    /** A code point that begins (or is) an emoji. */
+    private fun isEmojiStart(codePoint: Int): Boolean = when (codePoint) {
+        in 0x1F000..0x1FAFF -> true   // emoticons, pictographs, transport, supplemental, flags
+        in 0x2600..0x27BF -> true     // miscellaneous symbols and dingbats
+        in 0x2B00..0x2BFF -> true     // miscellaneous symbols and arrows
+        in 0x2300..0x23FF -> true     // miscellaneous technical (⌚ ⏰ ▶ …)
+        in 0x25A0..0x25FF -> true     // geometric shapes
+        in 0x2190..0x21FF -> true     // arrows
+        0x2122, 0x2139, 0x203C, 0x2049, 0x24C2, 0x3030, 0x303D, 0x3297, 0x3299 -> true
+        else -> false
+    }
+
+    /** Code points that extend an emoji already in progress (joiner, variation, skin tone, keycap). */
+    private fun isEmojiJoiner(codePoint: Int): Boolean =
+        codePoint == 0x200D || codePoint == 0x20E3 ||
+            codePoint in 0xFE00..0xFE0F || codePoint in 0x1F3FB..0x1F3FF
 
     private suspend fun buildOptionCharts(
         answers: List<Answer>,
