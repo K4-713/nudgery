@@ -14,6 +14,7 @@ import com.nudgery.shared.usecase.QuestionRequest
 import com.nudgery.shared.usecase.ScheduleRequest
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.analysisWindow
+import com.nudgery.shared.usecase.isSingleEmoji
 import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.util.FakeNotificationScheduler
 import com.nudgery.shared.util.TestRepositories
@@ -567,6 +568,22 @@ class VisualizationDataTest {
 
         assertTrue(words.contains("dream"), "text word kept")
         assertTrue(words.contains("✨"), "emoji kept as its own word")
+    }
+
+    @Test
+    fun TDD_isSingleEmojiIdentifiesLoneEmojiForLargerBubbleLabels() {
+        // The packed bubble chart draws a bubble's label twice as large when the entry is a single
+        // emoji; isSingleEmoji decides that, matching the tokenizer's notion of one emoji.
+        assertTrue(isSingleEmoji("🐶"), "one emoji")
+        assertTrue(isSingleEmoji(" 🐱 "), "surrounding whitespace ignored")
+        assertTrue(isSingleEmoji("👍🏽"), "emoji with a skin-tone modifier is still one emoji")
+        assertTrue(isSingleEmoji("🇺🇸"), "a flag (regional-indicator pair) is one emoji")
+        assertTrue(isSingleEmoji("👨‍👩‍👧"), "a ZWJ sequence is one emoji")
+
+        assertTrue(!isSingleEmoji("🐶🐱"), "two emoji is not a single emoji")
+        assertTrue(!isSingleEmoji("dream"), "a word is not an emoji")
+        assertTrue(!isSingleEmoji("🐶 dog"), "emoji plus text is not a single emoji")
+        assertTrue(!isSingleEmoji(""), "empty string is not an emoji")
     }
 
     @Test

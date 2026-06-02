@@ -130,6 +130,7 @@ import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
+import com.nudgery.shared.usecase.isSingleEmoji
 import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.model.VisualizationData
 import kotlinx.datetime.Clock
@@ -1718,13 +1719,18 @@ private fun PackedBubbleChart(
             if (r < 18f) return@forEach
             val textColor = if (bubbleColor.luminance() > 0.4f) Color.Black else Color.White
 
-            val wordPx = (r * 0.5f).coerceIn(9f, 26f)
+            // A lone emoji floats in a sea of bubble; with no neighbors it has room to be twice the
+            // size of regular word labels (and to use more of the bubble's width before wrapping).
+            val emojiOnly = isSingleEmoji(c.entry.label)
+            val wordPx = if (emojiOnly) (r * 1.0f).coerceIn(18f, 52f)
+                         else (r * 0.5f).coerceIn(9f, 26f)
+            val labelMaxWidth = (r * if (emojiOnly) 2f else 1.7f).toInt().coerceAtLeast(1)
             val wordLayout = textMeasurer.measure(
                 text = c.entry.label,
                 style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
-                constraints = Constraints(maxWidth = (r * 1.7f).toInt().coerceAtLeast(1))
+                constraints = Constraints(maxWidth = labelMaxWidth)
             )
             // Word centered on the bubble's center.
             drawText(
