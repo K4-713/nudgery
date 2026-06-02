@@ -82,9 +82,14 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.floor
 import kotlin.math.max
@@ -595,7 +600,8 @@ private fun FullScreenChartDialog(
                         chartPalette = chartPalette,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .weight(1f),
+                        zoomable = true
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TimeframeSelector(
@@ -625,7 +631,9 @@ private fun FullScreenChartDialog(
 private fun NudgeryChart(
     visualization: VisualizationData,
     chartPalette: ChartPalettePreference,
-    modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+    modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+    // Only the full-screen packed bubble chart enables pinch-to-zoom.
+    zoomable: Boolean = false
 ) {
     Box(
         modifier = modifier
@@ -650,7 +658,7 @@ private fun NudgeryChart(
                 )
                 is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
                 is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
-                is VisualizationData.PackedBubble -> PackedBubbleChart(visualization.entries, chartPalette)
+                is VisualizationData.PackedBubble -> PackedBubbleChart(visualization.entries, chartPalette, zoomable)
             }
         }
     }
@@ -1253,8 +1261,16 @@ private fun NamedCountChart(entries: List<NamedCount>) {
 /** Maximum number of bubbles drawn; keeps the busiest packed bubble charts legible. Entries are pre-sorted by count. */
 private const val MAX_BUBBLES = 25
 
+/** Pinch-zoom bounds for the full-screen packed bubble chart. */
+private const val MIN_BUBBLE_ZOOM = 1f
+private const val MAX_BUBBLE_ZOOM = 6f
+
 @Composable
-private fun PackedBubbleChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
+private fun PackedBubbleChart(
+    entries: List<NamedCount>,
+    palette: ChartPalettePreference,
+    zoomable: Boolean = false
+) {
     if (entries.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
@@ -1290,7 +1306,7 @@ private fun PackedBubbleChart(entries: List<NamedCount>, palette: ChartPalettePr
         PackBounds(minX, minY, maxX, maxY)
     }
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    val drawBubbles: DrawScope.() -> Unit = {
         // Scale the packed cluster to fill the available space (works for both the small
         // card thumbnail and the full-screen view), keeping its aspect ratio and centering it.
         val contentW = (bounds.maxX - bounds.minX).coerceAtLeast(1e-6)
@@ -1342,6 +1358,48 @@ private fun PackedBubbleChart(entries: List<NamedCount>, palette: ChartPalettePr
                 )
             }
         }
+    }
+
+    if (!zoomable) {
+        Canvas(modifier = Modifier.fillMaxSize(), onDraw = drawBubbles)
+        return
+    }
+
+    // Full-screen: pinch to zoom and drag to pan. Double-tap resets. Panning is clamped so the
+    // cluster can't be dragged entirely out of view, and zoom-out is clamped back to fit.
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { viewportSize = it }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(MIN_BUBBLE_ZOOM, MAX_BUBBLE_ZOOM)
+                    val maxX = (viewportSize.width * (scale - 1f)) / 2f
+                    val maxY = (viewportSize.height * (scale - 1f)) / 2f
+                    offset = Offset(
+                        (offset.x + pan.x).coerceIn(-maxX, maxX),
+                        (offset.y + pan.y).coerceIn(-maxY, maxY)
+                    )
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onDoubleTap = { scale = 1f; offset = Offset.Zero })
+            }
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                },
+            onDraw = drawBubbles
+        )
     }
 }
 
