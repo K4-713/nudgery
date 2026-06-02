@@ -513,6 +513,58 @@ Top to bottom:
 6. **Timeframe picker** — row of chips just below the chart; changes the current view but does not persist. Persistent default is set inside the chart editor.
 7. **Raw data table** — collapsed by default, with a visible header row (e.g. "12 answers") indicating content. Each row has a per-answer hide control; tapping it triggers a confirmation dialog before hiding.
 
+### Charts and Visualizations
+
+All charts on the detail screen are locked to a single shared time **window** so that the main
+question chart and every follow-up chart always show the same period (see README — *Viewing Nudges*
+for the user-facing description). The design particulars behind that behavior:
+
+**The window equals the timeframe.** Selecting a timeframe chip sets the window span — weekly = 7
+days, monthly = 30, yearly = 365, all-time = the full history — and resets it to the most recent
+period. There is no separate "page" concept; earlier data is reached only by sliding the window.
+
+**Navigation.**
+- Time-based charts (calendar heat map, line graph) are dragged left/right directly; the drag
+  slides the shared window.
+- Categorical charts (bar, column, packed bubble) have no time axis, so a slim scrubber strip below
+  the chart slides the window instead.
+- A drag is a continuous gesture: one sweep moves through as many days as the finger travels, and
+  the gesture is never interrupted mid-drag. One full-width swipe slides the window by three times
+  the selected timeframe (3 weeks on weekly, 3 months on monthly, 3 years on yearly), so scrolling
+  through history feels the same speed at every zoom level (`FULL_SWIPE_TIMEFRAME_MULTIPLIER`).
+
+**Smooth scrolling.** A window shift reloads each chart's data, but the chart composables are kept
+alive across reloads (keyed on chart *type*, not on the data object) so that:
+- in-flight drag gestures survive the reload instead of being cancelled (otherwise the user has to
+  re-tap to move more than one step), and
+- entrance animations (e.g. the line graph growing from zero) play only on first load or when the
+  user switches chart type — not on every shift.
+Rapid shifts conflate to the latest resting window so a fast drag issues one reload, not a backlog.
+
+**Heat map fill vs. scroll.** "Fill the canvas" means the whole current period is visible at once
+without having to scroll *within* it — not that scrolling is disabled. Monthly, yearly, and all-time
+heat maps size their cells so the entire month/year/history fits the chart; weekly shows a short,
+large-celled strip of days. Every timeframe except all-time still scrolls — dragging slides the
+shared window to earlier periods (see *Navigation* above). All-time already shows the entire history,
+so it has nowhere to scroll.
+
+**One square at a time.** Cells are laid out column-major to fill the grid, so sliding the window by
+one cell reflows the whole grid by one position — squares visibly travel through the grid rather
+than columns sliding off the edge. This is intentional: the motion conveys how the grid is arranged
+and reads better than a rigid column-by-column shift. For this to stay clean, the window must step
+in whole cells: the yearly heat map's cells are *weeks*, so its window steps a week (7 days) at a
+time (`windowStepDays`); a day-sized step there would re-bucket partial weeks and oscillate the
+week-cell count, reshuffling the grid. Weekly and monthly have day cells and step a day at a time.
+
+**Line graph windowing.** The line graph fits exactly the window's day span; it does not scroll
+internally. All-time fits the entire range.
+
+**Column chart axis labels.** Category labels are drawn smaller than Vico's default and tilted at a
+shallow angle so that every label stays visible. Vico's aligned axis item placer drops labels (e.g.
+shows only every other one) when the widest label is wider than the per-column spacing; shrinking
+and angling each label reduces its horizontal footprint enough to keep them all. This applies in
+both the inline card and the expanded full-screen view.
+
 ### Chart Editor
 
 Accessed via the chart type icon. Contains:

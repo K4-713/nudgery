@@ -13,14 +13,19 @@ import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.QuestionRequest
 import com.nudgery.shared.usecase.ScheduleRequest
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
+import com.nudgery.shared.usecase.analysisWindow
+import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.util.FakeNotificationScheduler
 import com.nudgery.shared.util.TestRepositories
 import com.nudgery.shared.util.createTestRepositories
 import kotlinx.coroutines.test.runTest
 import kotlin.time.Duration.Companion.days
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.until
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
@@ -372,6 +377,45 @@ class VisualizationDataTest {
         assertTrue(allTimeCharts.isNotEmpty())
         val heatMap = allTimeCharts.filterIsInstance<VisualizationData.CalendarHeatMap>().first()
         assertEquals(1.0, heatMap.dailyCounts.sumOf { it.value })
+    }
+
+    @Test
+    fun TDD_yearlyHeatMapWindowStepsByWholeWeeks() {
+        // DESIGN.md "Charts and Visualizations" — the yearly heat map's cells are weeks, so its
+        // window steps a week at a time; weekly and monthly step a day.
+        assertEquals(7, windowStepDays(Timeframe.YEARLY), "Yearly steps by a whole week")
+        assertEquals(1, windowStepDays(Timeframe.WEEKLY), "Weekly steps by a day")
+        assertEquals(1, windowStepDays(Timeframe.MONTHLY), "Monthly steps by a day")
+
+        // Stepping the yearly window by one week shifts both ends by exactly 7 days and keeps the
+        // start's day-of-week, so the Monday-aligned week grid holds a constant cell count instead
+        // of oscillating between 52/53 weeks (which would reshuffle the grid).
+        val today = LocalDate(2026, 6, 2)
+        val earliest = LocalDate(2020, 1, 1)
+        val (start0, end0) = analysisWindow(Timeframe.YEARLY, 0, today, earliest)
+        val step = windowStepDays(Timeframe.YEARLY)
+        val (start1, end1) = analysisWindow(Timeframe.YEARLY, step, today, earliest)
+
+        assertEquals(step, start1.until(start0, DateTimeUnit.DAY).toInt(), "Start slides one week")
+        assertEquals(step, end1.until(end0, DateTimeUnit.DAY).toInt(), "End slides one week")
+        assertEquals(start0.dayOfWeek, start1.dayOfWeek, "Day-of-week preserved → constant cell count")
+    }
+
+    @Test
+    fun TDD_monthlyYearlyAndAllTimeHeatMapsFillTheCanvasWithoutScrolling() = runTest {
+        // DESIGN.md "Charts and Visualizations" — Heat map fill vs. scroll: "monthly, yearly, and
+        //   all-time heat maps size their cells to fill the canvas with no internal scroll ...
+        //   Weekly is the exception: it shows a short, large-celled strip of days that scrolls."
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")
+
+        suspend fun heatMap(timeframe: Timeframe) = getVisualizationData
+            .execute(nudgeId, questionId, timeframe)
+            .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+
+        assertTrue(heatMap(Timeframe.MONTHLY).fillViewport, "Monthly heat map should fill the canvas")
+        assertTrue(heatMap(Timeframe.YEARLY).fillViewport, "Yearly heat map should fill the canvas")
+        assertTrue(heatMap(Timeframe.ALL_TIME).fillViewport, "All-time heat map should fill the canvas")
+        assertTrue(!heatMap(Timeframe.WEEKLY).fillViewport, "Weekly heat map should scroll, not fill")
     }
 
     // --- TEXT (packed bubble) ---

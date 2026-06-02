@@ -104,6 +104,7 @@ import com.nudgery.android.viewmodel.FollowUpVisualization
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
@@ -129,6 +130,7 @@ import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
+import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.model.VisualizationData
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -178,6 +180,7 @@ fun NudgeDetailScreen(
         dataEnd = uiState.dataEnd,
         canShiftOlder = uiState.canShiftOlder,
         canShiftNewer = uiState.canShiftNewer,
+        windowStepDays = windowStepDays(uiState.selectedTimeframe),
         onShiftDays = { viewModel.shiftWindowDays(it) }
     )
 
@@ -680,6 +683,9 @@ private data class ChartWindowNav(
     val dataEnd: LocalDate?,
     val canShiftOlder: Boolean,
     val canShiftNewer: Boolean,
+    // Days the window slides per one-cell step, matching the heat map's cell size (a week on the
+    // yearly view, a day otherwise) so dragging moves the grid a whole square at a time.
+    val windowStepDays: Int,
     val onShiftDays: (Int) -> Unit
 ) {
     /** There is somewhere to scroll to (not all-time, and history exists beyond the window). */
@@ -691,7 +697,7 @@ private data class ChartWindowNav(
         else 1
 
     companion object {
-        val None = ChartWindowNav(null, null, null, null, false, false, {})
+        val None = ChartWindowNav(null, null, null, null, false, false, 1, {})
     }
 }
 
@@ -710,7 +716,13 @@ private fun NudgeryChart(
             .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        key(visualization) {
+        // Key on the chart *type*, not the data object. A window shift reloads the data into a new
+        // VisualizationData instance every drag step; keying on the whole object tore down and
+        // rebuilt the chart each step, which replayed the line's grow-from-zero entrance animation
+        // and killed any in-flight drag gesture (forcing a re-tap per day). Keying on the type keeps
+        // the same composable across reloads — Vico animates the data diff, gestures survive a
+        // continuous multi-day drag — and only rebuilds when the user pages to a different chart.
+        key(visualization::class) {
             when (visualization) {
                 // Time-based charts: drag the chart itself to slide the shared window.
                 is VisualizationData.CalendarHeatMap -> Box(Modifier.fillMaxSize().timeWindowDrag(nav)) {
@@ -740,22 +752,32 @@ private fun NudgeryChart(
     }
 }
 
+// One full-width swipe across a time-based chart slides the shared window by this many times the
+// selected timeframe's span — e.g. 3 weeks per swipe on the weekly view, 3 months on monthly,
+// 3 years on yearly. Raise this to scroll through history faster, lower it for finer control.
+private const val FULL_SWIPE_TIMEFRAME_MULTIPLIER = 3
+
 /** Horizontal drag that slides the shared window; dragging right reveals older data. */
 private fun Modifier.timeWindowDrag(nav: ChartWindowNav): Modifier {
     if (!nav.navigable) return this
     val windowDays = nav.windowDays
-    return pointerInput(windowDays) {
+    val stepDays = nav.windowStepDays
+    return pointerInput(windowDays, stepDays) {
         var accumulated = 0f
         detectHorizontalDragGestures(
             onDragEnd = { accumulated = 0f },
             onDragCancel = { accumulated = 0f }
         ) { _, dragAmount ->
             accumulated += dragAmount
-            val daysPerPx = windowDays.toFloat() / size.width.coerceAtLeast(1)
-            val shift = (accumulated * daysPerPx).toInt()
-            if (shift != 0) {
-                nav.onShiftDays(shift) // drag right (+dx) → older
-                accumulated -= shift / daysPerPx
+            val daysPerPx = (windowDays * FULL_SWIPE_TIMEFRAME_MULTIPLIER).toFloat() /
+                size.width.coerceAtLeast(1)
+            // Slide in whole cells (a day, or a week on the yearly view) so the grid moves one
+            // square at a time and week buckets stay intact.
+            val steps = (accumulated * daysPerPx / stepDays).toInt()
+            if (steps != 0) {
+                val shiftDays = steps * stepDays
+                nav.onShiftDays(shiftDays) // drag right (+dx) → older
+                accumulated -= shiftDays / daysPerPx
             }
         }
     }
@@ -789,7 +811,8 @@ private fun TimeWindowScrubber(nav: ChartWindowNav, modifier: Modifier = Modifie
     Canvas(
         modifier = modifier
             .height(10.dp)
-            .pointerInput(totalDays) {
+            .pointerInput(totalDays, nav.windowStepDays) {
+                val stepDays = nav.windowStepDays
                 var accumulated = 0f
                 detectHorizontalDragGestures(
                     onDragEnd = { accumulated = 0f },
@@ -797,10 +820,13 @@ private fun TimeWindowScrubber(nav: ChartWindowNav, modifier: Modifier = Modifie
                 ) { _, dragAmount ->
                     accumulated += dragAmount
                     val daysPerPx = totalDays.toFloat() / size.width.coerceAtLeast(1)
-                    val shift = (accumulated * daysPerPx).toInt()
-                    if (shift != 0) {
-                        nav.onShiftDays(-shift) // drag the knob right (+dx) → newer
-                        accumulated -= shift / daysPerPx
+                    // Slide in whole cells so the shared window stays week-aligned on the yearly
+                    // view (keeping any heat map's week buckets intact).
+                    val steps = (accumulated * daysPerPx / stepDays).toInt()
+                    if (steps != 0) {
+                        val shiftDays = steps * stepDays
+                        nav.onShiftDays(-shiftDays) // drag the knob right (+dx) → newer
+                        accumulated -= shiftDays / daysPerPx
                     }
                 }
             }
@@ -938,9 +964,10 @@ private fun CalendarHeatMapChart(
             val labelStyle = TextStyle(fontSize = 9.sp, color = labelColor)
 
             if (fillViewport) {
-                // All-time: lay every cell out in an auto-fit grid that fills the canvas, no scroll.
-                // The adaptive granularity keeps the cell count bounded; the grid picks the rows/cols
-                // that maximize square cell size for that count. Column-major, oldest at top-left.
+                // Monthly, yearly, and all-time: lay every cell out in an auto-fit grid that fills
+                // the canvas, no scroll. The granularity keeps the cell count bounded; the grid picks
+                // the rows/cols that maximize square cell size for that count. Column-major, oldest
+                // at top-left.
                 val unitCells = when (granularity) {
                     HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> fillDayCells
                     HeatMapGranularity.WEEK, HeatMapGranularity.WEEK_GRID -> weekCells
@@ -1579,6 +1606,13 @@ private fun HorizontalBarChart(entries: List<NamedCount>) {
     }
 }
 
+// Column chart x-axis labels are drawn smaller than Vico's 12sp default and tilted at a shallow
+// angle. Vico's aligned item placer thins labels (e.g. shows only every other one) whenever the
+// widest label is wider than the per-column spacing; shrinking and angling each label cuts its
+// horizontal footprint enough to keep them all visible, in both the inline and full-screen views.
+private val COLUMN_AXIS_LABEL_SIZE = 9.sp
+private const val COLUMN_AXIS_LABEL_ROTATION_DEGREES = 45f
+
 @Composable
 private fun NamedCountChart(entries: List<NamedCount>) {
     if (entries.isEmpty()) {
@@ -1596,6 +1630,8 @@ private fun NamedCountChart(entries: List<NamedCount>) {
             rememberColumnCartesianLayer(),
             startAxis = VerticalAxis.rememberStart(),
             bottomAxis = HorizontalAxis.rememberBottom(
+                label = rememberAxisLabelComponent(textSize = COLUMN_AXIS_LABEL_SIZE),
+                labelRotationDegrees = COLUMN_AXIS_LABEL_ROTATION_DEGREES,
                 valueFormatter = object : CartesianValueFormatter {
                     override fun format(
                         context: CartesianMeasuringContext,

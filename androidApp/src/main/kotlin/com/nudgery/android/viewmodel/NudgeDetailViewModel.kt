@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -117,6 +118,11 @@ class NudgeDetailViewModel(
 
     // Earliest recorded answer date; bounds how far back the shared window can be shifted.
     private var earliestAnswerDate: LocalDate? = null
+
+    // In-flight visualization reload. A continuous drag shifts the window many times in quick
+    // succession; cancelling the prior load conflates those to the latest window so we issue one
+    // burst of work per resting position instead of a backlog of stale DB queries.
+    private var visualizationsJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -302,7 +308,8 @@ class NudgeDetailViewModel(
         val questionId = _uiState.value.mainQuestionId ?: return
         val timeframe = _uiState.value.selectedTimeframe
         val offsetDays = _uiState.value.windowOffsetDays
-        viewModelScope.launch {
+        visualizationsJob?.cancel()
+        visualizationsJob = viewModelScope.launch {
             val now = Clock.System.now()
             val tz = TimeZone.currentSystemDefault()
             val visualizations = getVisualizationData.execute(

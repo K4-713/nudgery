@@ -51,7 +51,11 @@ class GetVisualizationDataUseCase(
         }
 
         val granularity = computeGranularity(timeframe, windowStart, windowEnd)
-        val fillViewport = timeframe == Timeframe.ALL_TIME
+        // The window already equals the timeframe's span (a month, a year, or all of history), so
+        // there is no older data hiding within the chart — earlier periods are reached by shifting
+        // the window. Fitting the whole window into the canvas (no internal scroll) lets the month
+        // or year fill the chart. Weekly is the exception: its short day strip is meant to scroll.
+        val fillViewport = timeframe != Timeframe.WEEKLY
         // The line graph fits exactly the window (no internal scroll); the dashboard moves the window.
         val lineVisibleDays = (windowStart.until(windowEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
 
@@ -289,3 +293,16 @@ fun analysisWindow(
     val start = end.minus(sizeDays - 1, DateTimeUnit.DAY)
     return start to end
 }
+
+/** A week, in days — the granularity of the yearly heat map's cells. */
+const val DAYS_PER_WEEK = 7
+
+/**
+ * How many days the shared window slides per one-cell step on each timeframe, matching the heat
+ * map's cell granularity: the yearly heat map's cells are whole weeks, so its window must step a
+ * week at a time (otherwise a day-sized shift re-buckets partial weeks and the week-cell count
+ * oscillates, reshuffling the grid). Weekly and monthly have day cells and step a day at a time.
+ * `ALL_TIME` does not scroll, so its step is unused.
+ */
+fun windowStepDays(timeframe: Timeframe): Int =
+    if (timeframe == Timeframe.YEARLY) DAYS_PER_WEEK else 1
