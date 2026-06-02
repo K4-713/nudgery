@@ -1612,11 +1612,14 @@ private fun AnswerTableSection(
                     .clickable { tableExpanded = !tableExpanded }
                     .padding(16.dp)
             ) {
+                // A "response" is one main-question answer plus any follow-up answers it triggered,
+                // counted as a single unit.
+                val responseCount = answers.count { it.questionOrderIndex == 0 }
                 Text(
-                    text = if (answers.isEmpty())
-                        stringResource(R.string.detail_no_answers)
+                    text = if (responseCount == 0)
+                        stringResource(R.string.detail_no_responses)
                     else
-                        stringResource(R.string.detail_answers_header, answers.size),
+                        stringResource(R.string.detail_responses_header, responseCount),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f)
                 )

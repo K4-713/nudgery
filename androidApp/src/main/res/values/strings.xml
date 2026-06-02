@@ -102,7 +102,8 @@
     <string name="chart_type_packed_bubble">Packed Bubble</string>
     <string name="detail_export">Export data</string>
     <string name="detail_expand_chart">Expand chart</string>
-    <string name="detail_answers_header">%1$d answers</string>
+    <string name="detail_responses_header">%1$d responses</string>
+    <string name="detail_no_responses">No responses recorded yet.</string>
     <string name="detail_no_answers">No answers recorded yet.</string>
     <string name="detail_hide_answer">Hide this answer</string>
     <string name="detail_show_answer">Show this answer</string>

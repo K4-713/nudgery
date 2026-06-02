@@ -38,7 +38,7 @@ Enabled Nudges will send you notifications when it's time to answer your questio
 ## Viewing Nudges
 From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV file or saved as a full JSON backup (more on this later). There is also an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately outside of a scheduled answer.
 
-The raw data shown on the Nudge detail screen displays the main question answers, and the actual time that answer was received. If any follow-up questions were triggered by that specific answer, the answer can be expanded to see all related follow-up answers that go with that main answer.
+The raw data shown on the Nudge detail screen displays all nudge responses when expanded. A response consists of a single main question answer, the actual time that answer was received, and answers to any follow-up questions that came along with that main ansewr (expandable from the main answer).
 
 The visualizations available for each main question will differ, based on the main question type.
 
