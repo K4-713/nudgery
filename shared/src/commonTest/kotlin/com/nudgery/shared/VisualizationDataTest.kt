@@ -185,6 +185,48 @@ class VisualizationDataTest {
             "SCALE should provide a CalendarHeatMap")
     }
 
+    @Test
+    fun TDD_optionChartsCarryStablePerCategoryPaletteFraction() = runTest {
+        // Bar and column charts color each category by a fixed palette position (orderFraction) so a
+        // category keeps its color as the timeframe moves and the bars re-sort by count. The
+        // fraction follows the option's defined order, spread evenly 0..1, independent of count.
+        val options = listOf("Good", "Okay", "Bad")  // orderIndex 0, 1, 2
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How do you feel?", QuestionType.OPTION_SINGLE, options),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val nudgeId = result.nudgeId
+        val questionId = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }.id
+        val optionIds = repos.questionOptionRepository.getByQuestionId(questionId).sortedBy { it.orderIndex }
+
+        // "Bad" (last option) answered most often → it sorts first by count, but must still carry the
+        // palette fraction for its order position, not for its rank.
+        val now = Clock.System.now()
+        listOf(optionIds[0].id, optionIds[2].id, optionIds[2].id).forEachIndexed { i, optId ->
+            repos.answerRepository.insert(Answer(id = "ans-opt-$i", nudgeId = nudgeId, questionId = questionId,
+                value = optId, scheduledAt = now, answeredAt = now, isHidden = false))
+        }
+
+        val bar = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+            .filterIsInstance<VisualizationData.BarChart>().first()
+        // Bars are sorted by count (Bad first), but each carries its order-based fraction.
+        assertEquals(1.0f, bar.entries.first { it.label == "Bad" }.orderFraction, "last of 3 options → 1.0")
+        assertEquals(0.0f, bar.entries.first { it.label == "Good" }.orderFraction, "first of 3 options → 0.0")
+        assertEquals("Bad", bar.entries.first().label, "highest count sorts first")
+    }
+
+    @Test
+    fun TDD_yesNoColumnChartPutsYesAndNoAtOppositePaletteEnds() = runTest {
+        // YES/NO are colored at opposite ends of the palette so the two columns stay clearly distinct.
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")
+        val column = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+            .filterIsInstance<VisualizationData.ColumnChart>().first()
+        assertEquals(0.0f, column.entries.first { it.label == "YES" }.orderFraction)
+        assertEquals(1.0f, column.entries.first { it.label == "NO" }.orderFraction)
+    }
+
     // --- OPTION_SINGLE ---
 
     @Test

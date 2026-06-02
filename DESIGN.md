@@ -559,6 +559,15 @@ week-cell count, reshuffling the grid. Weekly and monthly have day cells and ste
 **Line graph windowing.** The line graph fits exactly the window's day span; it does not scroll
 internally. All-time fits the entire range.
 
+**Bar / column chart color.** Bars carry the user's chosen chart palette, but — unlike the heat map
+and bubble chart, which spend color on magnitude because they have no length — a bar already encodes
+its count through its length, so color is spent on *identity* instead. Each category is pinned to a
+fixed palette color by its stable position in the full set (`NamedCount.orderFraction`: an option's
+order among all options, spread evenly 0..1; YES and NO at the two ends). Because that position is
+independent of count, rank, and the selected window, a category keeps its color as the timeframe
+moves and the bars re-sort — you can track the same option across windows. (Trade-off: the palettes
+are magnitude gradients, so a question with many options yields analogous neighboring hues.)
+
 **Column chart axis labels.** Category labels are drawn smaller than Vico's default and tilted at a
 shallow angle so that every label stays visible. Vico's aligned axis item placer drops labels (e.g.
 shows only every other one) when the widest label is wider than the per-column spacing; shrinking

@@ -7,7 +7,18 @@ data class DailyCount(val date: LocalDate, val value: Double)
 
 data class DataPoint(val at: Instant, val value: Double)
 
-data class NamedCount(val label: String, val count: Int)
+data class NamedCount(
+    val label: String,
+    val count: Int,
+    /**
+     * This category's stable position within its full set, from 0.0 to 1.0 — an option's order
+     * among all the question's options, or 0.0/1.0 for YES/NO. It does not depend on the count,
+     * the sorted rank, or the selected window, so the bar and column charts can map it onto the
+     * chart palette and keep a category's color fixed as the timeframe moves. 0.0 when there is no
+     * inherent ordering (free-text words, which the packed bubble chart colors by magnitude).
+     */
+    val orderFraction: Float = 0f
+)
 
 enum class HeatMapGranularity {
     /** One cell per day, rendered as a single horizontal strip (8 days visible per screen). */

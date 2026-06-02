@@ -114,7 +114,13 @@ import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
+import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.core.common.Defaults
+import com.patrykandpatrick.vico.core.common.component.LineComponent
+import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.cartesian.Scroll
 import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
@@ -745,8 +751,8 @@ private fun NudgeryChart(
                     )
                 }
                 // Categorical charts: no time axis, so a scrubber underneath moves the window.
-                is VisualizationData.BarChart -> CategoricalChart(nav) { HorizontalBarChart(visualization.entries) }
-                is VisualizationData.ColumnChart -> CategoricalChart(nav) { NamedCountChart(visualization.entries) }
+                is VisualizationData.BarChart -> CategoricalChart(nav) { HorizontalBarChart(visualization.entries, chartPalette) }
+                is VisualizationData.ColumnChart -> CategoricalChart(nav) { NamedCountChart(visualization.entries, chartPalette) }
                 is VisualizationData.PackedBubble -> CategoricalChart(nav) { PackedBubbleChart(visualization.entries, chartPalette, zoomable) }
             }
         }
@@ -1547,7 +1553,7 @@ private fun LineGraphChart(
 }
 
 @Composable
-private fun HorizontalBarChart(entries: List<NamedCount>) {
+private fun HorizontalBarChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
     if (entries.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
@@ -1556,7 +1562,10 @@ private fun HorizontalBarChart(entries: List<NamedCount>) {
     }
 
     val maxCount = remember(entries) { entries.maxOf { it.count }.coerceAtLeast(1) }
-    val barColor = MaterialTheme.colorScheme.primary
+    // Each bar's color is fixed to its category (orderFraction), so a category keeps its hue as the
+    // timeframe moves and the bars re-sort by count.
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val stops = palette.paletteStops
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -1592,7 +1601,7 @@ private fun HorizontalBarChart(entries: List<NamedCount>) {
                             modifier = Modifier
                                 .fillMaxWidth(entry.count.toFloat() / maxCount)
                                 .fillMaxHeight()
-                                .background(barColor, MaterialTheme.shapes.extraSmall)
+                                .background(stops.colorAt(entry.orderFraction, isDark), MaterialTheme.shapes.extraSmall)
                         )
                     }
                 }
@@ -1615,7 +1624,7 @@ private val COLUMN_AXIS_LABEL_SIZE = 9.sp
 private const val COLUMN_AXIS_LABEL_ROTATION_DEGREES = 45f
 
 @Composable
-private fun NamedCountChart(entries: List<NamedCount>) {
+private fun NamedCountChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
     if (entries.isEmpty()) {
         Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
         return
@@ -1626,9 +1635,28 @@ private fun NamedCountChart(entries: List<NamedCount>) {
             columnSeries { series(entries.map { it.count }) }
         }
     }
+    // One column color per category, fixed to its orderFraction so a category keeps its hue as the
+    // timeframe moves. Vico picks the column for each bar by its x value (the category's index).
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val columnProvider = remember(entries, isDark, palette) {
+        val stops = palette.paletteStops
+        val columns = entries.map { entry ->
+            LineComponent(fill(stops.colorAt(entry.orderFraction, isDark)), Defaults.COLUMN_WIDTH)
+        }
+        object : ColumnCartesianLayer.ColumnProvider {
+            override fun getColumn(
+                entry: ColumnCartesianLayerModel.Entry,
+                seriesIndex: Int,
+                extraStore: ExtraStore
+            ): LineComponent = columns[entry.x.toInt().coerceIn(0, columns.lastIndex)]
+
+            override fun getWidestSeriesColumn(seriesIndex: Int, extraStore: ExtraStore): LineComponent =
+                columns.first()
+        }
+    }
     CartesianChartHost(
         chart = rememberCartesianChart(
-            rememberColumnCartesianLayer(),
+            rememberColumnCartesianLayer(columnProvider = columnProvider),
             startAxis = VerticalAxis.rememberStart(),
             bottomAxis = HorizontalAxis.rememberBottom(
                 label = rememberAxisLabelComponent(textSize = COLUMN_AXIS_LABEL_SIZE),

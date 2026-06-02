@@ -111,7 +111,11 @@ class GetVisualizationDataUseCase(
         return listOf(
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport),
             VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd, lineVisibleDays),
-            VisualizationData.ColumnChart(listOf(NamedCount("YES", totalYes), NamedCount("NO", totalNo)))
+            // YES/NO sit at opposite ends of the palette so they stay clearly distinct.
+            VisualizationData.ColumnChart(listOf(
+                NamedCount("YES", totalYes, orderFraction = 0f),
+                NamedCount("NO", totalNo, orderFraction = 1f)
+            ))
         )
     }
 
@@ -176,12 +180,20 @@ class GetVisualizationDataUseCase(
         includeColumnChart: Boolean
     ): List<VisualizationData> {
         val optionsById = questionOptionRepository.getByQuestionId(questionId).associateBy { it.id }
+        // Spread the options evenly across the palette by their defined order, so each option keeps
+        // a fixed color no matter its count, rank, or whether it appears in the current window.
+        val optionUniverseSize = optionsById.size
 
         val optionCounts = answers
             .flatMap { answer -> answer.value.split(",").map { it.trim() } }
             .filter { it.isNotBlank() }
             .groupBy { id -> optionsById[id]?.text ?: id }
-            .map { (label, occurrences) -> NamedCount(label, occurrences.size) }
+            .map { (label, ids) ->
+                val orderIndex = ids.firstNotNullOfOrNull { optionsById[it]?.orderIndex }
+                val orderFraction = if (orderIndex != null && optionUniverseSize > 1)
+                    orderIndex.toFloat() / (optionUniverseSize - 1) else 0f
+                NamedCount(label, ids.size, orderFraction)
+            }
             .sortedByDescending { it.count }
 
         return buildList {
