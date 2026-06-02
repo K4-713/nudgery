@@ -102,6 +102,7 @@ import com.nudgery.android.viewmodel.AnswerRow
 import com.nudgery.android.viewmodel.FollowUpVisualization
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
@@ -113,6 +114,7 @@ import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.Scroll
+import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
@@ -654,7 +656,8 @@ private fun NudgeryChart(
                 is VisualizationData.LineGraph -> LineGraphChart(
                     points = visualization.points,
                     windowStart = visualization.windowStart,
-                    windowEnd = visualization.windowEnd
+                    windowEnd = visualization.windowEnd,
+                    visibleDays = visualization.visibleDays
                 )
                 is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
                 is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
@@ -1298,7 +1301,8 @@ private fun formatHeatValue(value: Double): String {
 private fun LineGraphChart(
     points: List<DataPoint>,
     windowStart: LocalDate,
-    windowEnd: LocalDate
+    windowEnd: LocalDate,
+    visibleDays: Int = Int.MAX_VALUE
 ) {
     if (points.isEmpty()) {
         Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
@@ -1308,6 +1312,17 @@ private fun LineGraphChart(
     val windowDays = remember(windowStart, windowEnd) {
         (windowStart.until(windowEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
     }
+    // Show a sliding window of `visibleDays` anchored on the freshest data, scrolling for older.
+    // When the whole range already fits the window (or all-time), fit it all with no scrolling.
+    val fitAll = visibleDays >= windowDays
+    val zoomState = rememberVicoZoomState(
+        zoomEnabled = false,
+        initialZoom = if (fitAll) Zoom.Content else Zoom.x(visibleDays.toDouble())
+    )
+    val scrollState = rememberVicoScrollState(
+        scrollEnabled = !fitAll,
+        initialScroll = Scroll.Absolute.End
+    )
     val xOffsets = remember(points, windowStart) {
         points.map { pt ->
             windowStart.until(pt.at.toLocalDateTime(tz).date, DateTimeUnit.DAY).toDouble()
@@ -1345,7 +1360,8 @@ private fun LineGraphChart(
             ),
         ),
         modelProducer = modelProducer,
-        scrollState = rememberVicoScrollState(initialScroll = Scroll.Absolute.End),
+        scrollState = scrollState,
+        zoomState = zoomState,
         modifier = Modifier.fillMaxSize(),
     )
 }

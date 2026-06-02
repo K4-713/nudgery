@@ -350,7 +350,7 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 
 | Chart type | Composable | Rendering |
 |---|---|---|
-| `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at` |
+| `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at`. `LineGraph.visibleDays` (set from the timeframe) drives a fixed Vico zoom (`Zoom.x`) so a sliding window of that many days shows at once, scrolling to older data; all-time (`Int.MAX_VALUE`) uses `Zoom.Content` and disables scrolling to fit the whole range |
 | `BarChart` | `HorizontalBarChart` | Custom Compose `Column`/`Row` layout; proportional `Box` fills with `primary` color; label truncated to 80dp |
 | `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label` |
 | `PackedBubble` | `PackedBubbleChart` | Custom Canvas with d3-style front-chain circle packing; radius ∝ `sqrt(NamedCount.count)` (area encodes frequency); cluster scaled to fit; bold centered word with count beneath |

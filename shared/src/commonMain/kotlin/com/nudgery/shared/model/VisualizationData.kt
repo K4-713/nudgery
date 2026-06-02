@@ -33,7 +33,12 @@ sealed class VisualizationData {
     data class LineGraph(
         val points: List<DataPoint>,
         val windowStart: LocalDate,
-        val windowEnd: LocalDate
+        val windowEnd: LocalDate,
+        /**
+         * Number of days the chart shows at once before scrolling, set from the selected timeframe.
+         * `Int.MAX_VALUE` means "fit the whole range with no scrolling" (all-time).
+         */
+        val visibleDays: Int = Int.MAX_VALUE
     ) : VisualizationData()
     data class ColumnChart(val entries: List<NamedCount>) : VisualizationData()
     data class BarChart(val entries: List<NamedCount>) : VisualizationData()

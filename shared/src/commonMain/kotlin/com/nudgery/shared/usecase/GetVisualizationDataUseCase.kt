@@ -45,10 +45,17 @@ class GetVisualizationDataUseCase(
 
         val granularity = computeGranularity(timeframe, windowStart, windowEnd)
         val fillViewport = timeframe == Timeframe.ALL_TIME
+        // Days the line graph shows at once before scrolling; ALL_TIME fits everything (no scroll).
+        val lineVisibleDays = when (timeframe) {
+            Timeframe.WEEKLY -> 7
+            Timeframe.MONTHLY -> 31
+            Timeframe.YEARLY -> 365
+            Timeframe.ALL_TIME -> Int.MAX_VALUE
+        }
 
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport)
-            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
+            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
             QuestionType.TEXT -> buildTextCharts(answers)
@@ -80,7 +87,8 @@ class GetVisualizationDataUseCase(
         windowStart: LocalDate,
         windowEnd: LocalDate,
         granularity: HeatMapGranularity,
-        fillViewport: Boolean
+        fillViewport: Boolean,
+        lineVisibleDays: Int
     ): List<VisualizationData> {
         val dailyCounts = answers
             .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
@@ -96,7 +104,7 @@ class GetVisualizationDataUseCase(
 
         return listOf(
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport),
-            VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd),
+            VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd, lineVisibleDays),
             VisualizationData.ColumnChart(listOf(NamedCount("YES", totalYes), NamedCount("NO", totalNo)))
         )
     }
@@ -107,7 +115,8 @@ class GetVisualizationDataUseCase(
         windowStart: LocalDate,
         windowEnd: LocalDate,
         granularity: HeatMapGranularity,
-        fillViewport: Boolean
+        fillViewport: Boolean,
+        lineVisibleDays: Int
     ): List<VisualizationData> {
         val points = answers
             .mapNotNull { answer ->
@@ -124,7 +133,7 @@ class GetVisualizationDataUseCase(
             .sortedBy { it.date }
 
         return listOf(
-            VisualizationData.LineGraph(points, windowStart, windowEnd),
+            VisualizationData.LineGraph(points, windowStart, windowEnd, lineVisibleDays),
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport)
         )
     }

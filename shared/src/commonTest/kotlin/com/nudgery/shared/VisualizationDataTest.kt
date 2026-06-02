@@ -131,6 +131,22 @@ class VisualizationDataTest {
     }
 
     @Test
+    fun TDD_lineGraphVisibleDaysFollowsTimeframe() = runTest {
+        // README "Viewing Nudges": the timeframe sets a sliding window on the line graph,
+        //   freshest data first, older scrollable; all-time fits everything with no scrolling.
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.NUMBER, answerValue = "7")
+
+        suspend fun visibleDays(tf: Timeframe) = getVisualizationData.execute(nudgeId, questionId, tf)
+            .filterIsInstance<VisualizationData.LineGraph>().first().visibleDays
+
+        assertEquals(7, visibleDays(Timeframe.WEEKLY))
+        assertEquals(31, visibleDays(Timeframe.MONTHLY))
+        assertEquals(365, visibleDays(Timeframe.YEARLY))
+        assertEquals(Int.MAX_VALUE, visibleDays(Timeframe.ALL_TIME),
+            "ALL_TIME fits the whole range (no scrolling)")
+    }
+
+    @Test
     fun TDD_numberQuestionProvidesCalendarHeatMapData() = runTest {
         // README "Viewing Nudges": "NUMBER | Line graph, calendar heat map"
         val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.NUMBER, answerValue = "7")

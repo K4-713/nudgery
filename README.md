@@ -51,7 +51,7 @@ The visualizations available for each main question will differ, based on the ma
 | OPTION_MULTI | Bar chart, packed bubble chart |
 | TEXT | Packed bubble chart (word and emoji frequency) |
 
-The timeframe can be switched between weekly, monthly, yearly, and all-time.
+The timeframe can be switched between weekly, monthly, yearly, and all-time. For the time-based charts (the calendar heat map and the line graph) the timeframe sets how much history is visible at once — a sliding window of that size anchored on the freshest data, with older data reachable by scrolling. All-time fits the entire history on screen with no scrolling.
 
 
 ## Editing Nudges
