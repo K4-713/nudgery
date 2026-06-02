@@ -272,25 +272,27 @@ fun NudgeDetailScreen(
                 }
             }
 
-            // Follow-up questions row
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = if (uiState.followUpCount > 0)
-                            stringResource(R.string.detail_followup_count, uiState.followUpCount)
-                        else
-                            stringResource(R.string.detail_followup_questions),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = onEditFollowUpsClick) {
-                        Icon(
-                            imageVector = Icons.Outlined.QuestionAnswer,
-                            contentDescription = stringResource(R.string.detail_edit_followups)
+            // Follow-up questions row — hidden for free-text main questions, which can't have them.
+            if (uiState.mainQuestionType?.allowsFollowUps == true) {
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (uiState.followUpCount > 0)
+                                stringResource(R.string.detail_followup_count, uiState.followUpCount)
+                            else
+                                stringResource(R.string.detail_followup_questions),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
                         )
+                        IconButton(onClick = onEditFollowUpsClick) {
+                            Icon(
+                                imageVector = Icons.Outlined.QuestionAnswer,
+                                contentDescription = stringResource(R.string.detail_edit_followups)
+                            )
+                        }
                     }
                 }
             }

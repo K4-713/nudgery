@@ -142,7 +142,7 @@ Belongs to a `Nudge`. The first question (orderIndex 0) is the main question; su
 | scaleMax | Int? | Null unless `type = SCALE`; upper bound of the slider range |
 
 **QuestionType** enum: `YES_NO`, `SCALE`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`
-`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `TEXT` is only valid for follow-up questions (`isValidForMainQuestion` is false for `TEXT`).
+`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `TEXT` is valid for both main and follow-up questions, but a `TEXT` main question cannot have follow-ups — there are no fixed answers to define a trigger condition on (`QuestionType.allowsFollowUps` is false for `TEXT`). The create wizard skips the follow-up step for a `TEXT` main question, and the detail screen hides its follow-up row.
 
 **TriggerOperator** enum: `EQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`
 `CONTAINS` is used for `OPTION_MULTI` follow-ups: the trigger fires when the stored option ID appears anywhere in the comma-separated multi-select answer string.
@@ -342,6 +342,7 @@ Charts are rendered in the platform UI layer (not shared), since charting librar
 | NUMBER | Line graph, calendar heat map (daily average) |
 | OPTION_SINGLE | Bar chart, column chart, packed bubble chart |
 | OPTION_MULTI | Bar chart, packed bubble chart |
+| TEXT | Packed bubble chart (word/emoji frequency) |
 
 **Android rendering:**
 

@@ -19,10 +19,10 @@ You can set up a Nudge to have your phone ask you anything, on any schedule. Her
 Additionally, you can set up follow-up questions for specific answers. For instance, if your boss scored 7 or greater on being annoying that day, it could then ask you for some brief notes.
 
 ## Setting Up a Nudge
-Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question (Yes or No, Scale (of 1-10 or similar), Number, Option (Single), or Option (Multi)). For the Option types, you will be prompted here to add up to 16 selectable answers.
+Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question (Yes or No, Scale (of 1-10 or similar), Number, Option (Single), Option (Multi), or freeform Text). For the Option types, you will be prompted here to add up to 16 selectable answers.
 At this stage, you may also rename the Nudge, or leave it alone to go with the default name.
 
-Once the main question is set up, you will be able to add follow-up questions for specific answers or ranges of answers. Follow-up questions can be any of the main question types, plus a freeform Text type.
+Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text) you will be able to add follow-up questions for specific answers or ranges of answers. Follow-up questions can be any of the main question types. 
 
 After the questions are finished, you can edit the schedule for your Nudge to ask the question you just set up. Scheduling options include:
 * Daily: Pick a time of day (defaults to noon in your phone's timezone, which will move with your and your phone in case of travel), and the active days of the week
@@ -49,6 +49,7 @@ The visualizations available for each main question will differ, based on the ma
 | NUMBER | Line graph, calendar heat map (daily average) |
 | OPTION_SINGLE | Bar chart, column chart, packed bubble chart |
 | OPTION_MULTI | Bar chart, packed bubble chart |
+| TEXT | Packed bubble chart (word and emoji frequency) |
 
 The timeframe can be switched between weekly, monthly, yearly, and all-time.
 

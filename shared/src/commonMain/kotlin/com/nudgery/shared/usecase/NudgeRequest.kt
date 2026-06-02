@@ -38,7 +38,8 @@ data class CreateNudgeRequest(
 sealed class CreateNudgeResult {
     data class Success(val nudgeId: String) : CreateNudgeResult()
     sealed class Failure : CreateNudgeResult() {
-        data object MainQuestionCannotBeText : Failure()
+        /** A free-text main question may not have follow-up questions (no trigger conditions exist). */
+        data object TextMainCannotHaveFollowUps : Failure()
         data class TooManyOptions(val questionText: String) : Failure()
         data object InvalidScaleRange : Failure()
     }

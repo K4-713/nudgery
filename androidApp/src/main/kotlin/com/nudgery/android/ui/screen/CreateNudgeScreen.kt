@@ -37,7 +37,8 @@ import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.shared.usecase.CreateNudgeResult
 import org.koin.androidx.compose.koinViewModel
 
-private const val WIZARD_TOTAL_STEPS = 3
+/** Wizard steps. The follow-up step is omitted for a free-text main question (no triggers). */
+private enum class WizardStep { QUESTION, FOLLOW_UPS, SCHEDULE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +50,15 @@ fun CreateNudgeScreen(
     val formState by viewModel.formState.collectAsState()
     var currentStep by remember { mutableIntStateOf(0) }
 
+    val steps = if (formState.mainQuestion.type.allowsFollowUps) {
+        listOf(WizardStep.QUESTION, WizardStep.FOLLOW_UPS, WizardStep.SCHEDULE)
+    } else {
+        listOf(WizardStep.QUESTION, WizardStep.SCHEDULE)
+    }
+    val totalSteps = steps.size
+    // Switching the main type to/from text changes the step count; keep the index in range.
+    val safeStep = currentStep.coerceIn(0, totalSteps - 1)
+
     LaunchedEffect(formState.result) {
         if (formState.result is CreateNudgeResult.Success) onSuccess()
     }
@@ -57,14 +67,14 @@ fun CreateNudgeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringResource(R.string.wizard_step_of, currentStep + 1, WIZARD_TOTAL_STEPS))
+                    Text(stringResource(R.string.wizard_step_of, safeStep + 1, totalSteps))
                 }
             )
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             LinearProgressIndicator(
-                progress = { (currentStep + 1).toFloat() / WIZARD_TOTAL_STEPS },
+                progress = { (safeStep + 1).toFloat() / totalSteps },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -75,22 +85,22 @@ fun CreateNudgeScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
-                when (currentStep) {
-                    0 -> QuestionStep(
+                when (steps[safeStep]) {
+                    WizardStep.QUESTION -> QuestionStep(
                         nudgeName = formState.nudgeName,
                         onNameChange = { viewModel.setNudgeName(it) },
                         question = formState.mainQuestion,
                         onQuestionChange = { viewModel.setMainQuestion(it) },
                         existingFollowUps = formState.followUpQuestions
                     )
-                    1 -> FollowUpStep(
+                    WizardStep.FOLLOW_UPS -> FollowUpStep(
                         mainQuestion = formState.mainQuestion,
                         followUps = formState.followUpQuestions,
                         onAdd = { viewModel.addFollowUpQuestion(QuestionFormState()) },
                         onUpdate = { index, q -> viewModel.updateFollowUpQuestion(index, q) },
                         onRemove = { viewModel.removeFollowUpQuestion(it) }
                     )
-                    2 -> ScheduleStep(
+                    WizardStep.SCHEDULE -> ScheduleStep(
                         schedule = formState.schedule,
                         isEnabled = formState.isEnabled,
                         onScheduleChange = { viewModel.setSchedule(it) },
@@ -100,12 +110,12 @@ fun CreateNudgeScreen(
             }
 
             WizardNavBar(
-                currentStep = currentStep,
-                totalSteps = WIZARD_TOTAL_STEPS,
+                currentStep = safeStep,
+                totalSteps = totalSteps,
                 isSubmitting = formState.isSubmitting,
                 onCancel = onDismiss,
-                onBack = { currentStep-- },
-                onNext = { currentStep++ },
+                onBack = { currentStep = safeStep - 1 },
+                onNext = { currentStep = safeStep + 1 },
                 onSave = { viewModel.submit() }
             )
         }

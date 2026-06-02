@@ -86,6 +86,7 @@ fun QuestionStep(
 
         AnswerTypeSelector(
             selected = question.type,
+            includeText = true,
             onSelect = { newType ->
                 val clearedFollowUps = existingFollowUps.isNotEmpty() || question.options.isNotEmpty()
                 val isDestructive = clearedFollowUps &&

@@ -45,7 +45,13 @@ class CreateNudgeViewModel(
 
     fun setNudgeName(name: String) { _formState.update { it.copy(nudgeName = name) } }
     fun setEnabled(isEnabled: Boolean) { _formState.update { it.copy(isEnabled = isEnabled) } }
-    fun setMainQuestion(question: QuestionFormState) { _formState.update { it.copy(mainQuestion = question) } }
+    fun setMainQuestion(question: QuestionFormState) {
+        _formState.update {
+            // A free-text main question can't have follow-ups; drop any that were added.
+            val followUps = if (question.type.allowsFollowUps) it.followUpQuestions else emptyList()
+            it.copy(mainQuestion = question, followUpQuestions = followUps)
+        }
+    }
     fun setSchedule(schedule: ScheduleFormState) { _formState.update { it.copy(schedule = schedule) } }
 
     fun addFollowUpQuestion(question: QuestionFormState) {

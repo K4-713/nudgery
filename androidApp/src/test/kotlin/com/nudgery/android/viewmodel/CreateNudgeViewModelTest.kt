@@ -57,16 +57,29 @@ class CreateNudgeViewModelTest {
     }
 
     @Test
-    fun TDD_mainQuestionTypeCannotBeText() = runTest {
-        // README: "choose what kind of answer you want with the main question
-        //   (Yes or No, Number, Option (Single), or Option (Multi))" — TEXT is follow-up only
+    fun TDD_mainQuestionTypeCanBeText() = runTest {
+        // README "Setting Up a Nudge": free Text is a valid main question type
         viewModel.setMainQuestion(QuestionFormState(text = "Notes?", type = QuestionType.TEXT))
         viewModel.setSchedule(dailyScheduleForm())
 
         viewModel.submit()
         advanceUntilIdle()
 
-        assertEquals(CreateNudgeResult.Failure.MainQuestionCannotBeText, viewModel.formState.value.result)
+        assertTrue("Text main question should create successfully",
+            viewModel.formState.value.result is CreateNudgeResult.Success)
+    }
+
+    @Test
+    fun TDD_switchingMainQuestionToTextClearsFollowUps() = runTest {
+        // A free-text main question can't have follow-ups, so any added ones are dropped
+        viewModel.setMainQuestion(QuestionFormState(text = "How are you?", type = QuestionType.YES_NO))
+        viewModel.addFollowUpQuestion(QuestionFormState(text = "Why?", type = QuestionType.TEXT))
+        assertEquals(1, viewModel.formState.value.followUpQuestions.size)
+
+        viewModel.setMainQuestion(QuestionFormState(text = "Notes?", type = QuestionType.TEXT))
+
+        assertTrue("Follow-ups should be cleared when main becomes text",
+            viewModel.formState.value.followUpQuestions.isEmpty())
     }
 
     @Test

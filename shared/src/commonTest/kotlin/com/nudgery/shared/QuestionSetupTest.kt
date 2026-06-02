@@ -45,16 +45,31 @@ class QuestionSetupTest {
     )
 
     @Test
-    fun TDD_mainQuestionCannotBeTextType() = runTest {
-        // README "Setting Up a Nudge": "Follow-up questions can be any of the main question types,
-        //   plus a freeform Text type" — TEXT is only valid as a follow-up
+    fun TDD_mainQuestionCanBeTextType() = runTest {
+        // README "Setting Up a Nudge": free Text is now a valid main question type
         val result = createNudge.execute(
             CreateNudgeRequest(
                 mainQuestion = QuestionRequest("Write your thoughts", QuestionType.TEXT),
                 schedule = dailySchedule()
             )
         )
-        assertIs<CreateNudgeResult.Failure.MainQuestionCannotBeText>(result)
+        assertIs<CreateNudgeResult.Success>(result)
+    }
+
+    @Test
+    fun TDD_textMainQuestionCannotHaveFollowUps() = runTest {
+        // README "Setting Up a Nudge": a Text main question has no answer conditions to branch on,
+        //   so it cannot have follow-up questions
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Write your thoughts", QuestionType.TEXT),
+                followUpQuestions = listOf(
+                    QuestionRequest("A follow-up", QuestionType.YES_NO)
+                ),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.TextMainCannotHaveFollowUps>(result)
     }
 
     @Test
