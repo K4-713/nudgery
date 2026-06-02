@@ -114,7 +114,7 @@ Where possible, charts visually distinguish between a period with **no data reco
 - **Null (no data):** The cell renders in `surfaceVariant`, which matches the chart container background. The grid skeleton is still readable, but blank periods produce no visual noise — they simply disappear into the surface.
 - **Zero (recorded, value is zero):** The cell renders one small step away from the container background: `lerp(surfaceVariant, Color.White, 0.1f)` in dark mode and `lerp(surfaceVariant, Color.Black, 0.1f)` in light mode. Subtle enough not to compete with real data, but distinguishable on close inspection.
 
-This distinction is implemented in the calendar heat map for all three granularities (day, week, month). Other chart types — line graphs, bar/column charts, and packed bubble charts — simply omit periods with no data and do not have a corresponding null state to represent.
+This distinction is implemented in the calendar heat map across every granularity (the day strip, the day grid, the week grid, the week strip, and the month strip). Other chart types — line graphs, bar/column charts, and packed bubble charts — simply omit periods with no data and do not have a corresponding null state to represent.
 
 **Validation:** Adjacent stops in each palette are tested against Viénot 1999 colorblind simulation matrices (deuteranopia, protanopia, and tritanopia) applied in sRGB space. Separation is measured as Euclidean distance in sRGB. The general-purpose SPECTRUM palette requires ≥ 0.06 minimum distance; the purpose-built colorblind palettes (HORIZON, EMBER) require ≥ 0.10 (or ≥ 0.08 for Ember light under tritanopia). These thresholds are enforced by automated tests.
 

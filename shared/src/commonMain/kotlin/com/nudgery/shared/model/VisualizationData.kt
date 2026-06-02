@@ -14,7 +14,10 @@ enum class HeatMapGranularity {
     SINGLE_DAY,
     /** One cell per day, rendered as a 7-row Mon–Sun grid (GitHub contribution graph style). */
     DAY,
+    /** One cell per week, rendered as a single horizontal strip that scrolls. */
     WEEK,
+    /** One cell per week, rendered as a multi-row grid showing roughly a year per screen, scrolling for older weeks. */
+    WEEK_GRID,
     MONTH
 }
 

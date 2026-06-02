@@ -62,7 +62,7 @@ class GetVisualizationDataUseCase(
     ): HeatMapGranularity = when (timeframe) {
         Timeframe.WEEKLY -> HeatMapGranularity.SINGLE_DAY
         Timeframe.MONTHLY -> HeatMapGranularity.DAY
-        Timeframe.YEARLY -> HeatMapGranularity.WEEK
+        Timeframe.YEARLY -> HeatMapGranularity.WEEK_GRID
         Timeframe.ALL_TIME -> {
             val days = windowStart.until(windowEnd, DateTimeUnit.DAY)
             when {

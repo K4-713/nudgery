@@ -203,8 +203,8 @@ class NudgeDetailViewModelTest {
             .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
         assertEquals("YEARLY should also include all answers",
             2.0, yearlyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
-        assertEquals("YEARLY should use week granularity",
-            HeatMapGranularity.WEEK, yearlyHeatMap.granularity)
+        assertEquals("YEARLY should use the week-grid granularity",
+            HeatMapGranularity.WEEK_GRID, yearlyHeatMap.granularity)
     }
 
     @Test
