@@ -51,7 +51,13 @@ The visualizations available for each main question will differ, based on the ma
 | OPTION_MULTI | Bar chart, packed bubble chart |
 | TEXT | Packed bubble chart (word and emoji frequency) |
 
-The timeframe can be switched between weekly, monthly, yearly, and all-time. For the time-based charts (the calendar heat map and the line graph) the timeframe sets how much history is visible at once — a sliding window of that size anchored on the freshest data, with older data reachable by scrolling. All-time fits the entire history on screen with no scrolling.
+All the charts on the Nudge detail page will work with the same data: If you have follow-up questions, those charts and the main question chart all move and scale together, so you know you're always viewing the same data set and timeframe.
+
+Data will load most recent first. To look at earlier data, move a chart or time slider, and all the charts will move together.
+* On the time-based charts (the calendar heat map and the line graph), just drag the chart left/right.
+* On the count-based charts (bar, column, and packed bubble), drag the slim time strip beneath the chart; the bars and bubbles re-tally for whatever window you slide to.
+
+All-time shows your entire history at once, with nothing to scroll.
 
 
 ## Editing Nudges

@@ -173,9 +173,9 @@ class NudgeDetailViewModelTest {
     }
 
     @Test
-    fun TDD_selectTimeframe_updatesVisualizationData() = runTest {
-        // All historical data is visible regardless of timeframe; switching timeframe
-        // reloads the chart data with a different granularity.
+    fun TDD_selectTimeframe_locksAllChartsToTheSharedWindow() = runTest {
+        // The dashboard is locked to one window: WEEKLY (last 7 days) excludes a 60-day-old answer,
+        // while YEARLY (last 365 days) includes it. Switching timeframe resizes the shared window.
         val nudgeId = createNudge("Did you see any cool birds today?")
         val questions = repos.questionRepo.getByNudgeId(nudgeId)
         val questionId = questions.first().id
@@ -191,8 +191,8 @@ class NudgeDetailViewModelTest {
 
         val weeklyHeatMap = viewModel.uiState.value.visualizations
             .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
-        assertEquals("WEEKLY should include all answers regardless of age",
-            2.0, weeklyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
+        assertEquals("WEEKLY window (last 7 days) should include only the recent answer",
+            1.0, weeklyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
         assertEquals("WEEKLY should use single-day strip granularity",
             HeatMapGranularity.SINGLE_DAY, weeklyHeatMap.granularity)
 
@@ -201,7 +201,7 @@ class NudgeDetailViewModelTest {
 
         val yearlyHeatMap = viewModel.uiState.value.visualizations
             .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
-        assertEquals("YEARLY should also include all answers",
+        assertEquals("YEARLY window (last 365 days) should include both answers",
             2.0, yearlyHeatMap.dailyCounts.sumOf { it.value }, 0.0)
         assertEquals("YEARLY should use the week-grid granularity",
             HeatMapGranularity.WEEK_GRID, yearlyHeatMap.granularity)

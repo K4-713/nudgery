@@ -81,6 +81,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -168,6 +169,17 @@ fun NudgeDetailScreen(
     var selectedChartIndex by rememberSaveable { mutableStateOf(0) }
     var showFullScreenChart by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
+    // One shared window for the whole dashboard; every chart reads it and any drag/scrubber moves it.
+    val windowNav = ChartWindowNav(
+        windowStart = uiState.windowStart,
+        windowEnd = uiState.windowEnd,
+        dataStart = uiState.dataStart,
+        dataEnd = uiState.dataEnd,
+        canShiftOlder = uiState.canShiftOlder,
+        canShiftNewer = uiState.canShiftNewer,
+        onShiftDays = { viewModel.shiftWindowDays(it) }
+    )
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onBack()
@@ -337,7 +349,9 @@ fun NudgeDetailScreen(
                         onTimeframeSelect = { viewModel.selectTimeframe(it) },
                         onExport = { format -> viewModel.exportAnswers(format) },
                         onExpandChart = { showFullScreenChart = true },
-                        chartPalette = chartPalette
+                        chartPalette = chartPalette,
+                        windowLabel = uiState.windowLabel,
+                        nav = windowNav
                     )
                 }
             }
@@ -349,7 +363,8 @@ fun NudgeDetailScreen(
                         followUp = followUp,
                         selectedTimeframe = uiState.selectedTimeframe,
                         onTimeframeSelect = { viewModel.selectTimeframe(it) },
-                        chartPalette = chartPalette
+                        chartPalette = chartPalette,
+                        nav = windowNav
                     )
                 }
             }
@@ -397,7 +412,9 @@ fun NudgeDetailScreen(
             selectedTimeframe = uiState.selectedTimeframe,
             onTimeframeSelect = { viewModel.selectTimeframe(it) },
             onDismiss = { showFullScreenChart = false },
-            chartPalette = chartPalette
+            chartPalette = chartPalette,
+            windowLabel = uiState.windowLabel,
+            nav = windowNav
         )
     }
 }
@@ -412,7 +429,9 @@ private fun ChartSection(
     onTimeframeSelect: (Timeframe) -> Unit,
     onExport: (ExportFormat) -> Unit,
     onExpandChart: () -> Unit,
-    chartPalette: ChartPalettePreference
+    chartPalette: ChartPalettePreference,
+    windowLabel: String,
+    nav: ChartWindowNav
 ) {
     var showTypePicker by remember { mutableStateOf(false) }
     var showExportMenu by remember { mutableStateOf(false) }
@@ -423,7 +442,7 @@ private fun ChartSection(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(modifier = Modifier.weight(1f)) {
-                    NudgeryChart(visualization = visualizations[safeIndex], chartPalette = chartPalette)
+                    NudgeryChart(visualization = visualizations[safeIndex], chartPalette = chartPalette, nav = nav)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
@@ -457,6 +476,15 @@ private fun ChartSection(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            if (windowLabel.isNotEmpty()) {
+                Text(
+                    text = windowLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
             TimeframeSelector(
                 selectedTimeframe = selectedTimeframe,
@@ -560,6 +588,8 @@ private fun FullScreenChartDialog(
     onTimeframeSelect: (Timeframe) -> Unit,
     onDismiss: () -> Unit,
     chartPalette: ChartPalettePreference,
+    nav: ChartWindowNav = ChartWindowNav.None,
+    windowLabel: String = "",
     title: String? = null
 ) {
     var showTypePicker by remember { mutableStateOf(false) }
@@ -603,9 +633,19 @@ private fun FullScreenChartDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        zoomable = true
+                        zoomable = true,
+                        nav = nav
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    if (windowLabel.isNotEmpty()) {
+                        Text(
+                            text = windowLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     TimeframeSelector(
                         selectedTimeframe = selectedTimeframe,
                         onTimeframeSelect = onTimeframeSelect,
@@ -629,13 +669,40 @@ private fun FullScreenChartDialog(
     }
 }
 
+/**
+ * Shared-window navigation handed to charts so the whole dashboard moves together: dragging a
+ * time-based chart, or the scrubber under a categorical chart, shifts the same window.
+ */
+private data class ChartWindowNav(
+    val windowStart: LocalDate?,
+    val windowEnd: LocalDate?,
+    val dataStart: LocalDate?,
+    val dataEnd: LocalDate?,
+    val canShiftOlder: Boolean,
+    val canShiftNewer: Boolean,
+    val onShiftDays: (Int) -> Unit
+) {
+    /** There is somewhere to scroll to (not all-time, and history exists beyond the window). */
+    val navigable: Boolean get() = canShiftOlder || canShiftNewer
+
+    val windowDays: Int
+        get() = if (windowStart != null && windowEnd != null)
+            (windowStart.until(windowEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
+        else 1
+
+    companion object {
+        val None = ChartWindowNav(null, null, null, null, false, false, {})
+    }
+}
+
 @Composable
 private fun NudgeryChart(
     visualization: VisualizationData,
     chartPalette: ChartPalettePreference,
     modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
     // Only the full-screen packed bubble chart enables pinch-to-zoom.
-    zoomable: Boolean = false
+    zoomable: Boolean = false,
+    nav: ChartWindowNav = ChartWindowNav.None
 ) {
     Box(
         modifier = modifier
@@ -645,25 +712,110 @@ private fun NudgeryChart(
     ) {
         key(visualization) {
             when (visualization) {
-                is VisualizationData.CalendarHeatMap -> CalendarHeatMapChart(
-                    counts = visualization.dailyCounts,
-                    windowStart = visualization.windowStart,
-                    windowEnd = visualization.windowEnd,
-                    granularity = visualization.granularity,
-                    palette = chartPalette,
-                    fillViewport = visualization.fillViewport
-                )
-                is VisualizationData.LineGraph -> LineGraphChart(
-                    points = visualization.points,
-                    windowStart = visualization.windowStart,
-                    windowEnd = visualization.windowEnd,
-                    visibleDays = visualization.visibleDays
-                )
-                is VisualizationData.BarChart -> HorizontalBarChart(visualization.entries)
-                is VisualizationData.ColumnChart -> NamedCountChart(visualization.entries)
-                is VisualizationData.PackedBubble -> PackedBubbleChart(visualization.entries, chartPalette, zoomable)
+                // Time-based charts: drag the chart itself to slide the shared window.
+                is VisualizationData.CalendarHeatMap -> Box(Modifier.fillMaxSize().timeWindowDrag(nav)) {
+                    CalendarHeatMapChart(
+                        counts = visualization.dailyCounts,
+                        windowStart = visualization.windowStart,
+                        windowEnd = visualization.windowEnd,
+                        granularity = visualization.granularity,
+                        palette = chartPalette,
+                        fillViewport = visualization.fillViewport
+                    )
+                }
+                is VisualizationData.LineGraph -> Box(Modifier.fillMaxSize().timeWindowDrag(nav)) {
+                    LineGraphChart(
+                        points = visualization.points,
+                        windowStart = visualization.windowStart,
+                        windowEnd = visualization.windowEnd,
+                        visibleDays = visualization.visibleDays
+                    )
+                }
+                // Categorical charts: no time axis, so a scrubber underneath moves the window.
+                is VisualizationData.BarChart -> CategoricalChart(nav) { HorizontalBarChart(visualization.entries) }
+                is VisualizationData.ColumnChart -> CategoricalChart(nav) { NamedCountChart(visualization.entries) }
+                is VisualizationData.PackedBubble -> CategoricalChart(nav) { PackedBubbleChart(visualization.entries, chartPalette, zoomable) }
             }
         }
+    }
+}
+
+/** Horizontal drag that slides the shared window; dragging right reveals older data. */
+private fun Modifier.timeWindowDrag(nav: ChartWindowNav): Modifier {
+    if (!nav.navigable) return this
+    val windowDays = nav.windowDays
+    return pointerInput(windowDays) {
+        var accumulated = 0f
+        detectHorizontalDragGestures(
+            onDragEnd = { accumulated = 0f },
+            onDragCancel = { accumulated = 0f }
+        ) { _, dragAmount ->
+            accumulated += dragAmount
+            val daysPerPx = windowDays.toFloat() / size.width.coerceAtLeast(1)
+            val shift = (accumulated * daysPerPx).toInt()
+            if (shift != 0) {
+                nav.onShiftDays(shift) // drag right (+dx) → older
+                accumulated -= shift / daysPerPx
+            }
+        }
+    }
+}
+
+/** A categorical chart with a draggable time strip beneath it (only when there's history to scrub). */
+@Composable
+private fun CategoricalChart(nav: ChartWindowNav, chart: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) { chart() }
+        if (nav.navigable) {
+            TimeWindowScrubber(nav, Modifier.fillMaxWidth().padding(top = 6.dp))
+        }
+    }
+}
+
+/** A slim track showing the full history with the current window highlighted; drag to move it. */
+@Composable
+private fun TimeWindowScrubber(nav: ChartWindowNav, modifier: Modifier = Modifier) {
+    val windowStart = nav.windowStart ?: return
+    val dataStart = nav.dataStart ?: return
+    val dataEnd = nav.dataEnd ?: return
+
+    val totalDays = (dataStart.until(dataEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
+    val windowDays = nav.windowDays
+    val startOffsetDays = dataStart.until(windowStart, DateTimeUnit.DAY).toInt()
+
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val knobColor = MaterialTheme.colorScheme.primary
+
+    Canvas(
+        modifier = modifier
+            .height(10.dp)
+            .pointerInput(totalDays) {
+                var accumulated = 0f
+                detectHorizontalDragGestures(
+                    onDragEnd = { accumulated = 0f },
+                    onDragCancel = { accumulated = 0f }
+                ) { _, dragAmount ->
+                    accumulated += dragAmount
+                    val daysPerPx = totalDays.toFloat() / size.width.coerceAtLeast(1)
+                    val shift = (accumulated * daysPerPx).toInt()
+                    if (shift != 0) {
+                        nav.onShiftDays(-shift) // drag the knob right (+dx) → newer
+                        accumulated -= shift / daysPerPx
+                    }
+                }
+            }
+    ) {
+        val radius = CornerRadius(size.height / 2f)
+        drawRoundRect(color = trackColor, size = size, cornerRadius = radius)
+        val knobWidth = (windowDays.toFloat() / totalDays * size.width).coerceIn(6f, size.width)
+        val knobX = (startOffsetDays.toFloat() / totalDays * size.width)
+            .coerceIn(0f, size.width - knobWidth)
+        drawRoundRect(
+            color = knobColor,
+            topLeft = Offset(knobX, 0f),
+            size = Size(knobWidth, size.height),
+            cornerRadius = radius
+        )
     }
 }
 
@@ -1752,7 +1904,8 @@ private fun FollowUpChartSection(
     followUp: FollowUpVisualization,
     selectedTimeframe: Timeframe,
     onTimeframeSelect: (Timeframe) -> Unit,
-    chartPalette: ChartPalettePreference
+    chartPalette: ChartPalettePreference,
+    nav: ChartWindowNav = ChartWindowNav.None
 ) {
     var selectedChartIndex by rememberSaveable(followUp.questionId) { mutableStateOf(0) }
     var showTypePicker by remember { mutableStateOf(false) }
@@ -1771,7 +1924,8 @@ private fun FollowUpChartSection(
                 Box(modifier = Modifier.weight(1f)) {
                     NudgeryChart(
                         visualization = followUp.visualizations[safeIndex],
-                        chartPalette = chartPalette
+                        chartPalette = chartPalette,
+                        nav = nav
                     )
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1806,6 +1960,7 @@ private fun FollowUpChartSection(
             onTimeframeSelect = onTimeframeSelect,
             onDismiss = { showFullScreen = false },
             chartPalette = chartPalette,
+            nav = nav,
             title = followUp.questionText
         )
     }

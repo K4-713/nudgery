@@ -89,7 +89,7 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 | `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time formatted as `String?` in local time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
 | `CreateNudgeViewModel` | Manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled); calls `CreateNudgeUseCase` on `submit()` |
 | `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId`); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
-| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); reads persisted default timeframe from `AppSettings` on init and saves it when changed; live-observes answers via `combine`; loads visualizations per timeframe; `setAnswerHidden()`, `exportAnswers()` |
+| `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); reads persisted default timeframe from `AppSettings` on init and saves it when changed; live-observes answers via `combine`; owns the shared dashboard window (`selectedTimeframe` + `windowOffsetDays` → `[windowStart, windowEnd]`, label, `canShiftOlder/Newer`) and reloads all visualizations for that window; `selectTimeframe()`, `shiftWindowDays()`, `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
 | `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for the import-from-backup feature |
 
@@ -333,6 +333,12 @@ Import runs as a resumable `ImportSession`: each entry whose name is free import
 
 Charts are rendered in the platform UI layer (not shared), since charting libraries are platform-specific. The shared module exposes pre-aggregated data structures computed from raw `Answer` rows via `GetVisualizationDataUseCase`; the platform layer only handles rendering. Data types: `List<DataPoint>` (Instant + Double) for time-series, `List<NamedCount>` (label + count) for categorical, `List<DailyCount>` (LocalDate + Double) for heat maps.
 
+### Locked-window dashboard
+
+The detail screen is a single dashboard: every chart (main + follow-ups) shows the same time slice. `NudgeDetailViewModel` holds one shared window — `selectedTimeframe` (its size) plus `windowOffsetDays` (continuous, 0 = most recent) — resolved to `[windowStart, windowEnd]` by the shared `analysisWindow(timeframe, offsetDays, today, earliest)` helper (weekly 7 days, monthly 30, yearly 365; all-time spans earliest→today and ignores the offset). `GetVisualizationDataUseCase.execute(..., periodOffsetDays)` filters answers to that window and builds every chart from only that subset, so the charts are locked together by construction. `selectTimeframe` resizes the window and resets to the most recent period; `shiftWindowDays(delta)` slides it (clamped to `[0, earliest..today]`), and the ViewModel exposes the window label and `canShiftOlder/Newer`.
+
+Navigation is unified through `ChartWindowNav` passed into every chart: time-based charts (heat map, line graph) use `Modifier.timeWindowDrag` so dragging the chart calls `onShiftDays` (drag right → older); categorical charts (bar/column/bubble) render a `TimeWindowScrubber` beneath them — a slim track of the full history with the current window highlighted — whose drag also calls `onShiftDays`. Both convert pixels→days from the element width and the window/total span. The scrubber is hidden and the drag disabled when there is nowhere to scroll (all-time, or no older data).
+
 **Available chart types by QuestionType:**
 
 | QuestionType | Available Visualizations |
@@ -350,7 +356,7 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 
 | Chart type | Composable | Rendering |
 |---|---|---|
-| `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at`. `LineGraph.visibleDays` (set from the timeframe) drives a fixed Vico zoom (`Zoom.x`) so a sliding window of that many days shows at once, scrolling to older data; all-time (`Int.MAX_VALUE`) uses `Zoom.Content` and disables scrolling to fit the whole range |
+| `LineGraph` | `LineGraphChart` | Vico `CartesianChartHost` + `LineCartesianLayer`; x-axis labels formatted as `month/day` from `DataPoint.at`. Fits exactly the shared window (`LineGraph.visibleDays` = the window's day count → `Zoom.Content`, no internal scroll); the dashboard's drag moves the window instead |
 | `BarChart` | `HorizontalBarChart` | Custom Compose `Column`/`Row` layout; proportional `Box` fills with `primary` color; label truncated to 80dp |
 | `ColumnChart` | `NamedCountChart` | Vico `CartesianChartHost` + `ColumnCartesianLayer`; x-axis labels from `NamedCount.label` |
 | `PackedBubble` | `PackedBubbleChart` | Custom Canvas with d3-style front-chain circle packing; radius ∝ `sqrt(NamedCount.count)` (area encodes frequency); cluster scaled to fit; bold centered word with count beneath |

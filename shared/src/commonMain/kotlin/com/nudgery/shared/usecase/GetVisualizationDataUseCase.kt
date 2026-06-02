@@ -18,6 +18,7 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.until
 
@@ -30,6 +31,7 @@ class GetVisualizationDataUseCase(
         nudgeId: String,
         questionId: String,
         timeframe: Timeframe,
+        periodOffsetDays: Int = 0,
         now: Instant = Clock.System.now(),
         timeZone: TimeZone = TimeZone.currentSystemDefault()
     ): List<VisualizationData> {
@@ -37,21 +39,21 @@ class GetVisualizationDataUseCase(
             ?: return emptyList()
 
         val today = now.toLocalDateTime(timeZone).date
-        val answers = answerRepository.getVisibleByNudgeIdSince(nudgeId, Instant.DISTANT_PAST)
+        val allAnswers = answerRepository.getVisibleByNudgeIdSince(nudgeId, Instant.DISTANT_PAST)
             .filter { it.questionId == questionId }
+        val earliest = allAnswers.minOfOrNull { it.scheduledAt.toLocalDateTime(timeZone).date } ?: today
 
-        val windowStart = answers.minOfOrNull { it.scheduledAt.toLocalDateTime(timeZone).date } ?: today
-        val windowEnd = today
+        // The whole dashboard is locked to one shared window; charts only see answers inside it.
+        val (windowStart, windowEnd) = analysisWindow(timeframe, periodOffsetDays, today, earliest)
+        val answers = allAnswers.filter {
+            val date = it.scheduledAt.toLocalDateTime(timeZone).date
+            date >= windowStart && date <= windowEnd
+        }
 
         val granularity = computeGranularity(timeframe, windowStart, windowEnd)
         val fillViewport = timeframe == Timeframe.ALL_TIME
-        // Days the line graph shows at once before scrolling; ALL_TIME fits everything (no scroll).
-        val lineVisibleDays = when (timeframe) {
-            Timeframe.WEEKLY -> 7
-            Timeframe.MONTHLY -> 31
-            Timeframe.YEARLY -> 365
-            Timeframe.ALL_TIME -> Int.MAX_VALUE
-        }
+        // The line graph fits exactly the window (no internal scroll); the dashboard moves the window.
+        val lineVisibleDays = (windowStart.until(windowEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
 
         return when (question.type) {
             QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
@@ -258,4 +260,32 @@ class GetVisualizationDataUseCase(
             add(VisualizationData.PackedBubble(optionCounts))
         }
     }
+}
+
+/** Window sizes (in days) for the dashboard's time-based timeframes. */
+private const val WEEKLY_WINDOW_DAYS = 7
+private const val MONTHLY_WINDOW_DAYS = 30
+private const val YEARLY_WINDOW_DAYS = 365
+
+/**
+ * The `[start, end]` date window the whole nudge-detail dashboard is focused on: the [timeframe]'s
+ * span, shifted [offsetDays] days back from [today] (0 = most recent). `ALL_TIME` spans from the
+ * [earliest] recorded answer through [today] and ignores the offset.
+ */
+fun analysisWindow(
+    timeframe: Timeframe,
+    offsetDays: Int,
+    today: LocalDate,
+    earliest: LocalDate,
+): Pair<LocalDate, LocalDate> {
+    if (timeframe == Timeframe.ALL_TIME) return earliest to today
+    val sizeDays = when (timeframe) {
+        Timeframe.WEEKLY -> WEEKLY_WINDOW_DAYS
+        Timeframe.MONTHLY -> MONTHLY_WINDOW_DAYS
+        Timeframe.YEARLY -> YEARLY_WINDOW_DAYS
+        Timeframe.ALL_TIME -> WEEKLY_WINDOW_DAYS // unreachable; handled above
+    }
+    val end = today.minus(offsetDays.coerceAtLeast(0), DateTimeUnit.DAY)
+    val start = end.minus(sizeDays - 1, DateTimeUnit.DAY)
+    return start to end
 }

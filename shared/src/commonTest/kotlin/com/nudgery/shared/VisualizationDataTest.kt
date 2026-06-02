@@ -17,6 +17,7 @@ import com.nudgery.shared.util.FakeNotificationScheduler
 import com.nudgery.shared.util.TestRepositories
 import com.nudgery.shared.util.createTestRepositories
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.days
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
@@ -131,19 +132,19 @@ class VisualizationDataTest {
     }
 
     @Test
-    fun TDD_lineGraphVisibleDaysFollowsTimeframe() = runTest {
-        // README "Viewing Nudges": the timeframe sets a sliding window on the line graph,
-        //   freshest data first, older scrollable; all-time fits everything with no scrolling.
+    fun TDD_lineGraphFitsTheSharedWindow() = runTest {
+        // The dashboard is locked to one window; the line graph fits exactly that window's days.
+        // For a single answer recorded today, ALL_TIME spans just that one day.
         val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.NUMBER, answerValue = "7")
 
         suspend fun visibleDays(tf: Timeframe) = getVisualizationData.execute(nudgeId, questionId, tf)
             .filterIsInstance<VisualizationData.LineGraph>().first().visibleDays
 
         assertEquals(7, visibleDays(Timeframe.WEEKLY))
-        assertEquals(31, visibleDays(Timeframe.MONTHLY))
+        assertEquals(30, visibleDays(Timeframe.MONTHLY))
         assertEquals(365, visibleDays(Timeframe.YEARLY))
-        assertEquals(Int.MAX_VALUE, visibleDays(Timeframe.ALL_TIME),
-            "ALL_TIME fits the whole range (no scrolling)")
+        assertEquals(1, visibleDays(Timeframe.ALL_TIME),
+            "ALL_TIME spans earliest..today; one same-day answer is a single day")
     }
 
     @Test
@@ -303,6 +304,29 @@ class VisualizationDataTest {
     }
 
     // --- Timeframes ---
+
+    @Test
+    fun TDD_periodOffsetShiftsTheSharedWindow() = runTest {
+        // The dashboard window can be shifted back in time: offset 0 = most recent, larger = older.
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.YES_NO, answerValue = "YES")
+        val now = Clock.System.now()
+        repos.answerRepository.insert(
+            Answer(id = "ten-days-ago", nudgeId = nudgeId, questionId = questionId,
+                value = "YES", scheduledAt = now - 10.days, answeredAt = now - 10.days, isHidden = false)
+        )
+
+        suspend fun weeklySum(offsetDays: Int) = getVisualizationData
+            .execute(nudgeId, questionId, Timeframe.WEEKLY, periodOffsetDays = offsetDays, now = now)
+            .filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+            .dailyCounts.sumOf { it.value }
+
+        // Most-recent week sees only today's answer; not the 10-day-old one.
+        assertEquals(1.0, weeklySum(0), "offset 0 = this week (today only)")
+        // A window ending 10 days ago (spanning days 16..10 back) catches the older answer.
+        assertEquals(1.0, weeklySum(10), "offset 10 = the week around 10 days ago")
+        // A window in between catches neither.
+        assertEquals(0.0, weeklySum(3), "offset 3 = a week with no answers")
+    }
 
     @Test
     fun TDD_visualizationDataFilterableByWeeklyTimeframe() = runTest {

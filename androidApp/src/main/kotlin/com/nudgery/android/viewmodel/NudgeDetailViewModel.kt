@@ -21,6 +21,7 @@ import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
+import com.nudgery.shared.usecase.analysisWindow
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeRequest
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
@@ -32,8 +33,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.until
 
 private const val TAG = "NudgeDetailViewModel"
 
@@ -68,6 +73,16 @@ data class NudgeDetailUiState(
     val visualizations: List<VisualizationData> = emptyList(),
     val followUpVisualizations: List<FollowUpVisualization> = emptyList(),
     val selectedTimeframe: Timeframe = Timeframe.WEEKLY,
+    // The shared data window the whole dashboard is locked to.
+    val windowStart: LocalDate? = null,
+    val windowEnd: LocalDate? = null,
+    // Full data extent (earliest answer .. today), for the navigation scrubber.
+    val dataStart: LocalDate? = null,
+    val dataEnd: LocalDate? = null,
+    val windowOffsetDays: Int = 0,
+    val windowLabel: String = "",
+    val canShiftOlder: Boolean = false,
+    val canShiftNewer: Boolean = false,
     val exportContent: String? = null,
     val exportFormat: ExportFormat = ExportFormat.CSV,
     val isExporting: Boolean = false,
@@ -99,6 +114,9 @@ class NudgeDetailViewModel(
     private val _optionTextMap = MutableStateFlow<Map<String, String>>(emptyMap())
 
     private var followUpQuestions: List<Question> = emptyList()
+
+    // Earliest recorded answer date; bounds how far back the shared window can be shifted.
+    private var earliestAnswerDate: LocalDate? = null
 
     init {
         viewModelScope.launch {
@@ -140,6 +158,9 @@ class NudgeDetailViewModel(
                 Pair(rows, hasMissed)
             }.collect { (rows, hasMissed) ->
                 _uiState.update { it.copy(answers = rows, hasMissedNotification = hasMissed) }
+                earliestAnswerDate = rows.minOfOrNull { it.scheduledAt }
+                    ?.toLocalDateTime(TimeZone.currentSystemDefault())?.date
+                applyWindow(_uiState.value.windowOffsetDays)
                 loadVisualizations()
             }
         }
@@ -148,7 +169,58 @@ class NudgeDetailViewModel(
     fun selectTimeframe(timeframe: Timeframe) {
         _uiState.update { it.copy(selectedTimeframe = timeframe) }
         viewModelScope.launch { appSettings.setDefaultTimeframe(nudgeId, timeframe) }
+        applyWindow(0) // resize the shared window; reset to the most recent period
         loadVisualizations()
+    }
+
+    /** Slides the shared window; positive [deltaDays] moves it further back in time (older). */
+    fun shiftWindowDays(deltaDays: Int) {
+        val current = _uiState.value.windowOffsetDays
+        val next = (current + deltaDays).coerceIn(0, maxWindowOffsetDays())
+        if (next == current) return
+        applyWindow(next)
+        loadVisualizations()
+    }
+
+    private fun today(): LocalDate =
+        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+
+    private fun maxWindowOffsetDays(): Int {
+        val earliest = earliestAnswerDate ?: return 0
+        return earliest.until(today(), DateTimeUnit.DAY).toInt().coerceAtLeast(0)
+    }
+
+    /** Recomputes the shared window for the given offset and publishes it (label, bounds, flags). */
+    private fun applyWindow(offsetDays: Int) {
+        val timeframe = _uiState.value.selectedTimeframe
+        val today = today()
+        val earliest = earliestAnswerDate ?: today
+        val maxOffset = maxWindowOffsetDays()
+        val offset = if (timeframe == Timeframe.ALL_TIME) 0 else offsetDays.coerceIn(0, maxOffset)
+        val (start, end) = analysisWindow(timeframe, offset, today, earliest)
+        _uiState.update {
+            it.copy(
+                windowOffsetDays = offset,
+                windowStart = start,
+                windowEnd = end,
+                dataStart = earliestAnswerDate,
+                dataEnd = today,
+                windowLabel = windowLabel(timeframe, start, end),
+                canShiftOlder = timeframe != Timeframe.ALL_TIME && offset < maxOffset,
+                canShiftNewer = timeframe != Timeframe.ALL_TIME && offset > 0
+            )
+        }
+    }
+
+    private fun windowLabel(timeframe: Timeframe, start: LocalDate, end: LocalDate): String {
+        if (timeframe == Timeframe.ALL_TIME) return "All time"
+        return "${formatWindowDate(start)} – ${formatWindowDate(end)}"
+    }
+
+    private fun formatWindowDate(date: LocalDate): String {
+        val month = date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+        return if (date.year != today().year) "$month ${date.dayOfMonth}, ${date.year}"
+        else "$month ${date.dayOfMonth}"
     }
 
     fun setAnswerHidden(answerId: String, isHidden: Boolean) {
@@ -229,6 +301,7 @@ class NudgeDetailViewModel(
     private fun loadVisualizations() {
         val questionId = _uiState.value.mainQuestionId ?: return
         val timeframe = _uiState.value.selectedTimeframe
+        val offsetDays = _uiState.value.windowOffsetDays
         viewModelScope.launch {
             val now = Clock.System.now()
             val tz = TimeZone.currentSystemDefault()
@@ -236,6 +309,7 @@ class NudgeDetailViewModel(
                 nudgeId = nudgeId,
                 questionId = questionId,
                 timeframe = timeframe,
+                periodOffsetDays = offsetDays,
                 now = now,
                 timeZone = tz
             )
@@ -244,6 +318,7 @@ class NudgeDetailViewModel(
                     nudgeId = nudgeId,
                     questionId = question.id,
                     timeframe = timeframe,
+                    periodOffsetDays = offsetDays,
                     now = now,
                     timeZone = tz
                 )
