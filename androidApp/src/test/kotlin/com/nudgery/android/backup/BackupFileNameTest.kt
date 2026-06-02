@@ -1,5 +1,6 @@
 package com.nudgery.android.backup
 
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -46,6 +47,30 @@ class BackupFileNameTest {
     fun TDD_blankOrUnnamedFallsBackToNudge() {
         assertEquals("nudge", nudgeBackupFileName(""))
         assertEquals("nudge", nudgeBackupFileName("   "))
+    }
+
+    @Test
+    fun TDD_compactExportDateIsYyyymmdd() {
+        assertEquals("20260601", compactExportDate(LocalDate(2026, 6, 1)))
+        assertEquals("20261231", compactExportDate(LocalDate(2026, 12, 31)))
+    }
+
+    @Test
+    fun TDD_singleExportFileBaseIncludesNudgeWordAndDate() {
+        // Export filenames must always carry the nudge name, the word "nudge", and the date
+        assertEquals(
+            "Good Dog Sightings-nudge-20260601",
+            nudgeExportFileBase("Good Dog Sightings", LocalDate(2026, 6, 1))
+        )
+        // Emoji-only names still resolve, and still carry the word + date
+        val emoji = nudgeExportFileBase("🐶", LocalDate(2026, 6, 1))
+        assertTrue("contains nudge word", emoji.contains("-nudge-"))
+        assertTrue("contains date", emoji.contains("20260601"))
+    }
+
+    @Test
+    fun TDD_allNudgesBackupFileBaseIncludesNudgeWordAndDate() {
+        assertEquals("nudges-20260601", allNudgesBackupFileBase(LocalDate(2026, 6, 1)))
     }
 
     @Test

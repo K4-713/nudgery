@@ -64,9 +64,9 @@ While you cannot edit Nudge answer data once entered, you can select individual 
 ## Nudge Backup and Restore
 Nudges can be manually backed up and restored through the data download button on the Nudge detail page, to the right of the main chart. When you back up a Nudge, everything about that Nudge will be saved, including name, question and subquestion text, all answer data, enabled status, and schedule.
 
-To back up a Nudge, go to that nudge's detail page, tap the Download icon to the right of the main chart, and choose the "Back up nudge (JSON)" option. The backup file is named after the Nudge (for example, "Good Dog Sightings.json"; a Nudge named entirely with emoji is named after the emoji instead, like "dog-face.json"). You will then be able to send the backup file wherever you'd like: Files, Email, Drive, etc.
+To back up a Nudge, go to that nudge's detail page, tap the Download icon to the right of the main chart, and choose the "Back up nudge (JSON)" option. The backup file is named after the Nudge, plus the word "nudge" and the export date in compact form — for example, "Good Dog Sightings-nudge-20260601.json" (a Nudge named entirely with emoji is named after the emoji instead, like "dog-face-nudge-20260601.json"). You will then be able to send the backup file wherever you'd like: Files, Email, Drive, etc.
 
-To back up every Nudge at once, open Settings and tap "Back Up All Nudges". This produces a single ZIP archive (named like "nudgery-backup-2026-06-01.zip") containing one JSON file per Nudge, each named after its Nudge.
+To back up every Nudge at once, open Settings and tap "Back Up All Nudges". This produces a single ZIP archive (named like "nudges-20260601.zip") containing one JSON file per Nudge, each named after its Nudge.
 
 To restore, tap the Settings icon on the main screen, tap "Import from Backup", and choose either a single Nudge's JSON backup or a full backup ZIP (you may have to move it to your device first). A single JSON restores that one Nudge; a ZIP restores every Nudge inside it. Restoring re-creates each Nudge with all settings and data intact.
 

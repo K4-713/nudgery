@@ -9,6 +9,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
+import com.nudgery.android.backup.allNudgesBackupFileBase
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.android.ui.theme.paletteStops
@@ -127,7 +130,7 @@ fun SettingsScreen(
         }
         val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
         val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-        val zipFile = File(exportDir, "nudgery-backup-$today.zip")
+        val zipFile = File(exportDir, "${allNudgesBackupFileBase(today)}.zip")
         ZipOutputStream(zipFile.outputStream().buffered()).use { zos ->
             entries.forEach { entry ->
                 zos.putNextEntry(ZipEntry(entry.fileName))
@@ -192,7 +195,11 @@ fun SettingsScreen(
             ThemePreference.SYSTEM -> systemIsDark
         }
 
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+        ) {
             SettingsSectionLabel(stringResource(R.string.settings_theme))
 
             Column(modifier = Modifier.selectableGroup()) {

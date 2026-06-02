@@ -1,5 +1,23 @@
 package com.nudgery.android.backup
 
+import kotlinx.datetime.LocalDate
+
+/** Compact `YYYYMMDD` form of [date] for export filenames (e.g. 20260601). */
+fun compactExportDate(date: LocalDate): String =
+    "${date.year}" +
+        date.monthNumber.toString().padStart(2, '0') +
+        date.dayOfMonth.toString().padStart(2, '0')
+
+/**
+ * Base filename (no extension) for a single nudge's export on [date], e.g.
+ * "Good Dog Sightings-nudge-20260601". Always carries the nudge name, the word "nudge", and the date.
+ */
+fun nudgeExportFileBase(nudgeName: String, date: LocalDate): String =
+    "${nudgeBackupFileName(nudgeName)}-nudge-${compactExportDate(date)}"
+
+/** Filename (no extension) for the all-nudges backup archive on [date], e.g. "nudges-20260601". */
+fun allNudgesBackupFileBase(date: LocalDate): String = "nudges-${compactExportDate(date)}"
+
 /**
  * Builds a human-friendly base filename (no extension) for a nudge backup from the nudge's name.
  *

@@ -92,7 +92,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import com.nudgery.android.R
-import com.nudgery.android.backup.nudgeBackupFileName
+import com.nudgery.android.backup.nudgeExportFileBase
 import com.nudgery.android.viewmodel.AnswerRow
 import com.nudgery.android.viewmodel.FollowUpVisualization
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -122,6 +122,7 @@ import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
 import com.nudgery.shared.model.VisualizationData
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -168,7 +169,8 @@ fun NudgeDetailScreen(
     LaunchedEffect(uiState.exportContent) {
         val content = uiState.exportContent ?: return@LaunchedEffect
         val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
-        val base = nudgeBackupFileName(uiState.nudgeName)
+        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val base = nudgeExportFileBase(uiState.nudgeName, today)
         val (fileName, mimeType) = when (uiState.exportFormat) {
             ExportFormat.CSV -> "$base.csv" to "text/csv"
             ExportFormat.TSV -> "$base.tsv" to "text/tab-separated-values"
