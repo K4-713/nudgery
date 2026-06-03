@@ -7,10 +7,10 @@ This project will take a Documentation Driven Development approach, in which the
 # Architecture
 - See ARCHITECTURE.md (descriptive: how the current code is built)
 
-# Technical Decisions
-- See TECHNICAL_DECISIONS.md — binding, non-user-facing technical decisions that the
+# Engineering Decisions
+- See ENGINEERING_DECISIONS.md — binding, non-user-facing engineering decisions that the
   implementation must adhere to. Prescriptive and test-backed like README.md, but for the
-  system's internals rather than user-observable behavior. A statement is a *technical decision*
+  system's internals rather than user-observable behavior. A statement is an *engineering decision*
   (belongs here, with a test) if it is a requirement we are committing to; it is *architecture*
   (belongs in ARCHITECTURE.md, no test obligation) if it merely describes how today's code works.
 
@@ -24,7 +24,7 @@ This project will take a Documentation Driven Development approach, in which the
 Project requirements are defined by the end-user documentation. To implement these requirements:
 * First, before any code is written for a new feature or requirement, write automated tests that verify the behavior outlined in the end-user documentation. Initially, these tests will fail.
   * These tests will not be the only automated tests, so they should be easily identifiable by a TDD_ prefix in the test name, and commented with the line(s) in the documentation covered by this test
-* A feature may also carry binding technical decisions that users never see (storage invariants, platform constraints, generation rules, etc.). Record these in TECHNICAL_DECISIONS.md *before* implementing, and cover each one with a TDD_ test whose comment cites the decision ID (e.g. `// TECHNICAL_DECISIONS.md TD-3`) rather than a README line.
+* A feature may also carry binding engineering decisions that users never see (storage invariants, platform constraints, generation rules, etc.). Record these in ENGINEERING_DECISIONS.md *before* implementing, and cover each one with a TDD_ test whose comment cites the decision ID (e.g. `// ENGINEERING_DECISIONS.md ED-3`) rather than a README line.
 * Implement the new feature(s)
 * Once the feature is implemented, the documentation tests will pass, and keeping those tests will prevent regressions.
 * Always note next steps for implementation, if any, in TODO.md
@@ -101,7 +101,7 @@ Prior to tagging a new release, ensure that we are adhering to our own rules. Ma
   * Leave descriptive placeholders in square brackets in the README file, containing a short description of the fixes or undocumented behaviors that must be addressed.
   * Code behaviors that are currently tested in the TDDs without related information in the README.md should be prioritized.
   * Wait for the user to fix README.md before continuing to the next step.
-* Have a look through the ARCHITECTURE.md, DESIGN.md, TECHNICAL_DECISIONS.md, and TODO.md files, and call out any places where the documentation doesn't match the code. Decide interactively with the user which side is more correct in each mismatch case, and change the other side to match.
+* Have a look through the ARCHITECTURE.md, DESIGN.md, ENGINEERING_DECISIONS.md, and TODO.md files, and call out any places where the documentation doesn't match the code. Decide interactively with the user which side is more correct in each mismatch case, and change the other side to match.
 * If there are any substantial items in the README.md, DESIGN.md, or ARCHITECTURE.md docs that don't have TDD tests, write and run those tests which verify accuracy of the documentation.
-* Confirm every decision in TECHNICAL_DECISIONS.md has at least one TDD_ test enforcing it; write any that are missing. (Decisions still marked "implementation pending" are exempt until their feature lands.)
+* Confirm every decision in ENGINEERING_DECISIONS.md has at least one TDD_ test enforcing it; write any that are missing. (Decisions still marked "implementation pending" are exempt until their feature lands.)
 * Remove completely finished sections from TODO.md. Leave only sections that still have unfinished pieces.

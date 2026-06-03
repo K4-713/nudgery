@@ -3,16 +3,19 @@
 ## Emoji Question Type
 Add an `EMOJI` question type: a TEXT question under the hood, but whose input is restricted to emoji-only, entered through our own emoji picker for an A+ cross-platform experience.
 
-The binding technical decisions and their rationale live in `TECHNICAL_DECISIONS.md` (TD-1 … TD-9): TEXT-under-the-hood storage, emoji-only validation, never shipping glyphs, per-device (not intersection) availability, generated catalog, default skin tone, default gender (neutral-only, never overriding explicit picks), hair/direction as pick-time variants (not settings), and VS16 presentation normalization. The decision *not* to use the system keyboard or Jetpack `EmojiPickerView` is captured there too.
+The binding engineering decisions and their rationale live in `ENGINEERING_DECISIONS.md` (ED-1 … ED-12): TEXT-under-the-hood storage, emoji-only validation, never shipping glyphs, per-device (not intersection) availability, generated catalog, default skin tone, default gender (neutral-only, never overriding explicit picks), hair/direction as pick-time variants (not settings), VS16 presentation normalization, CLDR-sourced search keywords, shared keyword/prefix search (no fuzzy/semantic in v1), and the manual CLDR credit. The decision *not* to use the system keyboard or Jetpack `EmojiPickerView` is captured there too.
 
 **Work breakdown:**
-- [ ] Follow the DDD flow: add end-user docs (README) and design spec (DESIGN.md) for the EMOJI type, ensure the TECHNICAL_DECISIONS.md entries are current, then write TDD_ tests, then implement.
+- [ ] Follow the DDD flow: add end-user docs (README) and design spec (DESIGN.md) for the EMOJI type, ensure the ENGINEERING_DECISIONS.md entries are current, then write TDD_ tests, then implement.
 - [ ] Shared: promote the existing emoji helpers (`extractEmojiWords`, `isSingleEmoji` in `GetVisualizationDataUseCase.kt`) into a reusable `shared/util` emoji validator; use it for live input filtering and a save-time emoji-only guard (with tests, incl. paste/garbage/edge cases).
 - [ ] Model: add `QuestionType.EMOJI` routing to the TEXT path for storage/export/charts; resolve the exhaustive `when` branches across the ~10 files that match `QuestionType` (most delegate to TEXT); verify backup export/import round-trips the new type.
-- [ ] Data: build the `emoji-test.txt` → shared categorized-list generator + the runtime `hasGlyph` capability filter (spike this first to confirm maintenance feels light before building the picker UI). Have the generator report the gendered-concept count as a sanity check on the TD-7 estimate (~90–110).
-- [ ] Defaults (TD-6, TD-7): add the default-skin-tone and default-gender settings and their apply-by-rule logic (skin-tone modifier; gender mapping derived from the catalog), both neutral-base-only and never overriding explicit picks; cover gender + tone composition.
-- [ ] Normalization (TD-9): VS16 emoji-presentation normalization in the validator/normalizer.
-- [ ] Android UI: custom emoji picker (grid, categories, search, recents) in a bottom sheet, with skin-tone/gender defaults applied and hair/direction (TD-8) as pick-time variants; wire into `AnswerFormScreen`, plus the create/edit question wizard.
+- [ ] Data: build the `emoji-test.txt` → shared categorized-list generator + the runtime `hasGlyph` capability filter (spike this first to confirm maintenance feels light before building the picker UI). Have the generator report the gendered-concept count as a sanity check on the ED-7 estimate (~90–110).
+- [ ] Search data (ED-10): extend the generator to parse CLDR annotations and attach keywords (+ short name) per entry, English-only for now.
+- [ ] Credits (ED-12): add the manual CLDR (and Unicode emoji data) credit entry under `androidApp/config/libraries/` + `androidApp/config/licenses/` when the data is embedded.
+- [ ] Search logic (ED-11): shared keyword/prefix matcher with ranking (exact name > name prefix > keyword exact > keyword prefix), multi-word AND, results passed through the `hasGlyph` filter and defaults; no fuzzy/semantic in v1.
+- [ ] Defaults (ED-6, ED-7): add the default-skin-tone and default-gender settings and their apply-by-rule logic (skin-tone modifier; gender mapping derived from the catalog), both neutral-base-only and never overriding explicit picks; cover gender + tone composition.
+- [ ] Normalization (ED-9): VS16 emoji-presentation normalization in the validator/normalizer.
+- [ ] Android UI: custom emoji picker (grid, categories, search field, recents) in a bottom sheet, with skin-tone/gender defaults applied and hair/direction (ED-8) as pick-time variants; wire into `AnswerFormScreen`, plus the create/edit question wizard.
 - [ ] iOS UI: custom picker reusing the shared list (later).
 
 ## Play Store Listing Materials

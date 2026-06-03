@@ -1,6 +1,6 @@
-# Technical Decisions
+# Engineering Decisions
 
-Binding technical decisions that the implementation **must** adhere to, but which end
+Binding engineering decisions that the implementation **must** adhere to, but which end
 users never interact with and which are not visual/UX design. This is the engineering
 counterpart to `README.md`: where `README.md` is the prescriptive contract for *user-observable
 behavior*, this file is the prescriptive contract for the *system's internals*.
@@ -10,7 +10,7 @@ behavior*, this file is the prescriptive contract for the *system's internals*.
 | Doc | Role | Prescriptive or descriptive? | Test-backed? |
 | --- | --- | --- | --- |
 | `README.md` | What users experience | Prescriptive (for users) | Yes — `TDD_` tests cite it |
-| `TECHNICAL_DECISIONS.md` | Binding non-visible technical decisions | Prescriptive (for internals) | Yes — `TDD_` tests cite it |
+| `ENGINEERING_DECISIONS.md` | Binding non-visible engineering decisions | Prescriptive (for internals) | Yes — `TDD_` tests cite it |
 | `DESIGN.md` | Visual / UX design brief (look, feel, layout, motion) | Prescriptive (for design) | Where practical |
 | `ARCHITECTURE.md` | How today's code is actually built | **Descriptive** | No obligation |
 
@@ -23,18 +23,18 @@ the code changes.
 
 - **Every decision here must be backed by at least one automated test.** Reuse the `TDD_` prefix
   (these are documentation-driven tests like the README ones); in the test comment, cite the
-  decision by its ID (e.g. `// TECHNICAL_DECISIONS.md TD-3`) instead of a README line.
+  decision by its ID (e.g. `// ENGINEERING_DECISIONS.md ED-3`) instead of a README line.
 - Decisions are **living and normative** — unlike classic immutable ADRs, an entry here is in
   force as long as it is listed. When a decision is reversed, update or remove the entry (and its
   tests) rather than appending a contradicting one.
 - Each entry follows **Context → Decision → Consequences**, plus a **Tests** line and a **Status**.
-- IDs (`TD-N`) are stable; do not renumber. Retired decisions are deleted outright (git holds the
+- IDs (`ED-N`) are stable; do not renumber. Retired decisions are deleted outright (git holds the
   history), so a missing number is fine.
 
 ### Entry template
 
 ```
-### TD-N: <short title>
+### ED-N: <short title>
 **Status:** Accepted | Implemented | Superseded
 **Context:** Why this decision is needed.
 **Decision:** The rule the implementation must follow.
@@ -50,19 +50,19 @@ These decisions govern the planned `EMOJI` question type. They are **Accepted** 
 implemented; see the *Emoji Question Type* section of `TODO.md` for the work breakdown. Their
 `TDD_` tests are written first (DDD) and will fail until the feature lands.
 
-### TD-1: `EMOJI` is a TEXT question under the hood
+### ED-1: `EMOJI` is a TEXT question under the hood
 **Status:** Accepted — implementation pending
 **Context:** Users want an emoji-only answer type, but emoji answers should reuse the existing
 text storage, export, and packed-bubble visualization (which already tokenizes emoji).
 **Decision:** `QuestionType.EMOJI` persists, exports, and charts identically to `TEXT`. It differs
-only in input restriction (TD-2). Code that branches on `QuestionType` routes `EMOJI` to the
+only in input restriction (ED-2). Code that branches on `QuestionType` routes `EMOJI` to the
 `TEXT` path unless input handling is specifically concerned.
 **Consequences:** No new storage/export/chart paths. The exhaustive `when (questionType)` sites
 (~10 files) must each handle `EMOJI`, almost always by delegating to `TEXT`. Backup export/import
 must round-trip the new type.
 **Tests:** pending — see TODO.md.
 
-### TD-2: Emoji answers are validated emoji-only, not merely hinted
+### ED-2: Emoji answers are validated emoji-only, not merely hinted
 **Status:** Accepted — implementation pending
 **Context:** No Android/iOS API can restrict the system keyboard to emoji, so input correctness
 cannot rely on the keyboard. Users may also paste, dictate, or use a hardware keyboard.
@@ -73,7 +73,7 @@ so a stored `EMOJI` answer contains only emoji.
 shared validator is reused by both platforms.
 **Tests:** pending — see TODO.md (cover paste, mixed text+emoji, garbage, empty).
 
-### TD-3: Never ship emoji glyphs; render with the device font
+### ED-3: Never ship emoji glyphs; render with the device font
 **Status:** Accepted — implementation pending
 **Context:** Bundling emoji artwork would create a perpetual update treadmill and bloat.
 **Decision:** Emoji are always rendered using the device's own emoji font. We ship no emoji images.
@@ -81,7 +81,7 @@ shared validator is reused by both platforms.
 points only.
 **Tests:** pending — see TODO.md.
 
-### TD-4: Emoji availability is per-device, never the cross-platform intersection
+### ED-4: Emoji availability is per-device, never the cross-platform intersection
 **Status:** Accepted — implementation pending
 **Context:** Different OS versions render different emoji sets; showing an emoji the device can't
 draw yields tofu (□), and limiting to the iOS∩Android intersection would needlessly hide emoji.
@@ -93,7 +93,7 @@ update only briefly hides the newest emoji on the newest OS. Availability is not
 shared subset.
 **Tests:** pending — see TODO.md.
 
-### TD-5: The emoji catalog is generated from Unicode data, not hand-curated
+### ED-5: The emoji catalog is generated from Unicode data, not hand-curated
 **Status:** Accepted — implementation pending
 **Context:** Maintaining an emoji list by hand would be error-prone and would drift from Unicode.
 **Decision:** A generator parses Unicode's canonical, pre-categorized `emoji-test.txt` into a
@@ -104,7 +104,7 @@ regenerated once per year when Unicode publishes (September), in the same spirit
 platforms.
 **Tests:** pending — see TODO.md (generator output shape; parser correctness).
 
-### TD-6: Default skin tone is an app setting we apply via the Unicode modifier
+### ED-6: Default skin tone is an app setting we apply via the Unicode modifier
 **Status:** Accepted — implementation pending
 **Context:** The OS does not expose the user's keyboard skin-tone preference, and a self-rendered
 picker must decide a default tone.
@@ -116,17 +116,17 @@ multi-person ZWJ sequences.
 Explicit user choices are respected.
 **Tests:** pending — see TODO.md (un-toned default applied; explicit tone preserved; VS16/ZWJ cases).
 
-### TD-7: Default gender is an app setting, applied only to neutral person forms
+### ED-7: Default gender is an app setting, applied only to neutral person forms
 **Status:** Accepted — implementation pending
 **Context:** Users often use a person emoji to represent themselves, so a preferred gender is worth
-defaulting. Unlike skin tone (TD-6), gender is not a single appended modifier — it is encoded as
+defaulting. Unlike skin tone (ED-6), gender is not a single appended modifier — it is encoded as
 distinct base characters (🧑/👨/👩) or ZWJ sequences with ♀/♂ — and reaches a large set (~90–110
 person/role concepts: roles, gestures, activities/sports, fantasy beings).
 **Decision:** A user setting selects a default gender (neutral / woman / man). It is applied by
 substituting the gendered form **only** for emoji the user picks in *neutral/person* form that have
 gendered variants; it **never** overrides an explicitly gendered pick (tapping 👩 keeps 👩) — the
-same "convert the default, respect the explicit" rule as [[TD-6]]. The neutral↔woman↔man mapping is
-*derived* from the generated catalog (TD-5) by relating each gendered sequence to its neutral base,
+same "convert the default, respect the explicit" rule as [[ED-6]]. The neutral↔woman↔man mapping is
+*derived* from the generated catalog (ED-5) by relating each gendered sequence to its neutral base,
 not hand-curated. Gender and skin-tone defaults compose (neutral person → woman → woman + tone).
 **Consequences:** Real reach (~100 concepts) for the self-representation case. Requires the derived
 mapping and care around ZWJ structure. **Reversible:** stored answers are plain emoji strings, so
@@ -134,7 +134,7 @@ the setting and mapping can be removed later (if mis-mappings prove grating) wit
 **Tests:** pending — see TODO.md (default applied to neutral base; explicit gender preserved;
 gender+tone composition; non-gendered emoji untouched).
 
-### TD-8: Variant axes other than skin tone and gender are pick-time only
+### ED-8: Variant axes other than skin tone and gender are pick-time only
 **Status:** Accepted — implementation pending
 **Context:** Hair components (red/curly/white/bald) attach only to the 3 bare adult figures
 (person/man/woman) and never to role emoji; direction (facing left/right) reaches only a handful of
@@ -146,7 +146,7 @@ expands where these apply.)
 still reach these variants at pick time.
 **Tests:** pending — see TODO.md (picker surfaces hair/direction variants where they exist).
 
-### TD-9: Emoji answers are normalized to emoji presentation (VS16)
+### ED-9: Emoji answers are normalized to emoji presentation (VS16)
 **Status:** Accepted — implementation pending
 **Context:** Dual-use symbols can render as a monochrome *text* glyph (VS15, U+FE0E) or a color
 *emoji* glyph (VS16, U+FE0F). In an emoji-only field the color form is always intended.
@@ -156,3 +156,46 @@ rule, not a user setting.
 **Consequences:** Consistent color rendering of dual-use symbols; no monochrome surprises.
 **Tests:** pending — see TODO.md (VS15→VS16 normalization; already-VS16 unchanged; non-dual-use
 emoji untouched).
+
+### ED-10: Emoji search keywords come from CLDR annotations
+**Status:** Accepted — implementation pending
+**Context:** Typeahead search must surface emoji by the words a user types. `emoji-test.txt` (ED-5)
+carries only the CLDR short name (😂 = "face with tears of joy"), so searching it alone misses the
+synonyms people actually type ("lol", "crying laughing"). Unicode CLDR annotations
+(`common/annotations/<locale>.xml`) are the canonical open-standard keyword lists (😂 →
+`face | joy | laugh | tear | tears of joy`) and are localized, making them the path to translated
+search later.
+**Decision:** The catalog generator (ED-5) also parses CLDR annotations and attaches a keyword list
+(plus the short name) to each catalog entry. **English-only initially**; additional locales are a
+later i18n add-on. The half-measure of searching short names only is rejected.
+**Consequences:** The generator parses a second Unicode data file; the shared catalog grows a
+keyword field. Localization is unlocked by adding locales later.
+**Tests:** pending — see TODO.md (generator attaches keywords; known emoji resolve expected
+keywords).
+
+### ED-11: Emoji search is shared keyword/prefix matching (no fuzzy/semantic in v1)
+**Status:** Accepted — implementation pending
+**Context:** Search should feel responsive and "related to the word," but a local, battery-conscious
+app should not ship an ML/embedding model, and CLDR keywords already encode the synonyms users type.
+**Decision:** Search is an in-memory prefix match of the typed token(s) against each emoji's name +
+keywords, implemented as **pure shared Kotlin** (reused by both platforms; only the search field is
+per-platform). Ranking: exact name > name prefix > keyword exact > keyword prefix. Multi-word
+queries AND their tokens. Results must pass the device-renderability filter ([[ED-4]]) and a picked
+result still flows through the skin-tone/gender defaults ([[ED-6]], [[ED-7]]). **v1 explicitly
+excludes** fuzzy/typo tolerance and semantic relatedness — "related" means curated CLDR keyword
+synonyms.
+**Consequences:** Fast over a few thousand entries with no search index. Highly testable. Typo
+tolerance is a possible later enhancement.
+**Tests:** pending — see TODO.md (prefix matches on name and keyword; ranking order; multi-word AND;
+unrenderable matches excluded).
+
+### ED-12: Embedded CLDR-derived keyword data is credited manually
+**Status:** Accepted — implementation pending
+**Context:** CLDR is a Unicode-licensed data source, not a Maven dependency, so the automatic
+credits pipeline (AboutLibraries → `CREDITS.md`) does not cover it.
+**Decision:** The CLDR-derived keyword data (and the Unicode emoji data of ED-5) are credited via a
+**manual** entry under `androidApp/config/libraries/` + `androidApp/config/licenses/`, the same way
+AGENTS.md handles bundled non-Maven assets like fonts.
+**Consequences:** Attribution stays accurate; one manual credit entry to add when the data is
+embedded and to revisit if the data source changes.
+**Tests:** n/a (attribution/config, verified by the credits process, not a runtime behavior).
