@@ -4,25 +4,25 @@ Ask Yourself
 ## What Is Nudgery
 Nudgery is an Android app that asks you your own questions, on a schedule you choose. You will be able to view the history of each nudge you record, and identify trends over time.
 
-Nudgery contains no ads, and your data stays on your phone (unless you go through the steps to export it).
+Nudgery contains no ads, and your data stays on your phone (unless you take the time to move it somewhere else on purpose).
 
 ## What Can You Use Nudgery For?
 Nudgery was initially written to help the author track daily migraine status over time, because it is unusually challenging to have good habits when your brain is low-key malfunctioning. The author also thought (while we're here) it would be fun to be able to track whatever the user (you!) thinks would be helpful or interesting to keep track of for a while.
 
 You can set up a Nudge to have your phone ask you anything, on any schedule. Here are some possibilities to get you started:
 * Did you have a headache in the last 24 hours?
-* Did you dream last night?
+* What did you dream about last night?
 * When was the last time you ate a vegetable?
 * How annoying was your boss today?
 * Did you do anything fun today on purpose?
 
-Additionally, you can set up follow-up questions for specific answers. For instance, if your boss scored 7 or greater on being annoying that day, it could then ask you for some brief notes.
+Additionally, you can set up follow-up questions for specific answers. For instance, if your boss scored 7 or greater on being annoying that day, you could then ask yourself for some brief follow-up notes.
 
 ## Setting Up a Nudge
-Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question (Yes or No, Scale (of 1-10 or similar), Number, Option (Single), Option (Multi), or freeform Text). For the Option types, you will be prompted here to add up to 16 selectable answers.
+Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question (Yes or No, Scale (of 1-10 or similar), Number, Option (Single), Option (Multi), freeform Text, or Emoji-only). For the Option types, you will be prompted here to add up to 16 selectable answers.
 At this stage, you may also rename the Nudge, or leave it alone to go with the default name.
 
-Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text) you will be able to add follow-up questions for specific answers or ranges of answers. Follow-up questions can be any of the main question types. 
+Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text or emoji) you will be able to add follow-up questions for specific answers or ranges of answers. Follow-up questions can be any of the main question types. 
 
 After the questions are finished, you can edit the schedule for your Nudge to ask the question you just set up. Scheduling options include:
 * Daily: Pick a time of day (defaults to noon in your phone's timezone, which will move with your and your phone in case of travel), and the active days of the week
@@ -36,9 +36,9 @@ Save the Nudge. It will appear on the main screen in the list with the rest of y
 Enabled Nudges will send you notifications when it's time to answer your questions. When the notification pops up, clicking on it will take you directly to the question form.
 
 ## Viewing Nudges
-From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV file or saved as a full JSON backup (more on this later). There is also an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately outside of a scheduled answer.
+From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV file or saved as a full JSON backup (more on this later). There is also an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately, outside of a scheduled answer.
 
-The raw data shown on the Nudge detail screen displays all nudge responses when expanded. A response consists of a single main question answer, the actual time that answer was received, and answers to any follow-up questions that came along with that main ansewr (expandable from the main answer).
+The raw data shown on the Nudge detail screen displays all nudge responses when expanded. A response consists of a single main question answer, the actual time that answer was received, and answers to any follow-up questions that came along with that main answer (expandable from the main answer).
 
 The visualizations available for each main question will differ, based on the main question type.
 
@@ -50,6 +50,7 @@ The visualizations available for each main question will differ, based on the ma
 | OPTION_SINGLE | Bar chart, column chart, packed bubble chart |
 | OPTION_MULTI | Bar chart, packed bubble chart |
 | TEXT | Packed bubble chart (word and emoji frequency) |
+| EMOJI | Packed bubble chart |
 
 All the charts on the Nudge detail page will work with the same data: If you have follow-up questions, those charts and the main question chart all move and scale together, so you know you're always viewing the same data set and timeframe.
 
@@ -88,6 +89,7 @@ To get to the Settings page, tap the Settings (gear) icon from the main page. He
 * Alarm permissions diagnostic information. Depending on your specific phone software, we may need a specific permission to set exact notification "alarms", if you want exact nudge notification schedules. This section tells you if the app has all the permissions it needs to work the best, and how to allow it if you haven't (and want to).
 * Back up all of your Nudges at once into a single ZIP archive.
 * Import from a backup — either a single Nudge's JSON or a full backup ZIP — which fully restores everything about each Nudge and its related data at the time the backup was saved.
+* If you want to use the Emoji question type, select in-app emoji defaults for skin-tone and gender. These defaults will be applied when we can; Specific emoji don't always have multiple styles, but when they do, we'll default them the way you want. You'll still be able to pick whatever version of any emoji you want when you're answering an Emoji question.
 
 # Fabricated Questions
 ## What happens to my nudge schedule when I change timezones?
@@ -101,4 +103,7 @@ We're thinking of the hourly nudge run as a single unit of multiple questions th
 We see you, night owls. In fact, we probably are you.
 
 ## Is this a health app?
-Not exactly. You can ask yourself anything you want using Nudgery, so there's a good chance that there will be questions relating to your mental or physical health. But, Nudgery is as much of a health app as a blank diary is a medical record: It depends completely on who it belongs to, and what they decide to put in it.
+No, not exactly. You can ask yourself anything you want using Nudgery, so it's a good bet that there will be questions relating to your mental or physical health. But, Nudgery is as much of a health app as a blank diary is a medical record: It depends completely on who it belongs to, and what they decide to put in it.
+
+## Why won't my Emoji question show me a bar chart?
+There are simply too many options to draw if the whole current universe of your phone's emoji are valid responses. If you want a bar chart, set up either a single option or multi-select option main question, and add the smaller set of Emoji you want to answer with as fixed options.
