@@ -5,6 +5,8 @@ import com.nudgery.shared.model.DailyCount
 import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
+import com.nudgery.shared.model.Question
+import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.Timeframe
 import com.nudgery.shared.model.VisualizationData
@@ -22,11 +24,48 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.until
 
+/**
+ * A preloaded, in-memory snapshot of one question's full answer history plus its options — enough
+ * to build that question's charts for *any* time window without touching the database. The
+ * nudge-detail dashboard loads this once (whenever the underlying answers change) and then
+ * re-aggregates it as the user scrubs the shared window, so scrubbing never re-queries SQLite.
+ */
+data class QuestionVisualizationSource(
+    val question: Question,
+    /** The question's full visible answer history, unfiltered by window. */
+    val answers: List<Answer>,
+    /** Option id -> option, for option-type questions; empty for other types. */
+    val optionsById: Map<String, QuestionOption>
+)
+
 class GetVisualizationDataUseCase(
     private val answerRepository: AnswerRepository,
     private val questionRepository: QuestionRepository,
     private val questionOptionRepository: QuestionOptionRepository
 ) {
+    /**
+     * Loads everything needed to chart [questionId] for any window. This is the only step that
+     * touches the database, so callers that re-render many windows (e.g. a drag-scrub) should call
+     * it once and reuse the result with [build].
+     */
+    suspend fun loadSource(nudgeId: String, questionId: String): QuestionVisualizationSource? {
+        val question = questionRepository.getByNudgeId(nudgeId).firstOrNull { it.id == questionId }
+            ?: return null
+        val answers = answerRepository.getVisibleByNudgeIdSince(nudgeId, Instant.DISTANT_PAST)
+            .filter { it.questionId == questionId }
+        val optionsById = when (question.type) {
+            QuestionType.OPTION_SINGLE, QuestionType.OPTION_MULTI ->
+                questionOptionRepository.getByQuestionId(questionId).associateBy { it.id }
+            else -> emptyMap()
+        }
+        return QuestionVisualizationSource(question, answers, optionsById)
+    }
+
+    /**
+     * Loads the question's data from the database and builds its charts for the given window.
+     * Equivalent to [loadSource] followed by [build]; retained for callers that render a single
+     * window and don't benefit from caching the source.
+     */
     suspend fun execute(
         nudgeId: String,
         questionId: String,
@@ -35,12 +74,25 @@ class GetVisualizationDataUseCase(
         now: Instant = Clock.System.now(),
         timeZone: TimeZone = TimeZone.currentSystemDefault()
     ): List<VisualizationData> {
-        val question = questionRepository.getByNudgeId(nudgeId).firstOrNull { it.id == questionId }
-            ?: return emptyList()
+        val source = loadSource(nudgeId, questionId) ?: return emptyList()
+        return build(source, timeframe, periodOffsetDays, now, timeZone)
+    }
 
+    /**
+     * Builds a question's charts for one window from an already-loaded [source]. Pure and
+     * database-free: it only filters and aggregates the in-memory snapshot, so it is safe to call
+     * repeatedly (once per scrub step) without incurring storage I/O.
+     */
+    fun build(
+        source: QuestionVisualizationSource,
+        timeframe: Timeframe,
+        periodOffsetDays: Int = 0,
+        now: Instant = Clock.System.now(),
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): List<VisualizationData> {
+        val question = source.question
         val today = now.toLocalDateTime(timeZone).date
-        val allAnswers = answerRepository.getVisibleByNudgeIdSince(nudgeId, Instant.DISTANT_PAST)
-            .filter { it.questionId == questionId }
+        val allAnswers = source.answers
         val earliest = allAnswers.minOfOrNull { it.scheduledAt.toLocalDateTime(timeZone).date } ?: today
 
         // The whole dashboard is locked to one shared window; charts only see answers inside it.
@@ -62,8 +114,8 @@ class GetVisualizationDataUseCase(
         return when (question.type) {
             QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
             QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
-            QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, questionId, includeColumnChart = true)
-            QuestionType.OPTION_MULTI -> buildOptionCharts(answers, questionId, includeColumnChart = false)
+            QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, source.optionsById, includeColumnChart = true)
+            QuestionType.OPTION_MULTI -> buildOptionCharts(answers, source.optionsById, includeColumnChart = false)
             QuestionType.TEXT -> buildTextCharts(answers)
         }
     }
@@ -174,12 +226,11 @@ class GetVisualizationDataUseCase(
             }
         }
 
-    private suspend fun buildOptionCharts(
+    private fun buildOptionCharts(
         answers: List<Answer>,
-        questionId: String,
+        optionsById: Map<String, QuestionOption>,
         includeColumnChart: Boolean
     ): List<VisualizationData> {
-        val optionsById = questionOptionRepository.getByQuestionId(questionId).associateBy { it.id }
         // Spread the options evenly across the palette by their defined order, so each option keeps
         // a fixed color no matter its count, rank, or whether it appears in the current window.
         val optionUniverseSize = optionsById.size

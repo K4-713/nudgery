@@ -662,4 +662,107 @@ class VisualizationDataTest {
             .first { !it.isMainQuestion }.id
         return result.nudgeId to followUpId
     }
+
+    // --- Preloaded source / in-memory rendering (scroll responsiveness refactor) ---
+
+    /** Creates a NUMBER nudge and records one answer per (daysAgo, value) entry. */
+    private suspend fun numberNudgeWithAnswers(answers: List<Pair<Int, String>>): Pair<String, String> {
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How many?", QuestionType.NUMBER),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val nudgeId = result.nudgeId
+        val questionId = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }.id
+        val now = Clock.System.now()
+        answers.forEachIndexed { index, (daysAgo, value) ->
+            repos.answerRepository.insert(
+                Answer(
+                    id = "ans-$index",
+                    nudgeId = nudgeId,
+                    questionId = questionId,
+                    value = value,
+                    scheduledAt = now - daysAgo.days,
+                    answeredAt = now - daysAgo.days,
+                    isHidden = false
+                )
+            )
+        }
+        return nudgeId to questionId
+    }
+
+    @Test
+    fun buildFromLoadedSourceMatchesExecuteAcrossTimeframes() = runTest {
+        // Refactor safety: rendering from a cached, preloaded source must produce exactly what the
+        // database-reading execute() path produces, for every timeframe.
+        val (nudgeId, questionId) = numberNudgeWithAnswers(
+            listOf(0 to "5", 3 to "8", 10 to "2", 40 to "9")
+        )
+        val source = getVisualizationData.loadSource(nudgeId, questionId)
+        assertNotNull(source)
+
+        val now = Clock.System.now()
+        val tz = TimeZone.currentSystemDefault()
+        for (timeframe in Timeframe.values()) {
+            assertEquals(
+                getVisualizationData.execute(nudgeId, questionId, timeframe, now = now, timeZone = tz),
+                getVisualizationData.build(source, timeframe, now = now, timeZone = tz),
+                "build() from a cached source should match execute() for $timeframe"
+            )
+        }
+    }
+
+    @Test
+    fun buildReadsTheSnapshotNotTheDatabase() = runTest {
+        // The performance fix hinges on this: once a source is loaded, building charts must not touch
+        // the database, so scrubbing incurs no storage reads. An answer inserted after loadSource must
+        // therefore not appear in charts built from the earlier snapshot, while execute() (which
+        // re-reads the database) does see it.
+        val (nudgeId, questionId) = numberNudgeWithAnswers(listOf(0 to "5"))
+        val source = getVisualizationData.loadSource(nudgeId, questionId)
+        assertNotNull(source)
+
+        val now = Clock.System.now()
+        repos.answerRepository.insert(
+            Answer(
+                id = "ans-inserted-after-load",
+                nudgeId = nudgeId,
+                questionId = questionId,
+                value = "9",
+                scheduledAt = now,
+                answeredAt = now,
+                isHidden = false
+            )
+        )
+
+        val fromSnapshot = getVisualizationData.build(source, Timeframe.ALL_TIME, now = now)
+            .filterIsInstance<VisualizationData.LineGraph>().first()
+        val fromDatabase = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME, now = now)
+            .filterIsInstance<VisualizationData.LineGraph>().first()
+
+        assertEquals(1, fromSnapshot.points.size, "snapshot build must ignore answers inserted after load")
+        assertEquals(2, fromDatabase.points.size, "execute re-reads the database and sees the new answer")
+    }
+
+    @Test
+    fun buildReaggregatesWindowsFromOneSource() = runTest {
+        // Scrubbing shifts the window against one cached source. Different offsets must yield different
+        // window contents without reloading, proving the window math runs on the in-memory snapshot.
+        val (nudgeId, questionId) = numberNudgeWithAnswers(
+            listOf(2 to "5", 9 to "8")  // one answer this week, one the week before
+        )
+        val source = getVisualizationData.loadSource(nudgeId, questionId)
+        assertNotNull(source)
+        val now = Clock.System.now()
+
+        fun weeklyPoints(offsetDays: Int) = getVisualizationData
+            .build(source, Timeframe.WEEKLY, periodOffsetDays = offsetDays, now = now)
+            .filterIsInstance<VisualizationData.LineGraph>().first().points
+
+        assertEquals(1, weeklyPoints(0).size, "current week sees only the recent answer")
+        assertEquals(5.0, weeklyPoints(0).first().value)
+        assertEquals(1, weeklyPoints(7).size, "shifting a week back sees only the older answer")
+        assertEquals(8.0, weeklyPoints(7).first().value)
+    }
 }

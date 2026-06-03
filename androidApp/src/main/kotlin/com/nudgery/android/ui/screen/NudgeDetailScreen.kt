@@ -1548,6 +1548,10 @@ private fun LineGraphChart(
         modelProducer = modelProducer,
         scrollState = scrollState,
         zoomState = zoomState,
+        // Every window shift swaps the whole dataset, so Vico's default difference animation would
+        // interpolate between two unrelated windows — the line appears to "dance" while scrubbing and
+        // only settles once dragging stops. Snap to each window's real data instead.
+        animationSpec = null,
         modifier = Modifier.fillMaxSize(),
     )
 }
@@ -1673,6 +1677,9 @@ private fun NamedCountChart(entries: List<NamedCount>, palette: ChartPalettePref
             ),
         ),
         modelProducer = modelProducer,
+        // See LineGraphChart: the dataset is fully replaced on every window shift, so the default
+        // difference animation would tween between unrelated windows. Snap to each window's data.
+        animationSpec = null,
         modifier = Modifier.fillMaxSize(),
     )
 }

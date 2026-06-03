@@ -21,6 +21,7 @@ import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
 import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
+import com.nudgery.shared.usecase.QuestionVisualizationSource
 import com.nudgery.shared.usecase.analysisWindow
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeRequest
@@ -119,10 +120,14 @@ class NudgeDetailViewModel(
     // Earliest recorded answer date; bounds how far back the shared window can be shifted.
     private var earliestAnswerDate: LocalDate? = null
 
-    // In-flight visualization reload. A continuous drag shifts the window many times in quick
-    // succession; cancelling the prior load conflates those to the latest window so we issue one
-    // burst of work per resting position instead of a backlog of stale DB queries.
+    // In-flight visualization render. A continuous drag shifts the window many times in quick
+    // succession; cancelling the prior render conflates those to the latest window so we do one
+    // aggregation per resting position instead of a backlog of stale ones.
     private var visualizationsJob: Job? = null
+
+    // Per-question chart sources (full answer history + options), loaded from the database only when
+    // the underlying answers change. Scrubbing re-aggregates these in memory — see renderVisualizations.
+    private var visualizationSources: Map<String, QuestionVisualizationSource> = emptyMap()
 
     init {
         viewModelScope.launch {
@@ -167,7 +172,7 @@ class NudgeDetailViewModel(
                 earliestAnswerDate = rows.minOfOrNull { it.scheduledAt }
                     ?.toLocalDateTime(TimeZone.currentSystemDefault())?.date
                 applyWindow(_uiState.value.windowOffsetDays)
-                loadVisualizations()
+                reloadVisualizationSources()
             }
         }
     }
@@ -176,7 +181,7 @@ class NudgeDetailViewModel(
         _uiState.update { it.copy(selectedTimeframe = timeframe) }
         viewModelScope.launch { appSettings.setDefaultTimeframe(nudgeId, timeframe) }
         applyWindow(0) // resize the shared window; reset to the most recent period
-        loadVisualizations()
+        renderVisualizations()
     }
 
     /** Slides the shared window; positive [deltaDays] moves it further back in time (older). */
@@ -185,7 +190,7 @@ class NudgeDetailViewModel(
         val next = (current + deltaDays).coerceIn(0, maxWindowOffsetDays())
         if (next == current) return
         applyWindow(next)
-        loadVisualizations()
+        renderVisualizations()
     }
 
     private fun today(): LocalDate =
@@ -301,34 +306,47 @@ class NudgeDetailViewModel(
             )
         }
 
-        loadVisualizations()
+        reloadVisualizationSources()
     }
 
-    private fun loadVisualizations() {
-        val questionId = _uiState.value.mainQuestionId ?: return
+    /**
+     * Reads each charted question's full answer history (and options) from the database and caches
+     * it, then renders. This is the only visualization path that touches storage, so it runs only
+     * when the underlying answers change — not while the user scrubs the window.
+     */
+    private suspend fun reloadVisualizationSources() {
+        val questionIds = buildList {
+            _uiState.value.mainQuestionId?.let { add(it) }
+            addAll(followUpQuestions.map { it.id })
+        }
+        visualizationSources = questionIds
+            .mapNotNull { id -> getVisualizationData.loadSource(nudgeId, id)?.let { id to it } }
+            .toMap()
+        Log.i(TAG, "Loaded ${visualizationSources.size} visualization sources for $nudgeId")
+        renderVisualizations()
+    }
+
+    /**
+     * Rebuilds the charts for the current window from the cached [visualizationSources]. Pure
+     * in-memory aggregation (no database), so it is cheap to call on every scrub step; it cancels
+     * any prior render so a fast drag collapses to its resting window instead of rendering a backlog
+     * of intermediate windows.
+     */
+    private fun renderVisualizations() {
+        val mainQuestionId = _uiState.value.mainQuestionId ?: return
         val timeframe = _uiState.value.selectedTimeframe
         val offsetDays = _uiState.value.windowOffsetDays
+        val now = Clock.System.now()
+        val tz = TimeZone.currentSystemDefault()
+        val sources = visualizationSources
         visualizationsJob?.cancel()
         visualizationsJob = viewModelScope.launch {
-            val now = Clock.System.now()
-            val tz = TimeZone.currentSystemDefault()
-            val visualizations = getVisualizationData.execute(
-                nudgeId = nudgeId,
-                questionId = questionId,
-                timeframe = timeframe,
-                periodOffsetDays = offsetDays,
-                now = now,
-                timeZone = tz
-            )
+            val visualizations = sources[mainQuestionId]
+                ?.let { getVisualizationData.build(it, timeframe, offsetDays, now, tz) }
+                ?: emptyList()
             val followUpVizs = followUpQuestions.mapNotNull { question ->
-                val vizs = getVisualizationData.execute(
-                    nudgeId = nudgeId,
-                    questionId = question.id,
-                    timeframe = timeframe,
-                    periodOffsetDays = offsetDays,
-                    now = now,
-                    timeZone = tz
-                )
+                val source = sources[question.id] ?: return@mapNotNull null
+                val vizs = getVisualizationData.build(source, timeframe, offsetDays, now, tz)
                 if (vizs.isEmpty()) null
                 else FollowUpVisualization(
                     questionId = question.id,
@@ -337,7 +355,7 @@ class NudgeDetailViewModel(
                 )
             }
             _uiState.update { it.copy(visualizations = visualizations, followUpVisualizations = followUpVizs) }
-            Log.i(TAG, "Loaded ${visualizations.size} main + ${followUpVizs.size} follow-up visualizations for $timeframe")
+            Log.i(TAG, "Rendered ${visualizations.size} main + ${followUpVizs.size} follow-up visualizations for $timeframe")
         }
     }
 
