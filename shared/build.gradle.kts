@@ -1,5 +1,6 @@
 import com.nudgery.buildtools.emoji.EmojiCatalogGenerator
 import com.nudgery.buildtools.emoji.EmojiTestParser
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -44,10 +45,8 @@ kotlin {
     }
 
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "11"
-            }
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
         }
     }
 
