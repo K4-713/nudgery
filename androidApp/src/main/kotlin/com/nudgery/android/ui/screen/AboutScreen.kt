@@ -1,7 +1,9 @@
 package com.nudgery.android.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -23,7 +25,7 @@ import com.nudgery.android.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(onBack: () -> Unit, onLicensesClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -73,6 +75,18 @@ fun AboutScreen(onBack: () -> Unit) {
                 text = stringResource(R.string.about_open_source),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.about_licenses_link),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable(onClick = onLicensesClick)
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
             )
         }
     }

@@ -1,0 +1,16 @@
+{
+  "uniqueId": "org.brailleinstitute:atkinson-hyperlegible-next",
+  "artifactVersion": "bundled",
+  "name": "Atkinson Hyperlegible Next",
+  "description": "Typeface bundled with the app and used throughout the UI; designed by the Braille Institute for maximum legibility, especially for low-vision readers.",
+  "website": "https://www.brailleinstitute.org/freefont/",
+  "developers": [
+    {
+      "name": "Braille Institute of America, Inc.",
+      "organisationUrl": "https://www.brailleinstitute.org"
+    }
+  ],
+  "licenses": [
+    "OFL-1.1"
+  ]
+}

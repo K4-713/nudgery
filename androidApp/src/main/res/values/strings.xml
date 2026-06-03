@@ -181,6 +181,12 @@
     <string name="about_description">Nudgery lets you create questions and have your phone ask you those questions on a schedule you choose. Your data stays on your device — no accounts, no ads, no cloud.</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_open_source">Nudgery is free and open source software.</string>
+    <string name="about_licenses_link">Open-source licenses</string>
+
+    <!-- Open-source licenses screen -->
+    <string name="licenses_title">Open-source licenses</string>
+    <string name="licenses_close">Close</string>
+    <string name="licenses_no_text">No license text was bundled for this component.</string>
 
     <!-- Generic actions -->
     <string name="action_confirm">Confirm</string>

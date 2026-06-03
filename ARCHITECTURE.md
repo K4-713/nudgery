@@ -25,6 +25,7 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Notification scheduling (Android) | AlarmManager + WorkManager | AlarmManager provides precise timing; WorkManager handles reliable execution. Implements shared `NotificationScheduler` interface. |
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
+| Open-source licenses | AboutLibraries (core only) | Gradle plugin harvests dependency/license data into `R.raw.aboutlibraries`; rendered by our own `LicensesScreen`. Compose-Multiplatform UI module intentionally not used (see *iOS Readiness Notes*) |
 | Settings persistence | DataStore Preferences | Stores `ThemePreference`, bold text toggle, `ChartPalette`, and per-nudge default timeframe (keyed as `default_timeframe_<nudgeId>`); flows observed by `SettingsViewModel` and `NudgeDetailViewModel` |
 | Typeface | Atkinson Hyperlegible Next | All 14 weight/style variants bundled as TTF in `androidApp/src/main/res/font/`; wired into `nudgeryTypography()` in `Type.kt` |
 
@@ -383,5 +384,8 @@ The following decisions were made specifically to keep iOS support achievable wi
 3. **kotlinx.datetime over java.time** — Avoids Android API level constraints and is usable from iOS via KMP.
 4. **`NotificationScheduler` interface** — Decouples scheduling logic from WorkManager so an iOS implementation can be dropped in.
 5. **ViewModel logic in platform modules** — Shared use cases are plain Kotlin classes; Android ViewModels wrap them. On iOS, the same use cases can be wrapped in an equivalent observable pattern (e.g. `ObservableObject`).
+6. **Open-source licenses use AboutLibraries core, not its UI** — The AboutLibraries Gradle plugin (applied in `androidApp`) harvests the dependency + license data into `R.raw.aboutlibraries`; we deliberately depend only on `aboutlibraries-core` and render it with our own AndroidX Compose screen (`LicensesScreen`). We did *not* adopt the library's `aboutlibraries-compose-m3` UI because it is built on Compose Multiplatform (`org.jetbrains.compose.*`) and would pull a second Compose stack into this AndroidX-Jetpack app. `aboutlibraries-core` is itself Kotlin Multiplatform (iOS targets included), so the data layer already crosses to iOS.
 
 When iOS work begins, the primary tasks will be: adding the `iosApp` Xcode target, writing iOS `actual` implementations for platform interfaces, and building the SwiftUI layer against the already-tested shared core.
+
+**iOS open-source licenses:** the plugin auto-generates the license data only for Android builds. For iOS, run the `exportLibraryDefinitions` Gradle task to emit the same JSON, bundle it as an iOS resource, and parse it with `aboutlibraries-core` (which supports iOS) — then render it in SwiftUI (or Compose Multiplatform, if adopted). Because we render from the *data* rather than the library's Compose UI, the iOS licenses screen is just a small SwiftUI view over the same parsed model; nothing about the current Android choice blocks it. The manually-declared entries in `androidApp/config/` (e.g. the bundled Atkinson Hyperlegible Next font) should be moved to or shared with a common config path when the iOS target is added so both platforms credit them.

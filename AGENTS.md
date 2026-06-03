@@ -36,6 +36,10 @@ Project requirements are defined by the end-user documentation. To implement the
 * 3rd party dependencies must be kept current
 * Avoid introducing new dependencies to production code
 * Dependencies must be removed when no longer needed
+* Whenever a dependency is introduced, updated, or removed (in `gradle/libs.versions.toml` or a module's `build.gradle.kts`), regenerate the open-source credits so attribution stays accurate:
+  * Run `./gradlew :androidApp:generateCredits` and commit the updated `CREDITS.md`. It is generated from the release build's actual dependency graph (harvested by the AboutLibraries Gradle plugin), so it must be refreshed by hand — it does not update itself.
+  * The in-app *Settings → About → Open-source licenses* screen regenerates automatically on every build, so it needs no manual step.
+  * Third-party assets that are **not** Maven dependencies (e.g. bundled fonts) are credited via manual entries under `androidApp/config/libraries/` and `androidApp/config/licenses/`. Add or remove these when such assets change.
 
 ## Logging
 * Always log key events for system visibility

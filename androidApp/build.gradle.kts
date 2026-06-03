@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.aboutlibraries)
 }
 
 val gitVersionCode: Int = try {
@@ -75,6 +76,13 @@ android {
     }
 }
 
+aboutLibraries {
+    collect {
+        // Manual entries for things that aren't Maven dependencies (e.g. the bundled font) live here.
+        configPath = file("config")
+    }
+}
+
 dependencies {
     implementation(project(":shared"))
 
@@ -99,6 +107,10 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.compose.material.icons.extended)
 
+    // Open-source license data. We use only the core (no Compose UI module) and render the licenses
+    // with our own AndroidX Compose screen — the plugin generates R.raw.aboutlibraries at build time.
+    implementation(libs.aboutlibraries.core)
+
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
@@ -110,4 +122,104 @@ dependencies {
     androidTestImplementation(libs.workmanager.testing)
     androidTestImplementation(libs.kotlinx.datetime)
     androidTestImplementation(libs.sqldelight.android.driver)
+}
+
+// Regenerates the human-readable CREDITS.md at the repo root from the license data AboutLibraries
+// harvests for the *release* build (the shipped classpath). The in-app licenses screen is
+// regenerated automatically on every build and is the always-current source; CREDITS.md is a
+// committed snapshot, so re-run this task when dependencies are added, updated, or removed:
+//     ./gradlew :androidApp:generateCredits
+// License texts are taken straight from the harvested data, so no network fetch or hardcoded text.
+tasks.register("generateCredits") {
+    group = "documentation"
+    description = "Regenerates CREDITS.md from the harvested open-source license data (release)."
+    dependsOn("prepareLibraryDefinitionsRelease")
+
+    val licenseJson = layout.buildDirectory
+        .file("generated/aboutLibraries/release/res/raw/aboutlibraries.json")
+    val creditsFile = rootProject.layout.projectDirectory.file("CREDITS.md")
+    inputs.file(licenseJson)
+    outputs.file(creditsFile)
+
+    doLast {
+        @Suppress("UNCHECKED_CAST")
+        val data = groovy.json.JsonSlurper()
+            .parseText(licenseJson.get().asFile.readText()) as Map<String, Any?>
+        @Suppress("UNCHECKED_CAST")
+        val libraries = data["libraries"] as List<Map<String, Any?>>
+        @Suppress("UNCHECKED_CAST")
+        val licenses = data["licenses"] as Map<String, Map<String, Any?>>
+
+        // Maps a Maven group to a human author/vendor for grouping (most of the list is one vendor).
+        fun vendorFor(uniqueId: String): Pair<String, String?> {
+            val group = uniqueId.substringBefore(':').lowercase()
+            val table = listOf(
+                Triple(listOf("org.jetbrains.kotlinx"), "JetBrains — Kotlin libraries (kotlinx)", "https://github.com/Kotlin"),
+                Triple(listOf("org.jetbrains.kotlin"), "JetBrains — Kotlin", "https://kotlinlang.org"),
+                Triple(listOf("org.jetbrains"), "JetBrains", "https://www.jetbrains.com"),
+                Triple(listOf("androidx.", "com.google.android", "com.google.guava", "com.google.code"), "Google / Android Open Source Project", "https://developer.android.com/jetpack"),
+                Triple(listOf("io.insert-koin"), "Koin — Arnaud Giuliani (Kotzilla)", "https://insert-koin.io"),
+                Triple(listOf("com.patrykandpatrick.vico"), "Vico — Patryk Goworowski & Patrick Michalik", "https://github.com/patrykandpatrick/vico"),
+                Triple(listOf("app.cash", "com.squareup"), "Square / Cash App", "https://github.com/cashapp"),
+                Triple(listOf("com.mikepenz"), "Mike Penz", "https://mikepenz.dev"),
+                Triple(listOf("co.touchlab"), "Touchlab", "https://touchlab.co"),
+                Triple(listOf("org.brailleinstitute"), "Braille Institute of America", "https://www.brailleinstitute.org"),
+            )
+            for ((prefixes, name, url) in table) {
+                if (prefixes.any { group.startsWith(it) }) return name to url
+            }
+            return group to null
+        }
+
+        fun licensesOf(lib: Map<String, Any?>): List<String> =
+            @Suppress("UNCHECKED_CAST") (lib["licenses"] as? List<String> ?: emptyList())
+
+        val grouped = libraries.groupBy { vendorFor(it["uniqueId"] as String) }
+        val licUsage = mutableMapOf<String, Int>()
+        libraries.forEach { lib -> licensesOf(lib).forEach { licUsage.merge(it, 1, Int::plus) } }
+
+        val sb = StringBuilder()
+        sb.appendLine("# Credits").appendLine()
+        sb.appendLine("Nudgery is built on the work of many open-source projects, and ships a typeface designed for accessibility. We're grateful to everyone who made and maintains them.").appendLine()
+        sb.appendLine("This file is generated by `./gradlew :androidApp:generateCredits` from the release build's actual dependency graph (harvested by [AboutLibraries](https://github.com/mikepenz/AboutLibraries)). The in-app *Settings → About → Open-source licenses* screen is regenerated on every build and is the always-current source; this file is a snapshot of **${libraries.size} libraries**. Re-run the task when dependencies change.").appendLine()
+
+        sb.appendLine("## License summary").appendLine()
+        licUsage.entries.sortedByDescending { it.value }.forEach { (k, c) ->
+            sb.appendLine("- **$k** — $c librar${if (c == 1) "y" else "ies"}")
+        }
+        sb.appendLine()
+
+        sb.appendLine("## Libraries by author").appendLine()
+        grouped.entries
+            .sortedWith(compareByDescending<Map.Entry<Pair<String, String?>, List<Map<String, Any?>>>> { it.value.size }
+                .thenBy { it.key.first.lowercase() })
+            .forEach { (vendor, items) ->
+                val (name, url) = vendor
+                sb.appendLine("### $name")
+                if (url != null) sb.appendLine("<$url>").appendLine()
+                items.sortedBy { (it["name"] as String).lowercase() }.forEach { lib ->
+                    val ver = (lib["artifactVersion"] as? String)?.takeIf { it.isNotBlank() }
+                    val verSuffix = if (ver != null) " `$ver`" else ""
+                    val lics = licensesOf(lib).joinToString(", ").ifBlank { "—" }
+                    sb.appendLine("- ${lib["name"]}$verSuffix — $lics")
+                }
+                sb.appendLine()
+            }
+
+        sb.appendLine("---").appendLine()
+        sb.appendLine("## License texts").appendLine()
+        licUsage.keys.sorted().forEach { key ->
+            val lic = licenses[key]
+            sb.appendLine("### ${(lic?.get("name") as? String) ?: key}").appendLine()
+            val content = (lic?.get("content") as? String)?.takeIf { it.isNotBlank() }
+            if (content != null) {
+                sb.appendLine("```").appendLine(content.trimEnd()).appendLine("```").appendLine()
+            } else {
+                sb.appendLine("See <${(lic?.get("url") as? String) ?: key}>.").appendLine()
+            }
+        }
+
+        creditsFile.asFile.writeText(sb.toString())
+        logger.lifecycle("Wrote CREDITS.md (${libraries.size} libraries).")
+    }
 }

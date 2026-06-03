@@ -22,4 +22,5 @@ sealed class NudgeryScreen(val route: String) {
     }
     object Settings : NudgeryScreen("settings")
     object About : NudgeryScreen("about")
+    object Licenses : NudgeryScreen("licenses")
 }
