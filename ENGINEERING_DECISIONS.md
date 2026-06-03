@@ -94,15 +94,32 @@ shared subset.
 **Tests:** pending — see TODO.md.
 
 ### ED-5: The emoji catalog is generated from Unicode data, not hand-curated
-**Status:** Accepted — implementation pending
+**Status:** Implemented — `buildSrc` parser/generator + `:shared:generateEmojiCatalog` (base catalog; CLDR keywords pending in ED-10)
 **Context:** Maintaining an emoji list by hand would be error-prone and would drift from Unicode.
 **Decision:** A generator parses Unicode's canonical, pre-categorized `emoji-test.txt` into a
 shared categorized list in the KMP module; skin-tone and ZWJ variants are produced by rule. It is
 regenerated once per year when Unicode publishes (September), in the same spirit as
 `generateCredits`. The single shared list feeds both the Android and iOS pickers.
+
+**Artifact shape — generated Kotlin source, compiled in (not a bundled resource).** A build-time
+Gradle task emits the catalog as Kotlin source into a generated `commonMain` source set, compiled
+into the app (generated-on-build, not committed — the vendored `emoji-test.txt` is the source of
+truth in VCS, so the annual diff is just that file). The parser itself is build-time-only and lives
+in `buildSrc` (so it isn't shipped at runtime). This was chosen over **(b) a bundled parsed
+resource** because KMP has no common resource-loading API — (b) would force per-platform loaders or
+a new dependency, which fights ED-elsewhere goals — and over naive single-initializer codegen,
+which would blow the JVM 64 KB per-method limit (the generator therefore **chunks** the
+initializers). If the generated size becomes uncomfortable after keyword data lands ([[ED-10]]),
+the fallback is **(c) a generated Kotlin file holding a packed string + a tiny parser** — same
+`commonMain`, no resource API. This switch is cheap and contained: all consumers (search, defaults,
+UI) depend on the in-memory catalog *model*, not on how it was produced, so the storage shape is
+swappable without downstream blast radius. (Option (b)'s per-platform loaders are the one thing
+that would be expensive to change later, which is why it's ruled out now.)
 **Consequences:** ~once-a-year scripted regeneration; no hand curation. One update covers both
-platforms.
-**Tests:** pending — see TODO.md (generator output shape; parser correctness).
+platforms. Generated source is not committed; CI/build runs the generator before compile.
+**Tests:** parser correctness is unit-tested in `buildSrc`; the generator asserts catalog-shape
+sanity (counts, known emoji present) at build time; a `commonTest` checks the generated catalog is
+present and well-formed.
 
 ### ED-6: Default skin tone is an app setting we apply via the Unicode modifier
 **Status:** Accepted — implementation pending
@@ -120,8 +137,11 @@ Explicit user choices are respected.
 **Status:** Accepted — implementation pending
 **Context:** Users often use a person emoji to represent themselves, so a preferred gender is worth
 defaulting. Unlike skin tone (ED-6), gender is not a single appended modifier — it is encoded as
-distinct base characters (🧑/👨/👩) or ZWJ sequences with ♀/♂ — and reaches a large set (~90–110
-person/role concepts: roles, gestures, activities/sports, fantasy beings).
+distinct base characters (🧑/👨/👩) or ZWJ sequences with ♀/♂ — and reaches a substantial set:
+the spike measured **~74 man/woman-paired concepts** in emoji-test.txt v16.0 (roles, gestures,
+activities/sports, fantasy beings), plus a handful of inherently-gendered concepts that don't use
+the "man/woman X" naming (e.g. prince/princess, pregnant woman, Mrs. Claus). (Initial estimate was
+~90–110; the measurement revised it down.)
 **Decision:** A user setting selects a default gender (neutral / woman / man). It is applied by
 substituting the gendered form **only** for emoji the user picks in *neutral/person* form that have
 gendered variants; it **never** overrides an explicitly gendered pick (tapping 👩 keeps 👩) — the

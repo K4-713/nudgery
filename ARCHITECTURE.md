@@ -369,6 +369,16 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 
 ---
 
+## Emoji Catalog (build-time generation)
+
+The emoji picker (in progress) is backed by a catalog generated from Unicode data at build time, not hand-maintained or parsed at runtime — see ENGINEERING_DECISIONS.md ED-3/ED-4/ED-5 for the rationale.
+
+- **Source of truth:** the vendored `shared/emoji-data/emoji-test.txt` (Unicode UTS #51 test data). Annual refresh = swap that one file and rebuild.
+- **Build-time tools (`buildSrc`):** `EmojiTestParser` parses `emoji-test.txt`; `EmojiCatalogGenerator` derives **base concepts** (fully-qualified, no skin-tone modifier, no hair component) flagged with `acceptsSkinTone`/`hairCapable`, and emits them as Kotlin source. These live in `buildSrc` so they never ship in the app, and are unit-tested there.
+- **Generation:** the `:shared:generateEmojiCatalog` Gradle task writes `GeneratedEmojiCatalog.kt` into a generated `commonMain` source set (registered via `kotlin.srcDir(...)`, so compilation depends on it). It is generated-on-build (under `build/`, gitignored) — only the vendored data file is committed. Initializers are chunked (≤ `CHUNK_SIZE` entries/function) to stay under the JVM 64 KB method limit. Current v16.0 output: ~1,894 base concepts (294 skin-tone-capable, 3 hair-capable).
+- **Runtime model:** consumers depend on `EmojiCatalogEntry` (commonMain), not on how it was produced, so the storage shape is swappable (ED-5 names a packed-string fallback if keyword data later inflates the generated size).
+- **Device availability:** `EmojiGlyphFilter` (commonMain) with `PlatformEmojiGlyphFilter` (androidMain, via `Paint.hasGlyph`) filters the catalog to what the device can actually render (ED-4) — no new dependency, since minSdk 26 covers the API.
+
 ## Security and Privacy
 
 - All data is stored locally on-device. No network calls are made and no data leaves the device except via explicit user-initiated export.
