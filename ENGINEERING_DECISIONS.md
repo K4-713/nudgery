@@ -199,3 +199,21 @@ AGENTS.md handles bundled non-Maven assets like fonts.
 **Consequences:** Attribution stays accurate; one manual credit entry to add when the data is
 embedded and to revisit if the data source changes.
 **Tests:** n/a (attribution/config, verified by the credits process, not a runtime behavior).
+
+### ED-13: Emoji answers are entered via a conventional in-app picker, not the system keyboard
+**Status:** Accepted — implementation pending
+**Context:** No platform can restrict the system keyboard to emoji (the original reason for rolling
+our own picker). The picker should feel like the emoji pickers users already know, so it needs no
+user-facing explanation.
+**Decision:** `EMOJI` answers are entered through our in-app emoji picker, opened from a **read-only
+answer field** so the system soft keyboard never appears. The picker mirrors standard platform
+emoji-picker conventions — typeahead search ([[ED-11]]), recents, and category navigation, with
+variant selection ([[ED-8]]) and applied defaults ([[ED-6]], [[ED-7]]). Because it follows
+conventions users already know, the picker's mechanics are intentionally **not** documented in the
+user-facing README; the behavior is specified here and in the related EDs. Visual specifics are
+deferred to DESIGN.md until visual decisions are made.
+**Consequences:** Consistent, learnable UX with no bespoke user instructions to maintain. The
+read-only field is the seam that suppresses the keyboard and triggers the picker.
+**Tests:** UX/scope decision — the constituent behaviors are covered by [[ED-6]]…[[ED-11]]; the
+read-only-field / no-soft-keyboard behavior is verified at the UI layer when the picker lands
+(TODO Android-UI task).

@@ -3,7 +3,7 @@
 ## Emoji Question Type
 Add an `EMOJI` question type: a TEXT question under the hood, but whose input is restricted to emoji-only, entered through our own emoji picker for an A+ cross-platform experience.
 
-The binding engineering decisions and their rationale live in `ENGINEERING_DECISIONS.md` (ED-1 … ED-12): TEXT-under-the-hood storage, emoji-only validation, never shipping glyphs, per-device (not intersection) availability, generated catalog, default skin tone, default gender (neutral-only, never overriding explicit picks), hair/direction as pick-time variants (not settings), VS16 presentation normalization, CLDR-sourced search keywords, shared keyword/prefix search (no fuzzy/semantic in v1), and the manual CLDR credit. The decision *not* to use the system keyboard or Jetpack `EmojiPickerView` is captured there too.
+The binding engineering decisions and their rationale live in `ENGINEERING_DECISIONS.md` (ED-1 … ED-13): TEXT-under-the-hood storage, emoji-only validation, never shipping glyphs, per-device (not intersection) availability, generated catalog, default skin tone, default gender (neutral-only, never overriding explicit picks), hair/direction as pick-time variants (not settings), VS16 presentation normalization, CLDR-sourced search keywords, shared keyword/prefix search (no fuzzy/semantic in v1), the manual CLDR credit, and the conventional in-app picker entered via a read-only field (deliberately not documented for users). The decision *not* to use the system keyboard or Jetpack `EmojiPickerView` is captured there too.
 
 **Work breakdown:**
 - [ ] Follow the DDD flow: add end-user docs (README) and design spec (DESIGN.md) for the EMOJI type, ensure the ENGINEERING_DECISIONS.md entries are current, then write TDD_ tests, then implement.
