@@ -7,6 +7,8 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.settings.ThemePreference
 
@@ -77,3 +79,17 @@ fun NudgeryTheme(
         content = content
     )
 }
+
+/** How far the raised fill is blended from surface toward onSurface — subtle by design. */
+private const val RAISED_SURFACE_FRACTION = 0.07f
+
+/**
+ * A subtly "raised" fill derived from the live theme: [ColorScheme.surface][androidx.compose.material3.ColorScheme.surface]
+ * blended a little toward [onSurface][androidx.compose.material3.ColorScheme.onSurface], which makes
+ * it a touch lighter in dark mode and a touch darker in light mode. Derived from the active scheme
+ * (so it follows the in-app light/dark override) and stays on-palette rather than relying on the
+ * uncustomized Material surface-container tones.
+ */
+@Composable
+fun raisedSurfaceColor(fraction: Float = RAISED_SURFACE_FRACTION): Color =
+    lerp(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.onSurface, fraction)

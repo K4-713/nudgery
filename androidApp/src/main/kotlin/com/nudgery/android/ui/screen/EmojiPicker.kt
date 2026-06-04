@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Schedule
 import com.nudgery.android.R
 import com.nudgery.android.ui.theme.LocalEmojiScale
+import com.nudgery.android.ui.theme.raisedSurfaceColor
 import com.nudgery.shared.emoji.EmojiCatalogEntry
 import com.nudgery.shared.emoji.EmojiDefaults
 import com.nudgery.shared.emoji.EmojiSearch
@@ -132,7 +134,16 @@ fun EmojiPicker(
     }
     var expandedCell by remember { mutableIntStateOf(-1) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    // A subtly raised fill (ED-aware): always behind the category tabs, and behind the whole picker
+    // while a long-press variant menu is open, so the picker stands out from the screen behind it.
+    val raisedBackground = raisedSurfaceColor()
+    val variantMenuOpen = expandedCell != -1
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(if (variantMenuOpen) raisedBackground else Color.Transparent)
+    ) {
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
@@ -149,6 +160,7 @@ fun EmojiPicker(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(raisedBackground)
                     .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
