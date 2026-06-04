@@ -15,6 +15,9 @@ import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.util.STOP_WORDS
 import com.nudgery.shared.util.extractEmojiWords
+import kotlin.math.floor
+import kotlin.math.log10
+import kotlin.math.pow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
@@ -111,10 +114,13 @@ class GetVisualizationDataUseCase(
         val fillViewport = timeframe != Timeframe.WEEKLY
         // The line graph fits exactly the window (no internal scroll); the dashboard moves the window.
         val lineVisibleDays = (windowStart.until(windowEnd, DateTimeUnit.DAY) + 1).toInt().coerceAtLeast(1)
+        // A fixed Y range, computed over ALL answers, keeps the line graph's axis stable while the
+        // window is scrubbed (so absolute maxima stay at a constant height).
+        val lineYRange = lineGraphYRange(question, allAnswers, timeZone)
 
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
-            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays, lineYRange)
+            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays, lineYRange)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, source.optionsById, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, source.optionsById, includeColumnChart = false)
             QuestionType.TEXT, QuestionType.EMOJI -> buildTextCharts(answers)
@@ -147,7 +153,8 @@ class GetVisualizationDataUseCase(
         windowEnd: LocalDate,
         granularity: HeatMapGranularity,
         fillViewport: Boolean,
-        lineVisibleDays: Int
+        lineVisibleDays: Int,
+        lineYRange: Pair<Double, Double>?
     ): List<VisualizationData> {
         val dailyCounts = answers
             .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
@@ -163,7 +170,7 @@ class GetVisualizationDataUseCase(
 
         return listOf(
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport),
-            VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd, lineVisibleDays),
+            VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd, lineVisibleDays, lineYRange?.first, lineYRange?.second),
             // YES/NO sit at opposite ends of the palette so they stay clearly distinct.
             VisualizationData.ColumnChart(listOf(
                 NamedCount("YES", totalYes, orderFraction = 0f),
@@ -179,7 +186,8 @@ class GetVisualizationDataUseCase(
         windowEnd: LocalDate,
         granularity: HeatMapGranularity,
         fillViewport: Boolean,
-        lineVisibleDays: Int
+        lineVisibleDays: Int,
+        lineYRange: Pair<Double, Double>?
     ): List<VisualizationData> {
         val points = answers
             .mapNotNull { answer ->
@@ -196,9 +204,47 @@ class GetVisualizationDataUseCase(
             .sortedBy { it.date }
 
         return listOf(
-            VisualizationData.LineGraph(points, windowStart, windowEnd, lineVisibleDays),
+            VisualizationData.LineGraph(points, windowStart, windowEnd, lineVisibleDays, lineYRange?.first, lineYRange?.second),
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport)
         )
+    }
+
+    /**
+     * The fixed Y range for the line graph, computed over **all** answers so the axis is identical no
+     * matter which window is shown. SCALE uses its defined bounds; NUMBER and YES/NO anchor at 0 and
+     * top out at the rounded global maximum (max value, or max daily YES count). Null = auto-fit.
+     */
+    private fun lineGraphYRange(
+        question: Question,
+        allAnswers: List<Answer>,
+        timeZone: TimeZone
+    ): Pair<Double, Double>? = when (question.type) {
+        QuestionType.SCALE -> (question.scaleMin?.toDouble() ?: 0.0) to (question.scaleMax?.toDouble() ?: 10.0)
+        QuestionType.NUMBER -> {
+            val max = allAnswers.mapNotNull { it.value.toDoubleOrNull() }.maxOrNull() ?: 0.0
+            0.0 to niceCeil(max)
+        }
+        QuestionType.YES_NO -> {
+            val maxDailyYes = allAnswers
+                .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
+                .maxOfOrNull { (_, day) -> day.count { it.value.uppercase() == "YES" } } ?: 0
+            0.0 to niceCeil(maxDailyYes.toDouble())
+        }
+        else -> null
+    }
+
+    /** Rounds [value] up to a clean axis bound (1, 2, or 5 × a power of ten); a value ≤ 0 yields 1. */
+    private fun niceCeil(value: Double): Double {
+        if (value <= 0.0) return 1.0
+        val magnitude = 10.0.pow(floor(log10(value)))
+        val fraction = value / magnitude
+        val nice = when {
+            fraction <= 1.0 -> 1.0
+            fraction <= 2.0 -> 2.0
+            fraction <= 5.0 -> 5.0
+            else -> 10.0
+        }
+        return nice * magnitude
     }
 
     private fun buildTextCharts(answers: List<Answer>): List<VisualizationData> {

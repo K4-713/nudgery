@@ -703,6 +703,28 @@ class VisualizationDataTest {
     }
 
     @Test
+    fun TDD_numberLineGraphYAxisIsZeroToGlobalMaxRegardlessOfWindow() = runTest {
+        // Scrubbing must not rescale the Y axis: NUMBER is fixed to 0..(rounded global max) over all
+        // data, so a window of small values uses the same axis as the window holding the peak.
+        val (nudgeId, questionId) = numberNudgeWithAnswers(listOf(2 to "5", 40 to "50"))
+        val source = getVisualizationData.loadSource(nudgeId, questionId)
+        assertNotNull(source)
+        val now = Clock.System.now()
+
+        fun lineGraph(offsetDays: Int) = getVisualizationData
+            .build(source, Timeframe.WEEKLY, periodOffsetDays = offsetDays, now = now)
+            .filterIsInstance<VisualizationData.LineGraph>().first()
+
+        val currentWeek = lineGraph(0) // only sees the value-5 point
+        assertEquals(0.0, currentWeek.yMin, "NUMBER axis anchors at zero")
+        assertEquals(50.0, currentWeek.yMax, "axis tops out at the rounded global max, not the window's max")
+
+        val weekWithPeak = lineGraph(7)
+        assertEquals(currentWeek.yMin, weekWithPeak.yMin, "axis is identical across windows")
+        assertEquals(currentWeek.yMax, weekWithPeak.yMax, "axis is identical across windows")
+    }
+
+    @Test
     fun buildFromLoadedSourceMatchesExecuteAcrossTimeframes() = runTest {
         // Refactor safety: rendering from a cached, preloaded source must produce exactly what the
         // database-reading execute() path produces, for every timeframe.

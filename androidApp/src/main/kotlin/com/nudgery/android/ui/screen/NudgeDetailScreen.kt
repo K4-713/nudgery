@@ -750,7 +750,9 @@ private fun NudgeryChart(
                         points = visualization.points,
                         windowStart = visualization.windowStart,
                         windowEnd = visualization.windowEnd,
-                        visibleDays = visualization.visibleDays
+                        visibleDays = visualization.visibleDays,
+                        yMin = visualization.yMin,
+                        yMax = visualization.yMax
                     )
                 }
                 // Categorical charts: no time axis, so a scrubber underneath moves the window.
@@ -1491,7 +1493,9 @@ private fun LineGraphChart(
     points: List<DataPoint>,
     windowStart: LocalDate,
     windowEnd: LocalDate,
-    visibleDays: Int = Int.MAX_VALUE
+    visibleDays: Int = Int.MAX_VALUE,
+    yMin: Double? = null,
+    yMax: Double? = null
 ) {
     if (points.isEmpty()) {
         Text(stringResource(R.string.detail_no_answers), style = MaterialTheme.typography.bodySmall)
@@ -1528,7 +1532,10 @@ private fun LineGraphChart(
             rememberLineCartesianLayer(
                 rangeProvider = CartesianLayerRangeProvider.fixed(
                     minX = 0.0,
-                    maxX = (windowDays - 1).toDouble()
+                    maxX = (windowDays - 1).toDouble(),
+                    // Fixed Y bounds (ED: stable axis while scrubbing); null lets Vico auto-fit.
+                    minY = yMin,
+                    maxY = yMax
                 )
             ),
             startAxis = VerticalAxis.rememberStart(),

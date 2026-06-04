@@ -576,6 +576,13 @@ week-cell count, reshuffling the grid. Weekly and monthly have day cells and ste
 **Line graph windowing.** The line graph fits exactly the window's day span; it does not scroll
 internally. All-time fits the entire range.
 
+**Line graph Y axis (fixed, not auto-fit).** The Y axis is locked to a stable range computed over
+*all* the question's answers, so scrubbing the window never rescales it and absolute maxima stay at a
+constant height. SCALE uses its defined min–max (a "7" is always at the same height); NUMBER and the
+YES/NO daily-count line anchor at 0 and top out at the global maximum rounded up to a clean bound
+(1/2/5 × 10ⁿ). The trade-off — a single large NUMBER outlier compresses normal values — is accepted
+in favor of comparability across windows.
+
 **Bar / column chart color.** Bars carry the user's chosen chart palette, but — unlike the heat map
 and bubble chart, which spend color on magnitude because they have no length — a bar already encodes
 its count through its length, so color is spent on *identity* instead. Each category is pinned to a

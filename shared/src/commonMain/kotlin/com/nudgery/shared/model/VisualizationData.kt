@@ -49,7 +49,13 @@ sealed class VisualizationData {
          * Number of days the chart shows at once before scrolling, set from the selected timeframe.
          * `Int.MAX_VALUE` means "fit the whole range with no scrolling" (all-time).
          */
-        val visibleDays: Int = Int.MAX_VALUE
+        val visibleDays: Int = Int.MAX_VALUE,
+        /**
+         * Fixed Y-axis bounds so the axis stays stable while scrubbing the window (SCALE uses its
+         * defined range; NUMBER/YES use 0 to the rounded global max). Null = auto-fit to visible data.
+         */
+        val yMin: Double? = null,
+        val yMax: Double? = null
     ) : VisualizationData()
     data class ColumnChart(val entries: List<NamedCount>) : VisualizationData()
     data class BarChart(val entries: List<NamedCount>) : VisualizationData()
