@@ -20,15 +20,24 @@ data class NamedCount(
     val orderFraction: Float = 0f
 )
 
+/**
+ * The time unit of each heat-map cell, chosen from the dashboard timeframe (see `computeGranularity`).
+ * The weekly view renders its cells as a single centered row — the only non-`fillViewport` layout;
+ * every other timeframe fills the viewport as an auto-fit grid (see `CalendarHeatMapChart`).
+ *
+ * Note: with the fill layout, `SINGLE_DAY`/`DAY` and `WEEK`/`WEEK_GRID` now render identically and
+ * differ only in which timeframe selects them — a remaining simplification opportunity.
+ */
 enum class HeatMapGranularity {
-    /** One cell per day, rendered as a single horizontal strip (8 days visible per screen). */
+    /** One cell per day; weekly draws these as a single row, short all-time spans as an auto-fit grid. */
     SINGLE_DAY,
-    /** One cell per day, rendered as a 7-row Mon–Sun grid (GitHub contribution graph style). */
+    /** One cell per day, auto-fit grid (monthly, and 30–90-day all-time spans). */
     DAY,
-    /** One cell per week, rendered as a single horizontal strip that scrolls. */
+    /** One cell per week, auto-fit grid (90–365-day all-time spans). */
     WEEK,
-    /** One cell per week, rendered as a multi-row grid showing roughly a year per screen, scrolling for older weeks. */
+    /** One cell per week, auto-fit grid (yearly). */
     WEEK_GRID,
+    /** One cell per calendar month, auto-fit grid (all-time spans over a year). */
     MONTH
 }
 

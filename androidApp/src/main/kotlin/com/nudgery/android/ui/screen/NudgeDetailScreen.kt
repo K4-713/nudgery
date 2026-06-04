@@ -149,8 +149,6 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.until
@@ -881,11 +879,6 @@ private fun TimeWindowScrubber(nav: ChartWindowNav, modifier: Modifier = Modifie
 private const val SINGLE_DAY_GRID_ROWS = 1
 private const val SINGLE_DAY_GRID_VISIBLE_COLS = 7
 
-// The yearly (WEEK_GRID) heat map wraps week cells into this many rows and targets
-// WEEK_GRID_VISIBLE_COLS columns per screen (≈ a year: 5 × 11 ≈ 55 weeks), scrolling for older data.
-private const val WEEK_GRID_ROWS = 5
-private const val WEEK_GRID_VISIBLE_COLS = 11
-
 // The yearly view shows about this many month labels across the grid width — spaced ~1/N of the
 // canvas apart so the labels stay sparse (three floating markers) rather than one per month.
 private const val WEEK_GRID_TARGET_MONTH_LABELS = 3
@@ -910,18 +903,6 @@ private fun CalendarHeatMapChart(
     val density = LocalDensity.current
 
     val countByDate = remember(counts) { counts.associate { it.date to it.value } }
-
-    val dayGridWeeks = remember(windowStart, windowEnd) {
-        val gridStart = windowStart.minus(windowStart.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
-        val gridEnd = windowEnd.plus(7 - windowEnd.dayOfWeek.isoDayNumber, DateTimeUnit.DAY)
-        buildList {
-            var week = gridStart
-            while (week <= gridEnd) {
-                add(week)
-                week = week.plus(7, DateTimeUnit.DAY)
-            }
-        }
-    }
 
     // One entry per calendar day; only built when granularity == SINGLE_DAY.
     val singleDayCells = remember(counts, windowStart, windowEnd, granularity) {
@@ -1068,62 +1049,31 @@ private fun CalendarHeatMapChart(
                 }
             } else {
 
-            val numberOfCells = when (granularity) {
-                // Number of columns in the grid (each column holds SINGLE_DAY_GRID_ROWS days).
-                HeatMapGranularity.SINGLE_DAY ->
-                    (singleDayCells.size + SINGLE_DAY_GRID_ROWS - 1) / SINGLE_DAY_GRID_ROWS
-                HeatMapGranularity.DAY -> dayGridWeeks.size
-                HeatMapGranularity.WEEK -> weekCells.size
-                // Number of columns in the year grid (each column holds WEEK_GRID_ROWS weeks).
-                HeatMapGranularity.WEEK_GRID ->
-                    (weekCells.size + WEEK_GRID_ROWS - 1) / WEEK_GRID_ROWS
-                HeatMapGranularity.MONTH -> monthCells.size
-            }
-            val numberOfRows = if (granularity == HeatMapGranularity.DAY) 7 else 1
-
-            val maxCellByHeight = (availableHeightPx - labelAreaPx - gapPx * (numberOfRows - 1)) / numberOfRows
-            val naturalCellByWidth = if (numberOfCells > 1)
-                (availableWidthPx - gapPx * (numberOfCells - 1)) / numberOfCells
-            else availableWidthPx
-
-            val maxCellByHeightForSingleDayGrid =
-                (availableHeightPx - labelAreaPx - gapPx * (SINGLE_DAY_GRID_ROWS - 1)) / SINGLE_DAY_GRID_ROWS
-            val maxCellByHeightForWeekGrid =
-                (availableHeightPx - labelAreaPx - gapPx * (WEEK_GRID_ROWS - 1)) / WEEK_GRID_ROWS
-
-            val cellPx = when (granularity) {
-                HeatMapGranularity.SINGLE_DAY ->
-                    // Weekly: target SINGLE_DAY_GRID_VISIBLE_COLS columns per screen, then scroll.
-                    minOf(maxCellByHeightForSingleDayGrid,
-                        maxOf((availableWidthPx - gapPx * (SINGLE_DAY_GRID_VISIBLE_COLS - 1)) / SINGLE_DAY_GRID_VISIBLE_COLS, minCellPx))
-                HeatMapGranularity.WEEK_GRID ->
-                    // Yearly: target WEEK_GRID_VISIBLE_COLS columns (~a year) per screen, then scroll
-                    // for older weeks. Height (WEEK_GRID_ROWS rows) still caps the cell size.
-                    minOf(maxCellByHeightForWeekGrid,
-                        maxOf((availableWidthPx - gapPx * (WEEK_GRID_VISIBLE_COLS - 1)) / WEEK_GRID_VISIBLE_COLS, minCellPx))
-                else ->
-                    minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
-            }
-            // Weekly's single row is centered vertically in the card; one short row would otherwise
-            // float against the top of the 16:9 card. Other granularities pin to the top under labels.
-            val singleDayTopPx = if (granularity == HeatMapGranularity.SINGLE_DAY)
-                labelAreaPx + maxOf(0f, (availableHeightPx - labelAreaPx - cellPx) / 2f)
-            else labelAreaPx
+            // The non-fill path renders the weekly view only (SINGLE_DAY): a single row of day
+            // cells, one column per day. Every other timeframe fills the viewport (handled above).
+            val numberOfCells = singleDayCells.size
+            // Fit all the week's days across the width (capped by the card height, floored at minCellPx).
+            val cellPx = minOf(
+                availableHeightPx - labelAreaPx,
+                maxOf(
+                    (availableWidthPx - gapPx * (SINGLE_DAY_GRID_VISIBLE_COLS - 1)) / SINGLE_DAY_GRID_VISIBLE_COLS,
+                    minCellPx
+                )
+            )
+            // Center the single short row vertically; it would otherwise float at the top of the card.
+            val singleDayTopPx = labelAreaPx + maxOf(0f, (availableHeightPx - labelAreaPx - cellPx) / 2f)
 
             val contentWidthPx = if (numberOfCells > 0)
                 numberOfCells * (cellPx + gapPx) - gapPx else 0f
-            val needsScroll = !fillViewport && contentWidthPx > availableWidthPx
+            val needsScroll = contentWidthPx > availableWidthPx
 
             LaunchedEffect(contentWidthPx) {
                 if (needsScroll) scrollState.scrollTo(scrollState.maxValue)
             }
 
-            val tapModifier = Modifier.pointerInput(granularity, cellPx, gapPx, labelAreaPx, singleDayTopPx, counts) {
+            val tapModifier = Modifier.pointerInput(cellPx, gapPx, singleDayTopPx, counts) {
                 detectTapGestures { offset ->
-                    selectedCell = hitTestHeatCell(
-                        offset, granularity, cellPx, gapPx, labelAreaPx, singleDayTopPx,
-                        singleDayCells, dayGridWeeks, weekCells, monthCells, countByDate
-                    )
+                    selectedCell = hitTestWeeklyCell(offset, cellPx, gapPx, singleDayTopPx, singleDayCells)
                 }
             }
 
@@ -1180,177 +1130,9 @@ private fun CalendarHeatMapChart(
                             }
                         }
                     }
-                    HeatMapGranularity.DAY -> {
-                        if (dayGridWeeks.isEmpty()) return@Canvas
-                        var currentMonth = -1
-                        var lastLabelEnd = Float.NEGATIVE_INFINITY
-                        dayGridWeeks.forEachIndexed { weekIdx, weekStart ->
-                            val weekX = weekIdx * (cellPx + gapPx)
-                            val weekMonth = weekStart.monthNumber
-                            if (weekIdx == 0 || weekMonth != currentMonth) {
-                                currentMonth = weekMonth
-                                val label = weekStart.month.name.take(3)
-                                    .lowercase().replaceFirstChar { it.uppercase() }
-                                val measured = textMeasurer.measure(label, labelStyle)
-                                if (weekX >= lastLabelEnd + 4.dp.toPx()) {
-                                    drawText(measured, topLeft = Offset(weekX, 0f))
-                                    lastLabelEnd = weekX + measured.size.width
-                                }
-                            }
-                            for (dayIdx in 0..6) {
-                                val date = weekStart.plus(dayIdx, DateTimeUnit.DAY)
-                                val rawCount = countByDate[date]
-                                val cellTopLeft = Offset(weekX, labelAreaPx + dayIdx * (cellPx + gapPx))
-                                drawRoundRect(
-                                    color = when {
-                                        rawCount == null -> emptyCellColor
-                                        rawCount <= 0.0 -> zeroCellColor
-                                        else -> paletteStops.colorAt(
-                                            (rawCount / maxValue).toFloat().coerceIn(0f, 1f), isDark
-                                        )
-                                    },
-                                    topLeft = cellTopLeft,
-                                    size = Size(cellPx, cellPx),
-                                    cornerRadius = CornerRadius(cellPx * 0.15f)
-                                )
-                                if (date == selectedDate) {
-                                    drawRoundRect(
-                                        color = outlineColor,
-                                        topLeft = cellTopLeft,
-                                        size = Size(cellPx, cellPx),
-                                        cornerRadius = CornerRadius(cellPx * 0.15f),
-                                        style = Stroke(width = 1.5.dp.toPx())
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    HeatMapGranularity.WEEK -> {
-                        if (weekCells.isEmpty()) return@Canvas
-                        var currentMonth = -1
-                        var lastLabelEnd = Float.NEGATIVE_INFINITY
-                        weekCells.forEachIndexed { idx, (weekStart, value) ->
-                            val x = idx * (cellPx + gapPx)
-                            val weekMonth = weekStart.monthNumber
-                            if (idx == 0 || weekMonth != currentMonth) {
-                                currentMonth = weekMonth
-                                val label = weekStart.month.name.take(3)
-                                    .lowercase().replaceFirstChar { it.uppercase() }
-                                val measured = textMeasurer.measure(label, labelStyle)
-                                if (x >= lastLabelEnd + 4.dp.toPx()) {
-                                    drawText(measured, topLeft = Offset(x, 0f))
-                                    lastLabelEnd = x + measured.size.width
-                                }
-                            }
-                            drawRoundRect(
-                                color = when {
-                                    value == null -> emptyCellColor
-                                    value <= 0.0 -> zeroCellColor
-                                    else -> paletteStops.colorAt(
-                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
-                                    )
-                                },
-                                topLeft = Offset(x, labelAreaPx),
-                                size = Size(cellPx, cellPx),
-                                cornerRadius = CornerRadius(cellPx * 0.15f)
-                            )
-                            if (weekStart == selectedDate) {
-                                drawRoundRect(
-                                    color = outlineColor,
-                                    topLeft = Offset(x, labelAreaPx),
-                                    size = Size(cellPx, cellPx),
-                                    cornerRadius = CornerRadius(cellPx * 0.15f),
-                                    style = Stroke(width = 1.5.dp.toPx())
-                                )
-                            }
-                        }
-                    }
-                    HeatMapGranularity.WEEK_GRID -> {
-                        if (weekCells.isEmpty()) return@Canvas
-                        // Column-major: each column holds WEEK_GRID_ROWS weeks (oldest at top-left),
-                        // columns advance chronologically left to right.
-                        var currentMonth = -1
-                        var lastLabelEnd = Float.NEGATIVE_INFINITY
-                        weekCells.forEachIndexed { idx, (weekStart, value) ->
-                            val colIdx = idx / WEEK_GRID_ROWS
-                            val rowIdx = idx % WEEK_GRID_ROWS
-                            val x = colIdx * (cellPx + gapPx)
-                            val y = labelAreaPx + rowIdx * (cellPx + gapPx)
-                            // Month labels along the top, keyed to the first week of each column.
-                            if (rowIdx == 0) {
-                                val weekMonth = weekStart.monthNumber
-                                if (colIdx == 0 || weekMonth != currentMonth) {
-                                    currentMonth = weekMonth
-                                    val label = weekStart.month.name.take(3)
-                                        .lowercase().replaceFirstChar { it.uppercase() }
-                                    val measured = textMeasurer.measure(label, labelStyle)
-                                    if (x >= lastLabelEnd + 4.dp.toPx()) {
-                                        drawText(measured, topLeft = Offset(x, 0f))
-                                        lastLabelEnd = x + measured.size.width
-                                    }
-                                }
-                            }
-                            drawRoundRect(
-                                color = when {
-                                    value == null -> emptyCellColor
-                                    value <= 0.0 -> zeroCellColor
-                                    else -> paletteStops.colorAt(
-                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
-                                    )
-                                },
-                                topLeft = Offset(x, y),
-                                size = Size(cellPx, cellPx),
-                                cornerRadius = CornerRadius(cellPx * 0.15f)
-                            )
-                            if (weekStart == selectedDate) {
-                                drawRoundRect(
-                                    color = outlineColor,
-                                    topLeft = Offset(x, y),
-                                    size = Size(cellPx, cellPx),
-                                    cornerRadius = CornerRadius(cellPx * 0.15f),
-                                    style = Stroke(width = 1.5.dp.toPx())
-                                )
-                            }
-                        }
-                    }
-                    HeatMapGranularity.MONTH -> {
-                        if (monthCells.isEmpty()) return@Canvas
-                        var currentYear = -1
-                        var lastLabelEnd = Float.NEGATIVE_INFINITY
-                        monthCells.forEachIndexed { idx, (monthStart, value) ->
-                            val x = idx * (cellPx + gapPx)
-                            val year = monthStart.year
-                            if (idx == 0 || year != currentYear) {
-                                currentYear = year
-                                val measured = textMeasurer.measure(year.toString(), labelStyle)
-                                if (x >= lastLabelEnd + 4.dp.toPx()) {
-                                    drawText(measured, topLeft = Offset(x, 0f))
-                                    lastLabelEnd = x + measured.size.width
-                                }
-                            }
-                            drawRoundRect(
-                                color = when {
-                                    value == null -> emptyCellColor
-                                    value <= 0.0 -> zeroCellColor
-                                    else -> paletteStops.colorAt(
-                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
-                                    )
-                                },
-                                topLeft = Offset(x, labelAreaPx),
-                                size = Size(cellPx, cellPx),
-                                cornerRadius = CornerRadius(cellPx * 0.15f)
-                            )
-                            if (monthStart == selectedDate) {
-                                drawRoundRect(
-                                    color = outlineColor,
-                                    topLeft = Offset(x, labelAreaPx),
-                                    size = Size(cellPx, cellPx),
-                                    cornerRadius = CornerRadius(cellPx * 0.15f),
-                                    style = Stroke(width = 1.5.dp.toPx())
-                                )
-                            }
-                        }
-                    }
+                    // Only SINGLE_DAY (weekly) reaches the non-fill path; every other granularity
+                    // fills the viewport and is drawn above.
+                    else -> Unit
                 }
             }
             }
@@ -1453,54 +1235,22 @@ private fun hitTestFillGrid(
 }
 
 /** Maps a tap [offset] (in the chart's content coordinate space) to the cell it landed on. */
-private fun hitTestHeatCell(
+/**
+ * Maps a tap to a day cell in the weekly single-row heat map (the only non-fill layout). Every other
+ * timeframe fills the viewport and is hit-tested by [hitTestFillGrid].
+ */
+private fun hitTestWeeklyCell(
     offset: Offset,
-    granularity: HeatMapGranularity,
     cellPx: Float,
     gapPx: Float,
-    labelAreaPx: Float,
-    singleDayTopPx: Float,
-    singleDayCells: List<Pair<LocalDate, Double?>>,
-    dayGridWeeks: List<LocalDate>,
-    weekCells: List<Pair<LocalDate, Double?>>,
-    monthCells: List<Pair<LocalDate, Double?>>,
-    countByDate: Map<LocalDate, Double>
+    rowTopPx: Float,
+    cells: List<Pair<LocalDate, Double?>>
 ): SelectedHeatCell? {
     val step = cellPx + gapPx
-    if (step <= 0f || offset.x < 0f) return null
+    if (step <= 0f || offset.x < 0f || offset.y < rowTopPx) return null
+    if (((offset.y - rowTopPx) / step).toInt() != 0) return null  // tap is below the single row
     val column = (offset.x / step).toInt()
-    val yInGrid = offset.y - labelAreaPx
-    if (yInGrid < 0f) return null
-    val row = (yInGrid / step).toInt()
-
-    return when (granularity) {
-        HeatMapGranularity.SINGLE_DAY -> {
-            // The single row is centered vertically, so hit-test against its actual top, not the label.
-            val singleDayRow = ((offset.y - singleDayTopPx) / step).toInt()
-            if (offset.y < singleDayTopPx || singleDayRow !in 0 until SINGLE_DAY_GRID_ROWS) return null
-            val index = column * SINGLE_DAY_GRID_ROWS + singleDayRow
-            singleDayCells.getOrNull(index)?.let { SelectedHeatCell(it.first, it.second) }
-        }
-        HeatMapGranularity.DAY -> {
-            if (row !in 0..6) return null
-            val weekStart = dayGridWeeks.getOrNull(column) ?: return null
-            val date = weekStart.plus(row, DateTimeUnit.DAY)
-            SelectedHeatCell(date, countByDate[date])
-        }
-        HeatMapGranularity.WEEK -> {
-            if (row != 0) return null
-            weekCells.getOrNull(column)?.let { SelectedHeatCell(it.first, it.second) }
-        }
-        HeatMapGranularity.WEEK_GRID -> {
-            if (row !in 0 until WEEK_GRID_ROWS) return null
-            val index = column * WEEK_GRID_ROWS + row
-            weekCells.getOrNull(index)?.let { SelectedHeatCell(it.first, it.second) }
-        }
-        HeatMapGranularity.MONTH -> {
-            if (row != 0) return null
-            monthCells.getOrNull(column)?.let { SelectedHeatCell(it.first, it.second) }
-        }
-    }
+    return cells.getOrNull(column)?.let { SelectedHeatCell(it.first, it.second) }
 }
 
 /** Human-readable label for a selected cell's period, matching its granularity. */
