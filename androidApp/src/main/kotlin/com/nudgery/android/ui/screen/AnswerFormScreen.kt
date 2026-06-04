@@ -37,7 +37,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerFormUiState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
 import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.android.ui.theme.emojiScaledStyle
@@ -129,18 +132,26 @@ private fun AnswerStep(
 ) {
     val question = uiState.questions.getOrNull(stepIndex) ?: return
 
+    // The EMOJI answer field is read-only, so the keyboard is only ever open when the picker's search
+    // field is focused. In that case, drop the chrome (title + Save/Cancel) and give the picker the
+    // full space above the keyboard, with the search field near the top.
+    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val emojiSearchMode = question.question.type == QuestionType.EMOJI && keyboardOpen
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        if (!emojiSearchMode) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = question.question.text,
-            style = emojiScaledStyle(question.question.text, MaterialTheme.typography.headlineSmall),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
+            Text(
+                text = question.question.text,
+                style = emojiScaledStyle(question.question.text, MaterialTheme.typography.headlineSmall),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         when (question.question.type) {
             QuestionType.YES_NO -> YesNoInput(
@@ -178,6 +189,7 @@ private fun AnswerStep(
                 recents = uiState.emojiRecents,
                 onAppend = onEmojiAppend,
                 onBackspace = onEmojiBackspace,
+                compact = emojiSearchMode,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -189,7 +201,8 @@ private fun AnswerStep(
             Spacer(modifier = Modifier.weight(1f))
         }
 
-        Row(
+        // Buttons are hidden while the emoji search keyboard is open (dismiss it to save).
+        if (!emojiSearchMode) Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -396,21 +409,25 @@ private fun EmojiInput(
     recents: List<String>,
     onAppend: (String) -> Unit,
     onBackspace: () -> Unit,
+    compact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = currentAnswer.ifEmpty { stringResource(R.string.emoji_answer_hint) },
-                // The chosen emoji honor the global emoji scale (ED-14); the empty hint stays normal.
-                fontSize = if (currentAnswer.isEmpty()) 16.sp else (28 * LocalEmojiScale.current).sp,
-                modifier = Modifier.weight(1f)
-            )
-            if (currentAnswer.isNotEmpty()) {
-                TextButton(onClick = onBackspace) { Text("⌫", fontSize = 22.sp) }
+        // The chosen-emoji display is hidden while searching (compact) to maximize picker space.
+        if (!compact) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = currentAnswer.ifEmpty { stringResource(R.string.emoji_answer_hint) },
+                    // The chosen emoji honor the global emoji scale (ED-14); the empty hint stays normal.
+                    fontSize = if (currentAnswer.isEmpty()) 16.sp else (28 * LocalEmojiScale.current).sp,
+                    modifier = Modifier.weight(1f)
+                )
+                if (currentAnswer.isNotEmpty()) {
+                    TextButton(onClick = onBackspace) { Text("⌫", fontSize = 22.sp) }
+                }
             }
         }
         EmojiPicker(
