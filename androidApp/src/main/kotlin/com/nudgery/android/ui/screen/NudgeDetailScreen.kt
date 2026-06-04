@@ -136,7 +136,7 @@ import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
-import com.nudgery.shared.usecase.isSingleEmoji
+import com.nudgery.shared.util.isSingleEmoji
 import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.model.VisualizationData
 import kotlinx.datetime.Clock

@@ -63,7 +63,7 @@ must round-trip the new type.
 **Tests:** pending — see TODO.md.
 
 ### ED-2: Emoji answers are validated emoji-only, not merely hinted
-**Status:** Accepted — implementation pending
+**Status:** Implemented (shared logic) — `util.sanitizeToEmoji` / `util.isEmojiOnly`, promoted from the emoji helpers; UI wiring lands with the picker (ED-13, task #8)
 **Context:** No Android/iOS API can restrict the system keyboard to emoji, so input correctness
 cannot rely on the keyboard. Users may also paste, dictate, or use a hardware keyboard.
 **Decision:** An emoji-only validator (promoted from the existing `extractEmojiWords` /
@@ -167,7 +167,7 @@ still reach these variants at pick time.
 **Tests:** pending — see TODO.md (picker surfaces hair/direction variants where they exist).
 
 ### ED-9: Emoji answers are normalized to emoji presentation (VS16)
-**Status:** Accepted — implementation pending
+**Status:** Implemented (shared logic) — `emoji.normalizeEmojiPresentation` snaps each emoji to the catalog's fully-qualified form; UI wiring lands with the picker (task #8)
 **Context:** Dual-use symbols can render as a monochrome *text* glyph (VS15, U+FE0E) or a color
 *emoji* glyph (VS16, U+FE0F). In an emoji-only field the color form is always intended.
 **Decision:** When storing/displaying an `EMOJI` answer, the validator/normalizer ensures emoji

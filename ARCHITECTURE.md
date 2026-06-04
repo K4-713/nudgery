@@ -379,6 +379,7 @@ The emoji picker (in progress) is backed by a catalog generated from Unicode dat
 - **Generation:** the `:shared:generateEmojiCatalog` Gradle task writes `GeneratedEmojiCatalog.kt` into a generated `commonMain` source set (registered via `kotlin.srcDir(...)`, so compilation depends on it). It is generated-on-build (under `build/`, gitignored) — only the vendored data file is committed. Initializers are chunked (≤ `CHUNK_SIZE` entries/function) to stay under the JVM 64 KB method limit. Current v16.0 output: ~1,894 base concepts (294 skin-tone-capable, 3 hair-capable).
 - **Runtime model:** consumers depend on `EmojiCatalogEntry` (commonMain), not on how it was produced, so the storage shape is swappable (ED-5 names a packed-string fallback if keyword data later inflates the generated size).
 - **Device availability:** `EmojiGlyphFilter` (commonMain) with `PlatformEmojiGlyphFilter` (androidMain, via `Paint.hasGlyph`) filters the catalog to what the device can actually render (ED-4) — no new dependency, since minSdk 26 covers the API.
+- **Validation & presentation:** `util/EmojiText.kt` holds the shared emoji helpers (`extractEmojiWords`, `isSingleEmoji`, now also `sanitizeToEmoji`/`isEmojiOnly` — ED-2, with keycap support) reused by both the packed-bubble tokenizer and the EMOJI answer validator; `emoji/EmojiPresentation.kt` (`normalizeEmojiPresentation`) snaps emoji to their catalog fully-qualified form to guarantee emoji (not text) presentation (ED-9).
 
 ## Security and Privacy
 

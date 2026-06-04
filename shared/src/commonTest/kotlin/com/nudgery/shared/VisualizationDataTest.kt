@@ -14,7 +14,7 @@ import com.nudgery.shared.usecase.QuestionRequest
 import com.nudgery.shared.usecase.ScheduleRequest
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.analysisWindow
-import com.nudgery.shared.usecase.isSingleEmoji
+import com.nudgery.shared.util.isSingleEmoji
 import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.util.FakeNotificationScheduler
 import com.nudgery.shared.util.TestRepositories
