@@ -8,6 +8,9 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import android.os.SystemClock
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +56,10 @@ import org.koin.androidx.viewmodel.ext.android.viewModel as koinActivityViewMode
 
 private const val TAG = "MainActivity"
 private const val NAV_TRANSITION_DURATION_MS = 490
+
+// Splash hold: the icon lingers at least this long, until the nudge list loads, capped for safety.
+private const val MIN_SPLASH_HOLD_MS = 550L
+private const val MAX_SPLASH_HOLD_MS = 2000L
 
 class MainActivity : ComponentActivity() {
 
@@ -189,6 +196,22 @@ class MainActivity : ComponentActivity() {
               }
             }
         }
+
+        // Hold the system splash a beat longer — until the nudge list has loaded (and at least a
+        // brief minimum) — so launch goes straight from the icon to the list, with no flash of the
+        // empty-state button and no momentary blank. A hard cap guarantees it never sticks.
+        val splashStart = SystemClock.uptimeMillis()
+        val content = findViewById<View>(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                val elapsed = SystemClock.uptimeMillis() - splashStart
+                val ready = elapsed >= MAX_SPLASH_HOLD_MS ||
+                    (nudgeListViewModel.uiState.value != null && elapsed >= MIN_SPLASH_HOLD_MS)
+                if (ready) content.viewTreeObserver.removeOnPreDrawListener(this)
+                return ready
+            }
+        })
+        content.postDelayed({ content.invalidate() }, MIN_SPLASH_HOLD_MS)
     }
 
     override fun onNewIntent(intent: Intent) {

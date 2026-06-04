@@ -49,20 +49,22 @@ class NudgeListViewModel(
     // Combine nudges, notification fires, and answers so the list refreshes reactively
     // when any of the three tables change (e.g. notification fires while list is visible,
     // or user answers a nudge and returns to the list).
-    val uiState: StateFlow<List<NudgeSummary>> = combine(
+    // `null` until the first load completes, so the UI can distinguish "still loading" from
+    // "loaded and genuinely empty" and avoid flashing the empty-state button on launch.
+    val uiState: StateFlow<List<NudgeSummary>?> = combine(
         nudgeRepository.observeAll(),
         notificationFireRepository.observeAll(),
         answerRepository.observeAll()
     ) { nudges, _, _ ->
         nudges.map { it.toSummary() }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _pendingAnswer = MutableStateFlow<PendingAnswerNavigation?>(null)
     val pendingAnswer: StateFlow<PendingAnswerNavigation?> = _pendingAnswer.asStateFlow()
 
     fun toggleEnabled(nudgeId: String) {
         viewModelScope.launch {
-            val current = uiState.value.find { it.nudgeId == nudgeId } ?: return@launch
+            val current = uiState.value?.find { it.nudgeId == nudgeId } ?: return@launch
             updateNudge.execute(UpdateNudgeRequest(nudgeId = nudgeId, isEnabled = !current.isEnabled))
             Log.i(TAG, "Toggled nudge $nudgeId enabled → ${!current.isEnabled}")
         }

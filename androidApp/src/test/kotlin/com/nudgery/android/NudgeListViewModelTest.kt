@@ -64,8 +64,8 @@ class NudgeListViewModelTest {
         repos.nudgeRepo.insert(makeNudge("3", "Water intake"))
         advanceUntilIdle()
 
-        assertEquals(3, viewModel.uiState.value.size)
-        val names = viewModel.uiState.value.map { it.name }
+        assertEquals(3, viewModel.uiState.value!!.size)
+        val names = viewModel.uiState.value!!.map { it.name }
         assertTrue(names.containsAll(listOf("Mood check", "Step count", "Water intake")))
     }
 
@@ -79,7 +79,7 @@ class NudgeListViewModelTest {
         repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
         advanceUntilIdle()
 
-        val summary = viewModel.uiState.value.first()
+        val summary = viewModel.uiState.value!!.first()
         assertNotNull("Next fire time should be computed from the schedule", summary.nextFireTime)
     }
 
@@ -91,7 +91,7 @@ class NudgeListViewModelTest {
         repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
         advanceUntilIdle()
 
-        val nextFireTime = viewModel.uiState.value.first().nextFireTime ?: error("nextFireTime was null")
+        val nextFireTime = viewModel.uiState.value!!.first().nextFireTime ?: error("nextFireTime was null")
         assertFalse("Next fire time should not contain 'Z' (UTC marker)", nextFireTime.contains("Z"))
         assertFalse("Next fire time should not contain '+' (offset marker)", nextFireTime.contains("+"))
         assertTrue("Next fire time should contain 'AM' or 'PM'", nextFireTime.contains("AM") || nextFireTime.contains("PM"))
@@ -106,7 +106,7 @@ class NudgeListViewModelTest {
         repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
         advanceUntilIdle()
 
-        val summary = viewModel.uiState.value.first()
+        val summary = viewModel.uiState.value!!.first()
         val approx = summary.nextFireTimeApproximate ?: error("nextFireTimeApproximate was null")
         assertTrue("Approximate time should use ', around ' separator", approx.contains(", around "))
         assertFalse("Approximate time should not use ' at ' separator", approx.contains(" at "))
@@ -121,7 +121,7 @@ class NudgeListViewModelTest {
         repos.nudgeRepo.insert(makeNudge("1", "Exercise"))
         advanceUntilIdle()
 
-        val summary = viewModel.uiState.value.first()
+        val summary = viewModel.uiState.value!!.first()
         val exact = summary.nextFireTime ?: error("nextFireTime was null")
         val approx = summary.nextFireTimeApproximate ?: error("nextFireTimeApproximate was null")
         val exactDatePart = exact.substringBefore(" at ")
@@ -138,8 +138,8 @@ class NudgeListViewModelTest {
         repos.nudgeRepo.insert(makeNudge("2", "Paused nudge", isEnabled = false))
         advanceUntilIdle()
 
-        val active = viewModel.uiState.value.first { it.nudgeId == "1" }
-        val paused = viewModel.uiState.value.first { it.nudgeId == "2" }
+        val active = viewModel.uiState.value!!.first { it.nudgeId == "1" }
+        val paused = viewModel.uiState.value!!.first { it.nudgeId == "2" }
         assertTrue("Enabled nudge should report isEnabled=true", active.isEnabled)
         assertFalse("Disabled nudge should report isEnabled=false", paused.isEnabled)
     }
@@ -150,12 +150,12 @@ class NudgeListViewModelTest {
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         repos.nudgeRepo.insert(makeNudge("1", "Mood check", isEnabled = true))
         advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.first().isEnabled)
+        assertTrue(viewModel.uiState.value!!.first().isEnabled)
 
         viewModel.toggleEnabled("1")
         advanceUntilIdle()
 
-        assertFalse("Toggling an enabled nudge should disable it", viewModel.uiState.value.first().isEnabled)
+        assertFalse("Toggling an enabled nudge should disable it", viewModel.uiState.value!!.first().isEnabled)
     }
 
     @Test
@@ -180,7 +180,7 @@ class NudgeListViewModelTest {
 
         assertTrue(
             "Missed dot should show when a notification was fired with no subsequent answer",
-            viewModel.uiState.value.first().hasMissedNotification
+            viewModel.uiState.value!!.first().hasMissedNotification
         )
     }
 
@@ -192,14 +192,14 @@ class NudgeListViewModelTest {
         val fireTime = Clock.System.now()
         repos.notificationFireRepo.insert(NotificationFire("fire-1", "1", fireTime))
         advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.first().hasMissedNotification)
+        assertTrue(viewModel.uiState.value!!.first().hasMissedNotification)
 
         repos.answerRepo.insert(makeAnswer("1", "q-1", fireTime + kotlin.time.Duration.parse("PT1M")))
         advanceUntilIdle()
 
         assertFalse(
             "Missed dot should clear once an answer is recorded after the notification",
-            viewModel.uiState.value.first().hasMissedNotification
+            viewModel.uiState.value!!.first().hasMissedNotification
         )
     }
 
@@ -212,7 +212,7 @@ class NudgeListViewModelTest {
 
         assertFalse(
             "Missed dot must not appear when no notification has fired",
-            viewModel.uiState.value.first().hasMissedNotification
+            viewModel.uiState.value!!.first().hasMissedNotification
         )
     }
 

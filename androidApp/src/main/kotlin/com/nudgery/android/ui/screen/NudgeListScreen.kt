@@ -94,7 +94,7 @@ fun NudgeListScreen(
             )
         },
         floatingActionButton = {
-            if (nudges.isNotEmpty()) {
+            if (nudges?.isNotEmpty() == true) {
                 FloatingActionButton(onClick = onCreateClick) {
                     Icon(
                         imageVector = Icons.Filled.Add,
@@ -104,20 +104,22 @@ fun NudgeListScreen(
             }
         }
     ) { innerPadding ->
-        if (nudges.isEmpty()) {
-            EmptyNudgeList(
+        val currentNudges = nudges
+        when {
+            // Still loading: keep the screen empty so the empty-state button never flashes on launch.
+            currentNudges == null -> Unit
+            currentNudges.isEmpty() -> EmptyNudgeList(
                 onCreateClick = onCreateClick,
                 modifier = Modifier.padding(innerPadding)
             )
-        } else {
-            LazyColumn(
+            else -> LazyColumn(
                 contentPadding = innerPadding,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                itemsIndexed(nudges, key = { _, n -> n.nudgeId }) { _, nudge ->
+                itemsIndexed(currentNudges, key = { _, n -> n.nudgeId }) { _, nudge ->
                     NudgeListItem(
                         nudge = nudge,
                         exactAlarmGranted = exactAlarmGranted,
