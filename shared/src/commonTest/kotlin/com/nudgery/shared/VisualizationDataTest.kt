@@ -725,6 +725,20 @@ class VisualizationDataTest {
     }
 
     @Test
+    fun TDD_numberLineGraphYAxisHugsTheMax_withoutWastefulHeadroom() = runTest {
+        // The locked axis tops out just above the data max via a fine "nice" ladder, not ~2× it: a
+        // max of 11 yields 12, where a coarse 1/2/5/10 ladder would have jumped to 20.
+        val (nudgeId, questionId) = numberNudgeWithAnswers(listOf(0 to "11"))
+        val source = getVisualizationData.loadSource(nudgeId, questionId)
+        assertNotNull(source)
+
+        val line = getVisualizationData.build(source, Timeframe.WEEKLY, now = Clock.System.now())
+            .filterIsInstance<VisualizationData.LineGraph>().first()
+        assertEquals(0.0, line.yMin, "NUMBER axis anchors at zero")
+        assertEquals(12.0, line.yMax, "axis hugs the max (11 → 12), not ~2× it")
+    }
+
+    @Test
     fun buildFromLoadedSourceMatchesExecuteAcrossTimeframes() = runTest {
         // Refactor safety: rendering from a cached, preloaded source must produce exactly what the
         // database-reading execute() path produces, for every timeframe.

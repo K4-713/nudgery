@@ -235,18 +235,19 @@ class GetVisualizationDataUseCase(
         else -> null
     }
 
-    /** Rounds [value] up to a clean axis bound (1, 2, or 5 × a power of ten); a value ≤ 0 yields 1. */
+    /**
+     * Rounds [value] up to a clean axis bound: the smallest "nice" number ([NICE_AXIS_FRACTIONS] ×
+     * a power of ten) that is ≥ [value]. The fine ladder keeps the bound close to the data — modest
+     * headroom, at most ~25% above the max — rather than overshooting toward 2× as a coarse
+     * 1/2/5/10 ladder would (e.g. a max of 11 yields 12, not 20). A value ≤ 0 yields 1.
+     */
     private fun niceCeil(value: Double): Double {
         if (value <= 0.0) return 1.0
         val magnitude = 10.0.pow(floor(log10(value)))
         val fraction = value / magnitude
-        val nice = when {
-            fraction <= 1.0 -> 1.0
-            fraction <= 2.0 -> 2.0
-            fraction <= 5.0 -> 5.0
-            else -> 10.0
-        }
-        return nice * magnitude
+        // Tolerate floating-point noise so e.g. 12/10 == 1.2000…2 still matches the 1.2 step.
+        val niceFraction = NICE_AXIS_FRACTIONS.first { it >= fraction - 1e-9 }
+        return niceFraction * magnitude
     }
 
     private fun buildTextCharts(answers: List<Answer>): List<VisualizationData> {
@@ -303,6 +304,13 @@ class GetVisualizationDataUseCase(
         }
     }
 }
+
+/**
+ * The "nice" mantissas a line-graph Y axis may top out at (× a power of ten), ascending. Finer than
+ * the classic 1/2/5/10 so the locked axis sits just above the data max instead of wasting up to half
+ * the height. See `niceCeil`.
+ */
+private val NICE_AXIS_FRACTIONS = listOf(1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0)
 
 /** Window sizes (in days) for the dashboard's time-based timeframes. */
 private const val WEEKLY_WINDOW_DAYS = 7
