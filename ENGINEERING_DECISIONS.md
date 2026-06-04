@@ -263,3 +263,21 @@ at least the floor (and may go larger by frequency); the small **thumbnail** cha
 rows at high scale (intended). The bubble chart's frequency encoding is preserved, just floored in
 full screen.
 **Tests:** pending — emoji-only strings scale; mixed text+emoji strings do not.
+
+### ED-15: A top app bar grows to fit an emoji-only, emoji-scaled title
+**Status:** Implemented — `theme.emojiScaledAppBarHeight(...)` feeds `TopAppBar(expandedHeight = …)` on the nudge detail screen
+**Context:** Material's single-row `TopAppBar` centers its title in a fixed-height container and
+clips to bounds. With the emoji-scale setting (ED-14), an emoji-only title scaled toward the high
+end (e.g. `titleLarge` 26sp at the 2.5× ceiling → 65sp) is taller than that container and gets
+cropped top and bottom.
+**Decision:** When (and only when) a bar's title is **emoji-only** (`util.isEmojiOnly`) and the
+emoji scale is above 1.0, the bar's `expandedHeight` grows to fit the scaled glyph plus fixed
+vertical breathing room, floored at the Material default height; ordinary titles (mixed text, plain
+text, or scale 1.0) keep the default height unchanged. The height is computed in a `Density` scope
+so it tracks the device font-scale setting, not just the base title size.
+**Consequences:** Only emoji-only titles can make the header taller, and only at elevated scale; the
+common case is byte-for-byte unchanged. The rule lives in one reusable helper so other bars can
+adopt it. Material's `expandedHeight` parameter is used rather than a custom bar, keeping standard
+app-bar styling and scroll behavior.
+**Tests:** `EmojiScaleTest` — emoji-only scaled title grows past default; mixed/plain/unscaled titles
+return the default; growth never drops below the default.

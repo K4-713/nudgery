@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -137,6 +138,7 @@ import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
 import com.nudgery.android.ui.theme.LocalEmojiScale
+import com.nudgery.android.ui.theme.emojiScaledAppBarHeight
 import com.nudgery.android.ui.theme.emojiScaledStyle
 import com.nudgery.shared.util.isSingleEmoji
 import com.nudgery.shared.usecase.windowStepDays
@@ -237,13 +239,25 @@ fun NudgeDetailScreen(
         )
     }
 
+    val titleStyle = MaterialTheme.typography.titleLarge
+    // Grow the header just enough for a tall emoji-only title at high emoji scale, so it isn't
+    // clipped by the bar's fixed height (ENGINEERING_DECISIONS.md ED-15).
+    val barHeight = with(LocalDensity.current) {
+        emojiScaledAppBarHeight(
+            text = uiState.nudgeName,
+            scale = LocalEmojiScale.current,
+            baseTitleSize = titleStyle.fontSize,
+            defaultHeight = TopAppBarDefaults.TopAppBarExpandedHeight
+        )
+    }
     Scaffold(
         topBar = {
             TopAppBar(
+                expandedHeight = barHeight,
                 title = {
                     Text(
                         text = uiState.nudgeName,
-                        style = emojiScaledStyle(uiState.nudgeName, MaterialTheme.typography.titleLarge),
+                        style = emojiScaledStyle(uiState.nudgeName, titleStyle),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

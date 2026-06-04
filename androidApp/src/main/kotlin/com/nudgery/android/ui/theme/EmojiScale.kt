@@ -3,6 +3,10 @@ package com.nudgery.android.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.times
 import com.nudgery.shared.util.isEmojiOnly
@@ -27,4 +31,32 @@ fun emojiScaledStyle(text: String, base: TextStyle): TextStyle {
     } else {
         base
     }
+}
+
+/**
+ * Vertical breathing room kept above and below an enlarged emoji title so the scaled glyph isn't
+ * flush against the (grown) app-bar edges.
+ */
+private val EMOJI_TITLE_VERTICAL_PADDING = 16.dp
+
+/**
+ * The height a single-row `TopAppBar` needs so an **emoji-only**, emoji-scaled title (ED-14) isn't
+ * clipped by the bar's fixed [defaultHeight] (ENGINEERING_DECISIONS.md ED-15). Material's small top
+ * app bar centers the title in a fixed-height container and clips to bounds, so a title scaled past
+ * that height (a lone emoji at a high [scale]) gets cropped.
+ *
+ * For ordinary titles — mixed text, plain text, or [scale] 1.0 — this returns [defaultHeight]
+ * unchanged. For an emoji-only title scaled up, it returns a height that fits the scaled glyph plus
+ * [EMOJI_TITLE_VERTICAL_PADDING], but never less than [defaultHeight]. The conversion is done in a
+ * [Density] scope so the result tracks the device's font-scale setting, not just [baseTitleSize].
+ */
+fun Density.emojiScaledAppBarHeight(
+    text: String,
+    scale: Float,
+    baseTitleSize: TextUnit,
+    defaultHeight: Dp
+): Dp {
+    if (scale <= 1f || !baseTitleSize.isSp || !isEmojiOnly(text)) return defaultHeight
+    val scaledGlyphHeight = (baseTitleSize * scale).toDp()
+    return maxOf(defaultHeight, scaledGlyphHeight + EMOJI_TITLE_VERTICAL_PADDING)
 }
