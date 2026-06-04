@@ -12,4 +12,25 @@ import android.graphics.Paint
  */
 class PlatformEmojiGlyphFilter(private val paint: Paint = Paint()) : EmojiGlyphFilter {
     override fun canRender(emoji: String): Boolean = paint.hasGlyph(emoji)
+
+    /**
+     * True when [emoji] renders much wider than a single-cell emoji on this device's font — i.e. a
+     * multi-person ZWJ sequence (couple, kiss, family, two people holding hands) the font draws as
+     * side-by-side figures. The picker gives these a wider grid cell so the glyph doesn't overflow
+     * and overlap its neighbors. Measured against a single-person reference glyph (so the ratio is
+     * independent of [Paint.getTextSize]) and tracks the actual device font rather than assuming a
+     * fixed list of code points.
+     */
+    fun isWide(emoji: String): Boolean =
+        singleEmojiWidth > 0f && paint.measureText(emoji) > singleEmojiWidth * WIDE_RATIO_THRESHOLD
+
+    /** Advance width of one single-person glyph, measured once with this paint's text size. */
+    private val singleEmojiWidth: Float by lazy { paint.measureText(REFERENCE_SINGLE_EMOJI) }
+
+    private companion object {
+        /** 🧑 person (U+1F9D1) — a representative one-cell-wide emoji. */
+        const val REFERENCE_SINGLE_EMOJI = "🧑"
+        /** A glyph wider than 1.5× the reference is treated as multi-figure; doubles measure ~2×. */
+        const val WIDE_RATIO_THRESHOLD = 1.5f
+    }
 }

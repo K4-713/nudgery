@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -89,9 +90,11 @@ fun EmojiPicker(
     onPick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // One-time: keep only emoji this device can render, grouped by Unicode group (ED-4).
-    val renderable = remember {
-        val glyphFilter = PlatformEmojiGlyphFilter()
+    // One-time: keep only emoji this device can render, grouped by Unicode group (ED-4). The same
+    // filter also measures glyph width, so multi-person emoji that render double-wide can be laid out
+    // without overlapping (see the grid's span, below).
+    val glyphFilter = remember { PlatformEmojiGlyphFilter() }
+    val renderable = remember(glyphFilter) {
         EmojiCatalog.entries.filter { glyphFilter.canRender(it.emoji) }
     }
     // Fold each genderable concept's woman/man forms into its neutral entry (ED-7): they're offered
@@ -116,12 +119,14 @@ fun EmojiPicker(
 
     // The emoji strings to show: search results, recents, or the selected category — defaults applied
     // (so the grid previews exactly what a tap inserts). Recomputed only when an input changes.
-    val cells: List<PickerCell> = remember(query, selectedTab, defaultSkinTone, defaultGender, recents, tabs) {
-        fun of(entry: EmojiCatalogEntry) = PickerCell(entry.applyDefaults(defaultSkinTone, defaultGender), entry)
+    val cells: List<PickerCell> = remember(query, selectedTab, defaultSkinTone, defaultGender, recents, tabs, glyphFilter) {
+        fun cellFor(display: String, entry: EmojiCatalogEntry?) =
+            PickerCell(display, entry, isWide = glyphFilter.isWide(display))
+        fun of(entry: EmojiCatalogEntry) = cellFor(entry.applyDefaults(defaultSkinTone, defaultGender), entry)
         val tabEntries = tabs[selectedTab].entries
         when {
             query.isNotBlank() -> EmojiSearch.search(query, displayEntries).map { of(it) }
-            tabEntries == null -> recents.map { PickerCell(it, null) } // recents tab: final picks, no variant tray
+            tabEntries == null -> recents.map { cellFor(it, null) } // recents tab: final picks, no variant tray
             else -> tabEntries.map { of(it) }
         }
     }
@@ -173,7 +178,12 @@ fun EmojiPicker(
             columns = GridCells.Adaptive(minSize = (48 * emojiScale).dp),
             modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
-            itemsIndexed(cells) { index, cell ->
+            itemsIndexed(
+                cells,
+                // Double-wide multi-person glyphs get two columns so they don't overflow their cell
+                // and overlap neighbors (clamped so a narrow grid never asks for more than it has).
+                span = { _, cell -> GridItemSpan(if (cell.isWide) minOf(2, maxLineSpan) else 1) }
+            ) { index, cell ->
                 // Skin-tone/gender variants for this emoji, or null if it has none (ED-8).
                 val variants = remember(cell) {
                     cell.entry?.let { EmojiDefaults.variants(it) }?.takeIf { it.size > 1 }
@@ -229,9 +239,10 @@ private val VariantCornerTriangle = GenericShape { size, _ ->
     close()
 }
 
-/** A grid cell: the [display] emoji (defaults applied) and the source [entry] for variant lookup
- *  (null for recents, which are already-final picks with no variant tray). */
-private data class PickerCell(val display: String, val entry: EmojiCatalogEntry?)
+/** A grid cell: the [display] emoji (defaults applied), the source [entry] for variant lookup (null
+ *  for recents, which are already-final picks with no variant tray), and [isWide] when the glyph
+ *  renders double-wide (a multi-person sequence) and so needs a wider cell to avoid overlapping. */
+private data class PickerCell(val display: String, val entry: EmojiCatalogEntry?, val isWide: Boolean)
 
 /** A picker tab: its wireframe [icon], accessibility [contentDescription], and the [entries] it
  *  shows ([entries] is null for the Recents tab, which renders the dynamic recents list). */
