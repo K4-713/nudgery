@@ -92,7 +92,8 @@ class NudgeBackupParser {
                 scaleMax = obj.optInt("scaleMax", 10),
                 triggerOperator = triggerOperator,
                 triggerAnswerValue = triggerAnswerValue,
-                options = options
+                options = options,
+                collapsePerDay = obj.optBoolean("collapsePerDay", false)
             )
         }
     }

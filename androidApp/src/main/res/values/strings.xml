@@ -45,6 +45,8 @@
     <string name="answer_type_option_single">Choose one</string>
     <string name="answer_type_option_multi">Choose multiple</string>
     <string name="answer_type_text">Free text</string>
+    <string name="answer_one_yes_per_day">One Yes Per Day</string>
+    <string name="answer_one_yes_per_day_desc">Charts count each calendar day at most once: a single Yes if you answered Yes at all that day, otherwise No. Off, every Yes is counted. Raw data is unaffected.</string>
     <string name="field_scale_min">Minimum</string>
     <string name="field_scale_max">Maximum</string>
     <string name="error_scale_range_invalid">Minimum must be less than maximum</string>

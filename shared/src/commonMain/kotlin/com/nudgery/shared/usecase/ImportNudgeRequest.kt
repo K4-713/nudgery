@@ -20,7 +20,9 @@ data class ImportQuestionRequest(
     val scaleMax: Int = 10,
     val triggerOperator: TriggerOperator? = null,
     val triggerAnswerValue: String? = null,
-    val options: List<String> = emptyList()
+    val options: List<String> = emptyList(),
+    /** YES/NO "One Yes Per Day" flag (ED-17); absent in older backups ⇒ false. */
+    val collapsePerDay: Boolean = false
 )
 
 data class ImportAnswerRequest(

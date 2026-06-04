@@ -91,6 +91,18 @@ class NudgeEditTest {
     }
 
     @Test
+    fun TDD_editTogglesMainQuestionOneYesPerDay() = runTest {
+        // ED-17: editing can turn One Yes Per Day on for an existing YES/NO main question (so the
+        // user can enable it on a question they already have) without recreating it.
+        val nudgeId = createYesNoNudge()
+        assertFalse(repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }.collapsePerDay)
+
+        updateNudge.execute(UpdateNudgeRequest(nudgeId = nudgeId, mainQuestionCollapsePerDay = true))
+
+        assertTrue(repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }.collapsePerDay)
+    }
+
+    @Test
     fun TDD_nudgeBaseQuestionTypeCannotBeChanged() = runTest {
         // README "Editing Nudges": "Nudge configuration [can] be edited, except for the
         //   base type of the main question"

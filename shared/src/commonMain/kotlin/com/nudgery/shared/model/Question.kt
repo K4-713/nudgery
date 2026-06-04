@@ -9,7 +9,13 @@ data class Question(
     val triggerAnswerValue: String?,
     val triggerOperator: TriggerOperator?,
     val scaleMin: Int? = null,
-    val scaleMax: Int? = null
+    val scaleMax: Int? = null,
+    /**
+     * YES/NO only (ED-17): when true, charts collapse this question's answers to a single Yes/No per
+     * calendar day (any "YES" that day → Yes) instead of summing every answer. Display-only; raw
+     * answers are unaffected. Default false (sum). Ignored for non-YES/NO types.
+     */
+    val collapsePerDay: Boolean = false
 ) {
     val isMainQuestion: Boolean get() = orderIndex == 0
 }

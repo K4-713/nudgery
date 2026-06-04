@@ -10,7 +10,7 @@ Nudgery contains no ads, and your data stays on your phone (unless you take the 
 Nudgery was initially written to help the author track daily migraine status over time, because it is unusually challenging to have good habits when your brain is low-key malfunctioning. The author also thought (while we're here) it would be fun to be able to track whatever the user (you!) thinks would be helpful or interesting to keep track of for a while.
 
 You can set up a Nudge to have your phone ask you anything, on any schedule. Here are some possibilities to get you started:
-* Did you have a headache in the last 24 hours?
+* Did you have a headache today?
 * What did you dream about last night?
 * When was the last time you ate a vegetable?
 * How annoying was your boss today?
@@ -19,8 +19,22 @@ You can set up a Nudge to have your phone ask you anything, on any schedule. Her
 Additionally, you can set up follow-up questions for specific answers. For instance, if your boss scored 7 or greater on being annoying that day, you could then ask yourself for some brief follow-up notes.
 
 ## Setting Up a Nudge
-Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question (Yes or No, Scale (of 1-10 or similar), Number, Option (Single), Option (Multi), freeform Text, or Emoji-only). For the Option types, you will be prompted here to add up to 16 selectable answers.
+Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question. 
+
 At this stage, you may also rename the Nudge, or leave it alone to go with the default name.
+
+### Question Types
+The basic nudge question types are: 
+* Yes or No : Simple two-option answer. 
+  * With Yes or No questions, you will also get a "One Yes Per Day" option. Selecting this will squish whole calendar days of data down to a single "Yes" (if you answered "Yes" at all that day) or "No" in the graphs, instead of counting all the yesses in a day. Raw data will be saved the same way in either case.
+* Scale : Whole numbers, 0-10 is the default, and you answer with a slider.
+* Any Number : Type any number when asked
+* Option (Single) : Pick one option from a list
+  * With this question type, you will be prompted here to add up to 16 selectable answers.
+* Option (Multi) : Pick multiple options from a list
+  * Just like the single option type, you will be prompted here to add up to 16 selectable answers.
+* Freeform Text
+* Emoji-only answers
 
 Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text or emoji) you will be able to add follow-up questions for specific answers or ranges of answers. Follow-up questions can be any of the main question types. 
 

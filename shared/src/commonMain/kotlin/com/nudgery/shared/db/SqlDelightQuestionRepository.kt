@@ -23,7 +23,8 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
             triggerAnswerValue = question.triggerAnswerValue,
             triggerOperator = question.triggerOperator?.name,
             scale_min = question.scaleMin?.toLong(),
-            scale_max = question.scaleMax?.toLong()
+            scale_max = question.scaleMax?.toLong(),
+            collapse_per_day = if (question.collapsePerDay) 1L else 0L
         )
     }
 
@@ -40,7 +41,8 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
             triggerAnswerValue = question.triggerAnswerValue,
             triggerOperator = question.triggerOperator?.name,
             scale_min = question.scaleMin?.toLong(),
-            scale_max = question.scaleMax?.toLong()
+            scale_max = question.scaleMax?.toLong(),
+            collapse_per_day = if (question.collapsePerDay) 1L else 0L
         )
     }
 
@@ -61,6 +63,7 @@ class SqlDelightQuestionRepository(private val database: NudgeryDatabase) : Ques
         triggerAnswerValue = triggerAnswerValue,
         triggerOperator = triggerOperator?.let { TriggerOperator.valueOf(it) },
         scaleMin = scale_min?.toInt(),
-        scaleMax = scale_max?.toInt()
+        scaleMax = scale_max?.toInt(),
+        collapsePerDay = collapse_per_day != 0L
     )
 }

@@ -8,6 +8,7 @@ CREATE TABLE Question (
     triggerOperator TEXT,
     scale_min INTEGER,
     scale_max INTEGER,
+    collapse_per_day INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (nudgeId) REFERENCES Nudge(id) ON DELETE CASCADE
 );
 
@@ -15,15 +16,15 @@ selectByNudgeId:
 SELECT * FROM Question WHERE nudgeId = :nudgeId ORDER BY orderIndex ASC;
 
 insert:
-INSERT INTO Question (id, nudgeId, text, type, orderIndex, triggerAnswerValue, triggerOperator, scale_min, scale_max)
-VALUES (:id, :nudgeId, :text, :type, :orderIndex, :triggerAnswerValue, :triggerOperator, :scale_min, :scale_max);
+INSERT INTO Question (id, nudgeId, text, type, orderIndex, triggerAnswerValue, triggerOperator, scale_min, scale_max, collapse_per_day)
+VALUES (:id, :nudgeId, :text, :type, :orderIndex, :triggerAnswerValue, :triggerOperator, :scale_min, :scale_max, :collapse_per_day);
 
 updateText:
 UPDATE Question SET text = :text WHERE id = :id;
 
 update:
 UPDATE Question
-SET text = :text, type = :type, orderIndex = :orderIndex, triggerAnswerValue = :triggerAnswerValue, triggerOperator = :triggerOperator, scale_min = :scale_min, scale_max = :scale_max
+SET text = :text, type = :type, orderIndex = :orderIndex, triggerAnswerValue = :triggerAnswerValue, triggerOperator = :triggerOperator, scale_min = :scale_min, scale_max = :scale_max, collapse_per_day = :collapse_per_day
 WHERE id = :id;
 
 deleteById:

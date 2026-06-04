@@ -99,6 +99,21 @@ class UpdateNudgeUseCase(
             }
         }
 
+        // "One Yes Per Day" (ED-17) is a display-only flag, never a split-worthy content change.
+        // Reuse the full question update with the current (post-edit) text so a same-edit text change
+        // isn't clobbered.
+        if (request.mainQuestionCollapsePerDay != null && mainQuestion != null &&
+            request.mainQuestionCollapsePerDay != mainQuestion.collapsePerDay
+        ) {
+            questionRepository.update(
+                mainQuestion.copy(
+                    text = request.mainQuestionText ?: mainQuestion.text,
+                    collapsePerDay = request.mainQuestionCollapsePerDay
+                )
+            )
+            updatedNudge = updatedNudge.copy(updatedAt = now)
+        }
+
         if (request.schedule != null && existingSchedule != null) {
             val updatedSchedule = existingSchedule.copy(
                 type = request.schedule.type,
@@ -188,7 +203,8 @@ class UpdateNudgeUseCase(
                         triggerAnswerValue = resolvedTriggerValue,
                         triggerOperator = req.triggerOperator,
                         scaleMin = if (req.type == QuestionType.SCALE) req.scaleMin else null,
-                        scaleMax = if (req.type == QuestionType.SCALE) req.scaleMax else null
+                        scaleMax = if (req.type == QuestionType.SCALE) req.scaleMax else null,
+                        collapsePerDay = req.type == QuestionType.YES_NO && req.collapsePerDay
                     )
                 )
                 val existingOptionTexts = questionOptionRepository.getByQuestionId(existing.id)
@@ -215,7 +231,8 @@ class UpdateNudgeUseCase(
                         triggerAnswerValue = resolvedTriggerValue,
                         triggerOperator = req.triggerOperator,
                         scaleMin = if (req.type == QuestionType.SCALE) req.scaleMin else null,
-                        scaleMax = if (req.type == QuestionType.SCALE) req.scaleMax else null
+                        scaleMax = if (req.type == QuestionType.SCALE) req.scaleMax else null,
+                        collapsePerDay = req.type == QuestionType.YES_NO && req.collapsePerDay
                     )
                 )
                 if (req.type.isOptionType) {
@@ -259,7 +276,8 @@ class UpdateNudgeUseCase(
                 oldMainQuestion.copy(
                     id = newMainQuestionId,
                     nudgeId = newNudgeId,
-                    text = request.mainQuestionText ?: oldMainQuestion.text
+                    text = request.mainQuestionText ?: oldMainQuestion.text,
+                    collapsePerDay = request.mainQuestionCollapsePerDay ?: oldMainQuestion.collapsePerDay
                 )
             )
 

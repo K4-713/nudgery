@@ -114,6 +114,33 @@ fun QuestionStep(
                 onOptionsChange = { onQuestionChange(question.copy(options = it)) }
             )
         }
+
+        if (question.type == QuestionType.YES_NO) {
+            OneYesPerDayToggle(
+                checked = question.collapsePerDay,
+                onCheckedChange = { onQuestionChange(question.copy(collapsePerDay = it)) }
+            )
+        }
+    }
+}
+
+/** ED-17: the "One Yes Per Day" toggle shown for YES/NO questions in the create/edit wizard. */
+@Composable
+fun OneYesPerDayToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.answer_one_yes_per_day), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(R.string.answer_one_yes_per_day_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -335,6 +362,13 @@ private fun FollowUpEditor(
             OptionListEditor(
                 options = followUp.options,
                 onOptionsChange = { onUpdate(followUp.copy(options = it)) }
+            )
+        }
+
+        if (followUp.type == QuestionType.YES_NO) {
+            OneYesPerDayToggle(
+                checked = followUp.collapsePerDay,
+                onCheckedChange = { onUpdate(followUp.copy(collapsePerDay = it)) }
             )
         }
     }

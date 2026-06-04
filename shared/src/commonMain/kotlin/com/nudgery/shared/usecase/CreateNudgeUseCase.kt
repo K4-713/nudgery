@@ -99,7 +99,8 @@ class CreateNudgeUseCase(
                 triggerAnswerValue = triggerValue,
                 triggerOperator = if (orderIndex == 0) null else questionRequest.triggerOperator,
                 scaleMin = if (questionRequest.type == QuestionType.SCALE) questionRequest.scaleMin else null,
-                scaleMax = if (questionRequest.type == QuestionType.SCALE) questionRequest.scaleMax else null
+                scaleMax = if (questionRequest.type == QuestionType.SCALE) questionRequest.scaleMax else null,
+                collapsePerDay = questionRequest.type == QuestionType.YES_NO && questionRequest.collapsePerDay
             )
         )
         val optionIds = mutableListOf<String>()

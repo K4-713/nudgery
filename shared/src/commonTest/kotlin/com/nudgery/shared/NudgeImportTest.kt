@@ -98,6 +98,24 @@ class NudgeImportTest {
     }
 
     @Test
+    fun TDD_import_carriesOneYesPerDay() = runTest {
+        // ED-17: the One Yes Per Day flag is restored from a backup.
+        val nudgeId = importNudge.execute(
+            ImportNudgeRequest(
+                name = "Headache",
+                isEnabled = true,
+                schedule = dailyScheduleRequest(),
+                questions = listOf(
+                    ImportQuestionRequest(orderIndex = 0, text = "Headache?", type = QuestionType.YES_NO, collapsePerDay = true)
+                ),
+                answers = emptyList()
+            )
+        )
+        val question = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        assertTrue(question.collapsePerDay)
+    }
+
+    @Test
     fun TDD_import_createsNudgeWithCorrectName() = runTest {
         // README: import recreates the nudge from a JSON backup
         val request = ImportNudgeRequest(

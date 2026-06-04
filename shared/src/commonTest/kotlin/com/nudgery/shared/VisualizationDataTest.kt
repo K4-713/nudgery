@@ -1,6 +1,7 @@
 package com.nudgery.shared
 
 import com.nudgery.shared.model.Answer
+import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
 import com.nudgery.shared.model.Timeframe
@@ -11,6 +12,7 @@ import com.nudgery.shared.usecase.CreateNudgeResult
 import com.nudgery.shared.usecase.CreateNudgeUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.QuestionRequest
+import com.nudgery.shared.usecase.QuestionVisualizationSource
 import com.nudgery.shared.usecase.ScheduleRequest
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.analysisWindow
@@ -31,6 +33,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -736,6 +739,67 @@ class VisualizationDataTest {
             .filterIsInstance<VisualizationData.LineGraph>().first()
         assertEquals(0.0, line.yMin, "NUMBER axis anchors at zero")
         assertEquals(12.0, line.yMax, "axis hugs the max (11 → 12), not ~2× it")
+    }
+
+    /** A YES/NO visualization source built directly (no DB), for the One Yes Per Day tests. */
+    private fun yesNoSource(
+        collapsePerDay: Boolean,
+        now: Instant,
+        answers: List<Pair<Int, String>>
+    ): QuestionVisualizationSource {
+        val question = Question(
+            id = "q1", nudgeId = "n1", text = "Headache?", type = QuestionType.YES_NO,
+            orderIndex = 0, triggerAnswerValue = null, triggerOperator = null,
+            collapsePerDay = collapsePerDay
+        )
+        val rows = answers.mapIndexed { i, (daysAgo, value) ->
+            Answer("a$i", "n1", "q1", value, now - daysAgo.days, now - daysAgo.days, isHidden = false)
+        }
+        return QuestionVisualizationSource(question, rows, emptyMap())
+    }
+
+    @Test
+    fun TDD_yesNoCollapsePerDay_collapsesRepeatedYesAcrossAllCharts() = runTest {
+        // ED-17: with One Yes Per Day on, any Yes that calendar day counts once; a day with answers
+        // but no Yes is one No day. This holds for the heat map, the line graph, and the Yes/No bar.
+        val now = Clock.System.now()
+        val tz = TimeZone.currentSystemDefault()
+        val today = now.toLocalDateTime(tz).date
+        val source = yesNoSource(
+            collapsePerDay = true,
+            now = now,
+            answers = listOf(
+                0 to "YES", 0 to "YES",   // today: two Yes → one Yes day
+                1 to "NO",                // yesterday: only No → one No day
+                2 to "YES", 2 to "NO"     // 2 days ago: Yes + No → one Yes day
+            )
+        )
+        val charts = getVisualizationData.build(source, Timeframe.WEEKLY, now = now)
+
+        val heat = charts.filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+        assertEquals(1.0, heat.dailyCounts.first { it.date == today }.value, "two Yes today collapse to one")
+
+        val line = charts.filterIsInstance<VisualizationData.LineGraph>().first()
+        assertEquals(1.0, line.points.first { it.at.toLocalDateTime(tz).date == today }.value)
+
+        val bar = charts.filterIsInstance<VisualizationData.ColumnChart>().first()
+        assertEquals(2, bar.entries.first { it.label == "YES" }.count, "two Yes days")
+        assertEquals(1, bar.entries.first { it.label == "NO" }.count, "one No day")
+    }
+
+    @Test
+    fun TDD_yesNoWithoutCollapse_sumsEveryYes() = runTest {
+        // Default off (ED-17): every Yes answer is still counted, so two Yes in a day = 2.
+        val now = Clock.System.now()
+        val tz = TimeZone.currentSystemDefault()
+        val today = now.toLocalDateTime(tz).date
+        val source = yesNoSource(collapsePerDay = false, now = now, answers = listOf(0 to "YES", 0 to "YES"))
+        val charts = getVisualizationData.build(source, Timeframe.WEEKLY, now = now)
+
+        val heat = charts.filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+        assertEquals(2.0, heat.dailyCounts.first { it.date == today }.value, "default sums both Yes")
+        val bar = charts.filterIsInstance<VisualizationData.ColumnChart>().first()
+        assertEquals(2, bar.entries.first { it.label == "YES" }.count)
     }
 
     @Test

@@ -121,7 +121,8 @@ class ImportNudgeUseCase(
                 triggerAnswerValue = triggerValue,
                 triggerOperator = if (isMainQuestion) null else questionReq.triggerOperator,
                 scaleMin = if (questionReq.type == QuestionType.SCALE) questionReq.scaleMin else null,
-                scaleMax = if (questionReq.type == QuestionType.SCALE) questionReq.scaleMax else null
+                scaleMax = if (questionReq.type == QuestionType.SCALE) questionReq.scaleMax else null,
+                collapsePerDay = questionReq.type == QuestionType.YES_NO && questionReq.collapsePerDay
             )
         )
 

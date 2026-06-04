@@ -45,6 +45,8 @@ data class EditNudgeFormState(
     val mainQuestionType: QuestionType = QuestionType.YES_NO,
     val mainQuestionScaleMin: Int = 0,
     val mainQuestionScaleMax: Int = 10,
+    val mainQuestionCollapsePerDay: Boolean = false,
+    val originalMainQuestionCollapsePerDay: Boolean = false,
     val options: List<OptionEditState> = emptyList(),
     val originalOptionOrder: List<String> = emptyList(),
     val removedOptionIds: Set<String> = emptySet(),
@@ -104,6 +106,10 @@ class EditNudgeViewModel(
 
     fun setMainQuestionText(text: String) {
         _formState.update { it.copy(mainQuestionText = text) }
+    }
+
+    fun setMainQuestionCollapsePerDay(collapse: Boolean) {
+        _formState.update { it.copy(mainQuestionCollapsePerDay = collapse) }
     }
 
     fun addOption() {
@@ -181,6 +187,8 @@ class EditNudgeViewModel(
                     name = state.name.takeIf { it != state.originalName },
                     isEnabled = state.isEnabled,
                     mainQuestionText = state.mainQuestionText.takeIf { it != state.originalMainQuestionText },
+                    mainQuestionCollapsePerDay = state.mainQuestionCollapsePerDay
+                        .takeIf { it != state.originalMainQuestionCollapsePerDay },
                     optionUpdates = state.options
                         .filter { it.isChanged }
                         .map { UpdateOptionRequest(it.optionId!!, it.text) },
@@ -244,7 +252,8 @@ class EditNudgeViewModel(
                     triggerAnswerValue = uiTriggerValue,
                     triggerOperator = q.triggerOperator,
                     scaleMin = q.scaleMin ?: 0,
-                    scaleMax = q.scaleMax ?: 10
+                    scaleMax = q.scaleMax ?: 10,
+                    collapsePerDay = q.collapsePerDay
                 )
             )
         }
@@ -263,6 +272,8 @@ class EditNudgeViewModel(
                 mainQuestionType = mainQuestion?.type ?: QuestionType.YES_NO,
                 mainQuestionScaleMin = mainQuestion?.scaleMin ?: 0,
                 mainQuestionScaleMax = mainQuestion?.scaleMax ?: 10,
+                mainQuestionCollapsePerDay = mainQuestion?.collapsePerDay ?: false,
+                originalMainQuestionCollapsePerDay = mainQuestion?.collapsePerDay ?: false,
                 options = editableOptions,
                 originalOptionOrder = editableOptions.mapNotNull { it.optionId },
                 followUps = followUps,

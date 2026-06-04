@@ -16,7 +16,9 @@ data class QuestionRequest(
     val triggerAnswerValue: String? = null,
     val triggerOperator: TriggerOperator? = null,
     val scaleMin: Int = DEFAULT_SCALE_MIN,
-    val scaleMax: Int = DEFAULT_SCALE_MAX
+    val scaleMax: Int = DEFAULT_SCALE_MAX,
+    /** YES/NO "One Yes Per Day" flag (ED-17); ignored for other types. Default off (sum). */
+    val collapsePerDay: Boolean = false
 )
 
 data class ScheduleRequest(
@@ -57,6 +59,8 @@ data class UpdateNudgeRequest(
     val name: String? = null,
     val isEnabled: Boolean? = null,
     val mainQuestionText: String? = null,
+    /** New "One Yes Per Day" value for a YES/NO main question (ED-17); null = no change. */
+    val mainQuestionCollapsePerDay: Boolean? = null,
     val optionUpdates: List<UpdateOptionRequest> = emptyList(),
     val optionReorder: List<String>? = null,  // existing option IDs in desired order; null = no change
     val newOptions: List<String> = emptyList(),

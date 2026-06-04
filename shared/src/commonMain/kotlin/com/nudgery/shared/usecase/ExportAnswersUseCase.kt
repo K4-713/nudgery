@@ -122,6 +122,10 @@ class ExportAnswersUseCase(
                 sb.append(",\n      \"scaleMin\": ${question.scaleMin ?: 0}")
                 sb.append(",\n      \"scaleMax\": ${question.scaleMax ?: 10}")
             }
+            if (question.collapsePerDay) {
+                // ED-17: "One Yes Per Day" flag (YES/NO only); omitted when off.
+                sb.append(",\n      \"collapsePerDay\": true")
+            }
             if (question.triggerOperator != null) {
                 // Resolve option UUID trigger values to option text for round-trip import
                 val triggerText = optionIdToText[question.triggerAnswerValue] ?: question.triggerAnswerValue ?: ""

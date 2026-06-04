@@ -346,7 +346,7 @@ Navigation is unified through `ChartWindowNav` passed into every chart: time-bas
 
 | QuestionType | Available Visualizations |
 |---|---|
-| YES_NO | Calendar heat map, line graph (daily yes count), column chart |
+| YES_NO | Calendar heat map, line graph (daily yes count), column chart. With `Question.collapsePerDay` ("One Yes Per Day", ED-17) every chart aggregates by calendar day to a single Yes/No (any Yes → 1) instead of summing answers; the column chart then counts Yes days vs No days. |
 | SCALE | Line graph, calendar heat map (daily average) |
 | NUMBER | Line graph, calendar heat map (daily average) |
 | OPTION_SINGLE | Bar chart, column chart, packed bubble chart |

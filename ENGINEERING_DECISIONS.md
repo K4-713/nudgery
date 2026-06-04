@@ -314,3 +314,38 @@ next time they're saved (and on re-import), but are not bulk-migrated.
 **Tests:** `NudgeCreationTest`, `NudgeEditTest`, `NudgeImportTest`, `AnswerRecordingTest` — names,
 question text, options, and answer values are stored trimmed; a trailing-space-only edit is not
 recorded as a change.
+
+### ED-17: A Yes/No question can collapse to one Yes/No per calendar day in its charts
+**Status:** Implemented — `Question.collapsePerDay` (DB column + migration 2); applied in `GetVisualizationDataUseCase.buildYesNoCharts`; "One Yes Per Day" toggle in the create/edit wizard; round-trips through export/import
+**Context:** A daily yes/no — the headache case Nudgery was built for — is conceptually a per-day bit,
+but the charts sum every "YES" answer. Re-answering a day (an off-schedule **Answer Now** to flip
+No→Yes, or re-answering to correct a follow-up) then double-counts that day. Two semantics are both
+valid: an **event tally** (sum each Yes) and a **per-day presence** bit (the day is Yes or No), so
+this is an opt-in rather than a behavior change.
+**Decision:** A per-Yes/No-question boolean ("One Yes Per Day"), **default off**. When on, every
+chart derived from that question aggregates by **calendar day** to a single value before any further
+bucketing: a day with ≥1 "YES" answer = one Yes; a day with answers but no Yes = one No; a day with
+no answers is absent. It applies **uniformly across all of the question's charts** — calendar heat
+map, line graph, and the Yes/No summary (which then reads **"Yes days" vs "No days"**) — so they stay
+consistent. Larger heat-map buckets (week/month) sum these day-bits ("Yes days"). The flag is
+**independent per question**, set separately on the main question and on each Yes/No follow-up. It is
+a **display/aggregation rule only**: raw answers are never merged or deleted, so it is fully
+reversible and export keeps every answer.
+The collapse period is **hard-coded to the calendar day** regardless of schedule type
+(DAILY/HOURLY/WEEKLY/MONTHLY): the day is the chart pipeline's atomic unit (`DailyCount`), it serves
+HOURLY ("Yes day" when on vs event sum when off) and DAILY directly, and it matches "sum Yes days"
+for larger buckets. A per-schedule-period collapse was rejected — it would need sub-day (hourly) and
+period-aware (weekly/monthly) aggregation the pipeline lacks and would double-bucket against the
+chart's own day/week/month cells, for marginal benefit (only diverges on the uncommon case of
+re-answering a weekly/monthly question on different days within one period); revisitable later
+without redoing the per-day work.
+**Consequences:** A new boolean column on the question table — an additive migration defaulting
+false, so existing questions keep summing. The create/edit wizard gains the toggle for Yes/No
+questions (main and follow-up). Export/import carries the flag (absent ⇒ false for older backups).
+Aggregation branches on it in `GetVisualizationDataUseCase.buildYesNoCharts` (heat map daily counts,
+line points, and the Yes/No `ColumnChart`).
+**Tests:** `VisualizationDataTest` (collapse on → one Yes day across heat map/line/summary; Yes+No
+day = one Yes day; only-No day = one No day; off → summing preserved; line axis tops at 1 when on),
+`NudgeCreationTest` (persists for YES/NO; default off; ignored for non-YES/NO), `NudgeEditTest`
+(editing toggles it on an existing main question), `NudgeImportTest` + `DataExportTest` +
+`NudgeBackupParserTest` (export/import round-trip; absent ⇒ false).

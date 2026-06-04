@@ -17,6 +17,7 @@ import kotlinx.datetime.LocalTime
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -100,6 +101,45 @@ class NudgeCreationTest {
         val nudge = repos.nudgeRepository.getById(result.nudgeId)
         assertNotNull(nudge)
         assertEquals("Did you stretch?", nudge.name)
+    }
+
+    @Test
+    fun TDD_createPersistsOneYesPerDayForYesNo() = runTest {
+        // ED-17: the per-question "One Yes Per Day" flag persists for YES/NO questions.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Headache?", QuestionType.YES_NO, collapsePerDay = true),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val question = repos.questionRepository.getByNudgeId(result.nudgeId).first { it.isMainQuestion }
+        assertTrue(question.collapsePerDay)
+    }
+
+    @Test
+    fun TDD_oneYesPerDayDefaultsOffAndIsIgnoredForNonYesNo() = runTest {
+        // ED-17: default off; the flag is only honored for YES/NO questions.
+        val plain = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Headache?", QuestionType.YES_NO),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(plain)
+        assertFalse(repos.questionRepository.getByNudgeId(plain.nudgeId).first { it.isMainQuestion }.collapsePerDay)
+
+        val number = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How many?", QuestionType.NUMBER, collapsePerDay = true),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(number)
+        assertFalse(
+            repos.questionRepository.getByNudgeId(number.nudgeId).first { it.isMainQuestion }.collapsePerDay,
+            "flag is ignored for non-YES/NO types"
+        )
     }
 
     @Test

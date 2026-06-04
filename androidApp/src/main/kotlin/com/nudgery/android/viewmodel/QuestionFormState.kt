@@ -11,7 +11,9 @@ data class QuestionFormState(
     val triggerAnswerValue: String? = null,
     val triggerOperator: TriggerOperator? = null,
     val scaleMin: Int = 0,
-    val scaleMax: Int = 10
+    val scaleMax: Int = 10,
+    /** YES/NO "One Yes Per Day" toggle (ED-17); only meaningful when [type] is YES_NO. */
+    val collapsePerDay: Boolean = false
 ) {
     fun toRequest() = QuestionRequest(
         text = text,
@@ -20,6 +22,7 @@ data class QuestionFormState(
         triggerAnswerValue = triggerAnswerValue,
         triggerOperator = triggerOperator,
         scaleMin = scaleMin,
-        scaleMax = scaleMax
+        scaleMax = scaleMax,
+        collapsePerDay = collapsePerDay
     )
 }

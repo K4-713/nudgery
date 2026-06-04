@@ -38,6 +38,7 @@ import com.nudgery.android.R
 import com.nudgery.android.viewmodel.EditNudgeViewModel
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
+import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.usecase.UpdateNudgeResult
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -102,7 +103,10 @@ fun EditNudgeScreen(
                         onOptionReorder = { from, to -> viewModel.reorderOption(from, to) },
                         onOptionRemove = { index -> viewModel.removeOption(index) },
                         onOptionAdd = { viewModel.addOption() },
-                        canAddOption = formState.options.size < 16
+                        canAddOption = formState.options.size < 16,
+                        isYesNo = formState.mainQuestionType == QuestionType.YES_NO,
+                        collapsePerDay = formState.mainQuestionCollapsePerDay,
+                        onCollapsePerDayChange = { viewModel.setMainQuestionCollapsePerDay(it) }
                     )
                     1 -> FollowUpStep(
                         mainQuestion = QuestionFormState(
@@ -158,7 +162,10 @@ private fun EditQuestionStep(
     onOptionReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     onOptionRemove: (Int) -> Unit,
     onOptionAdd: () -> Unit,
-    canAddOption: Boolean
+    canAddOption: Boolean,
+    isYesNo: Boolean,
+    collapsePerDay: Boolean,
+    onCollapsePerDayChange: (Boolean) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.step_question_title), style = MaterialTheme.typography.titleMedium)
@@ -215,6 +222,10 @@ private fun EditQuestionStep(
             TextButton(onClick = onOptionAdd) {
                 Text(stringResource(R.string.option_add))
             }
+        }
+
+        if (isYesNo) {
+            OneYesPerDayToggle(checked = collapsePerDay, onCheckedChange = onCollapsePerDayChange)
         }
     }
 }

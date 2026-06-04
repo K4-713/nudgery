@@ -119,7 +119,7 @@ class GetVisualizationDataUseCase(
         val lineYRange = lineGraphYRange(question, allAnswers, timeZone)
 
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange, question.collapsePerDay)
             QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, source.optionsById, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, source.optionsById, includeColumnChart = false)
@@ -155,19 +155,34 @@ class GetVisualizationDataUseCase(
         granularity: HeatMapGranularity,
         fillViewport: Boolean,
         lineVisibleDays: Int,
-        lineYRange: Pair<Double, Double>?
+        lineYRange: Pair<Double, Double>?,
+        collapsePerDay: Boolean
     ): List<VisualizationData> {
-        val dailyCounts = answers
-            .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
+        // ED-17: when "One Yes Per Day" is on, each calendar day contributes a single bit — 1 if any
+        // "YES" that day, else 0 — instead of summing every Yes. Larger heat-map buckets then sum
+        // these day-bits ("Yes days"). Off (default), every Yes is counted.
+        val answersByDate = answers.groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
+        val dailyCounts = answersByDate
             .map { (date, dayAnswers) ->
-                DailyCount(date, dayAnswers.count { it.value.uppercase() == "YES" }.toDouble())
+                val yesCount = dayAnswers.count { it.value.uppercase() == "YES" }
+                val value = if (collapsePerDay) (if (yesCount > 0) 1.0 else 0.0) else yesCount.toDouble()
+                DailyCount(date, value)
             }
             .sortedBy { it.date }
 
         val dailyYesPoints = dailyCounts.map { DataPoint(it.date.atStartOfDayIn(timeZone), it.value) }
 
-        val totalYes = answers.count { it.value.uppercase() == "YES" }
-        val totalNo = answers.count { it.value.uppercase() == "NO" }
+        // Collapsed: the summary counts Yes days vs No days (a day with answers but no Yes is one No
+        // day). Otherwise it counts raw Yes vs No answers.
+        val totalYes: Int
+        val totalNo: Int
+        if (collapsePerDay) {
+            totalYes = answersByDate.values.count { day -> day.any { it.value.uppercase() == "YES" } }
+            totalNo = answersByDate.size - totalYes
+        } else {
+            totalYes = answers.count { it.value.uppercase() == "YES" }
+            totalNo = answers.count { it.value.uppercase() == "NO" }
+        }
 
         return listOf(
             VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, dataStart, granularity, fillViewport),
@@ -227,9 +242,15 @@ class GetVisualizationDataUseCase(
             0.0 to niceCeil(max)
         }
         QuestionType.YES_NO -> {
-            val maxDailyYes = allAnswers
-                .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
-                .maxOfOrNull { (_, day) -> day.count { it.value.uppercase() == "YES" } } ?: 0
+            // With "One Yes Per Day" (ED-17) each day's line value is 0 or 1, so the axis tops out at
+            // 1; otherwise it tops out at the busiest day's raw Yes count.
+            val maxDailyYes = if (question.collapsePerDay) {
+                if (allAnswers.any { it.value.uppercase() == "YES" }) 1 else 0
+            } else {
+                allAnswers
+                    .groupBy { it.scheduledAt.toLocalDateTime(timeZone).date }
+                    .maxOfOrNull { (_, day) -> day.count { it.value.uppercase() == "YES" } } ?: 0
+            }
             0.0 to niceCeil(maxDailyYes.toDouble())
         }
         else -> null

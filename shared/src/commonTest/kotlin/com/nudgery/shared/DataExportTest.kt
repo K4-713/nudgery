@@ -179,6 +179,28 @@ class DataExportTest {
     }
 
     @Test
+    fun TDD_jsonExport_includesOneYesPerDayOnlyWhenOn() = runTest {
+        // ED-17: the One Yes Per Day flag round-trips through JSON backups, emitted only when on.
+        val on = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Headache?", QuestionType.YES_NO, collapsePerDay = true),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val onJson = exportAnswers.execute(on.nudgeId, ExportFormat.JSON)
+        assertTrue(onJson.contains("\"collapsePerDay\": true"), "backup records the flag when on")
+
+        val off = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Headache?", QuestionType.YES_NO),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val offJson = exportAnswers.execute(off.nudgeId, ExportFormat.JSON)
+        assertFalse(offJson.contains("collapsePerDay"), "flag omitted when off")
+    }
+
+    @Test
     fun TDD_jsonExport_includesScheduleType() = runTest {
         // Schedule type is needed to reconstruct the notification cadence
         val (nudgeId, _, _) = createNudgeWithAnswer()
