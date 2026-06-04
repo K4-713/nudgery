@@ -40,6 +40,7 @@ import com.nudgery.android.viewmodel.AnswerFormUiState
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.unit.sp
 import com.nudgery.android.ui.theme.LocalEmojiScale
+import com.nudgery.android.ui.theme.emojiScaledStyle
 import com.nudgery.android.viewmodel.AnswerFormViewModel
 import com.nudgery.shared.emoji.Gender
 import com.nudgery.shared.emoji.SkinTone
@@ -136,7 +137,7 @@ private fun AnswerStep(
 
         Text(
             text = question.question.text,
-            style = MaterialTheme.typography.headlineSmall,
+            style = emojiScaledStyle(question.question.text, MaterialTheme.typography.headlineSmall),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )

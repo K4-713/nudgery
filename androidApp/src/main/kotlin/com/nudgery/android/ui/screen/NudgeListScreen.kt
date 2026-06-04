@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
+import com.nudgery.android.ui.theme.emojiScaledStyle
 import com.nudgery.android.viewmodel.NudgeListViewModel
 import com.nudgery.android.viewmodel.NudgeSummary
 import kotlinx.datetime.Instant
@@ -203,7 +204,7 @@ private fun NudgeListItem(
                     Box {
                         Text(
                             text = nudge.name,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = emojiScaledStyle(nudge.name, MaterialTheme.typography.titleSmall),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

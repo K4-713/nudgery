@@ -241,23 +241,25 @@ and icons are generic Material Symbols.
 **Tests:** UX/scope decision — constituent behaviors are covered by [[ED-6]]…[[ED-11]]; the
 no-system-keyboard-for-answer-input behavior is verified at the UI layer when the picker lands.
 
-### ED-14: A global emoji-scale setting applies to emoji surfaces, scoped by role not content
-**Status:** Implemented — `AppSettings.emojiScale` + Settings slider (live sample); applied via `LocalEmojiScale` to the picker grid and EMOJI-answer display
+### ED-14: A global emoji-scale setting applies to emoji-only strings, by content
+**Status:** Implemented — `AppSettings.emojiScale` + Settings slider (live sample), applied via `LocalEmojiScale`
 **Context:** Users often want to see emoji larger (a real gap in most apps; also an accessibility
 win). Because emoji render from the device font (ED-3), scaling is just a font-size multiplier.
-**Decision:** A single app setting controls emoji size, applied to **dedicated emoji surfaces** —
-the picker grid and the EMOJI-answer display (provided app-wide via a `LocalEmojiScale`
-CompositionLocal). The packed-bubble chart is **excluded**: it already sizes emoji by frequency
-(its own visual encoding), which a global multiplier would distort. It is scoped **by
-surface role, not by content**: a surface whose job is to render a standalone emoji scales; emoji
-that appear *inside text* (nudge names — even a name that is just one emoji — TEXT answers, option
-labels) follow the surrounding text size and are unaffected. Selectively enlarging emoji within a
-text run would need inline sizing spans and could break layout, and scaling a single-emoji nudge
-name would blow up the dense main list — both avoided by the role-based scope. The Settings control
-previews the scale on a sample emoji (random from a small "fun" shortlist), mirroring the skin-tone
-swatch pattern.
-**Consequences:** A new persisted setting (`AppSettings`, like the tone/gender defaults). The main
-list and other text surfaces are provably unaffected. Each emoji surface multiplies its base size
-by the scale.
-**Tests:** pending — surface-scoped application (emoji surfaces scale; a single-emoji nudge name
-does not).
+**Decision:** A single app setting controls emoji size, applied **by content, not by surface**: any
+displayed string that is **emoji-only** (no mixed text — `util.isEmojiOnly`) is scaled, wherever it
+appears — emoji-only nudge names (including on the dense main list), emoji-only question text and
+follow-ups, emoji-only answers in the raw-data table, the picker grid, and the EMOJI-answer display.
+Strings that **mix** emoji and text ride the surrounding text size and are unaffected (selectively
+enlarging emoji *within* a text run would need inline sizing spans and could break layout). Applied
+via a `LocalEmojiScale` CompositionLocal and an `emojiScaledStyle(text, base)` helper that scales a
+text style only when the text is emoji-only.
+
+**The scale is a size *floor*, not a fixed size** — users pick the smallest size they're willing to
+decipher. So the packed-bubble chart treats it as a minimum: in the **full-screen** chart, emoji are
+at least the floor (and may go larger by frequency); the small **thumbnail** chart may render emoji
+*below* the floor (it's a preview). The Settings control previews the scale on a sample emoji
+(random from a small wild-animal shortlist).
+**Consequences:** A new persisted setting (`AppSettings`). Emoji-only nudge names can enlarge list
+rows at high scale (intended). The bubble chart's frequency encoding is preserved, just floored in
+full screen.
+**Tests:** pending — emoji-only strings scale; mixed text+emoji strings do not.

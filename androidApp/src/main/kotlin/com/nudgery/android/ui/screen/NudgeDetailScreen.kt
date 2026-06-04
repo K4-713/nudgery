@@ -136,6 +136,8 @@ import com.nudgery.shared.model.DataPoint
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
+import com.nudgery.android.ui.theme.LocalEmojiScale
+import com.nudgery.android.ui.theme.emojiScaledStyle
 import com.nudgery.shared.util.isSingleEmoji
 import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.model.VisualizationData
@@ -241,6 +243,7 @@ fun NudgeDetailScreen(
                 title = {
                     Text(
                         text = uiState.nudgeName,
+                        style = emojiScaledStyle(uiState.nudgeName, MaterialTheme.typography.titleLarge),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -275,7 +278,7 @@ fun NudgeDetailScreen(
                 item {
                     Text(
                         text = uiState.mainQuestionText,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = emojiScaledStyle(uiState.mainQuestionText, MaterialTheme.typography.titleMedium),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1705,6 +1708,7 @@ private fun PackedBubbleChart(
     }
     val textMeasurer = rememberTextMeasurer()
     val maxCount = entries.maxOf { it.count }.toFloat()
+    val emojiScale = LocalEmojiScale.current // captured for the draw lambda (ED-14, full-screen floor)
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val stops = palette.paletteStops
 
@@ -1757,7 +1761,10 @@ private fun PackedBubbleChart(
             // A lone emoji floats in a sea of bubble; with no neighbors it has room to be twice the
             // size of regular word labels (and to use more of the bubble's width before wrapping).
             val emojiOnly = isSingleEmoji(c.entry.label)
-            val wordPx = if (emojiOnly) (r * 1.0f).coerceIn(18f, 52f)
+            // The emoji scale (ED-14) is a *floor*: enforced only in the full-screen (zoomable) chart,
+            // where lone emoji are at least the chosen size and may go larger; the thumbnail stays small.
+            val emojiFloor = if (zoomable) emojiScale else 1f
+            val wordPx = if (emojiOnly) (r * 1.0f).coerceIn(18f * emojiFloor, 52f * emojiFloor)
                          else (r * 0.5f).coerceIn(9f, 26f)
             val labelMaxWidth = (r * if (emojiOnly) 2f else 1.7f).toInt().coerceAtLeast(1)
             val wordLayout = textMeasurer.measure(
@@ -1993,7 +2000,7 @@ private fun FollowUpChartSection(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = followUp.questionText,
-                style = MaterialTheme.typography.labelMedium,
+                style = emojiScaledStyle(followUp.questionText, MaterialTheme.typography.labelMedium),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -2267,7 +2274,7 @@ private fun AnswerTableRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = answer.displayValue,
-                style = MaterialTheme.typography.bodyMedium,
+                style = emojiScaledStyle(answer.displayValue, MaterialTheme.typography.bodyMedium),
                 color = if (answer.isHidden) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
             )
             if (showDate) {
