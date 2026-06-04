@@ -615,7 +615,7 @@ private fun EmojiDefaultSelectors(
         // filtered to what this device can actually render so it never shows tofu.
         val sample = remember {
             val candidates = listOf(
-                "🦒", "🦓", "🦏", "🦘", "🦥", "🦦", "🐧", "🦉", "🦩", "🐙", "🐳",
+                "🦒", "🦭", "🐄", "🦆", "🦥", "🐖", "🐧", "🦉", "🦩", "🐙", "🐳",
                 "🦚", "🦔", "🐉", "🦄", "🐢"
             )
             val glyphFilter = PlatformEmojiGlyphFilter()
