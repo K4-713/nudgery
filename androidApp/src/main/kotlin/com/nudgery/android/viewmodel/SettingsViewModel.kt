@@ -52,6 +52,7 @@ data class SettingsUiState(
     val chartPalette: ChartPalettePreference = ChartPalettePreference.SPECTRUM,
     val defaultEmojiSkinTone: SkinTone = SkinTone.DEFAULT,
     val defaultEmojiGender: Gender = Gender.NEUTRAL,
+    val emojiScale: Float = 1f,
     val importStatus: ImportStatus = ImportStatus.Idle
 )
 
@@ -74,20 +75,21 @@ class SettingsViewModel(
     // In-flight import; null when no import is running. Mutated only on the main dispatcher.
     private var importSession: ImportSession? = null
 
-    // The two emoji defaults are grouped so the outer combine stays within its typed arity.
-    private val emojiDefaults: Flow<Pair<SkinTone, Gender>> = combine(
+    // The emoji settings are grouped so the outer combine stays within its typed arity.
+    private val emojiSettings: Flow<Triple<SkinTone, Gender, Float>> = combine(
         appSettings.defaultEmojiSkinTone,
-        appSettings.defaultEmojiGender
-    ) { tone, gender -> tone to gender }
+        appSettings.defaultEmojiGender,
+        appSettings.emojiScale
+    ) { tone, gender, scale -> Triple(tone, gender, scale) }
 
     val uiState: StateFlow<SettingsUiState> = combine(
         appSettings.themePreference,
         appSettings.boldText,
         appSettings.chartPalette,
-        emojiDefaults,
+        emojiSettings,
         _importStatus
     ) { theme, bold, palette, emoji, importStatus ->
-        SettingsUiState(theme, bold, palette, emoji.first, emoji.second, importStatus)
+        SettingsUiState(theme, bold, palette, emoji.first, emoji.second, emoji.third, importStatus)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setTheme(pref: ThemePreference) {
@@ -108,6 +110,10 @@ class SettingsViewModel(
 
     fun setDefaultEmojiGender(gender: Gender) {
         viewModelScope.launch { appSettings.setDefaultEmojiGender(gender) }
+    }
+
+    fun setEmojiScale(scale: Float) {
+        viewModelScope.launch { appSettings.setEmojiScale(scale) }
     }
 
     fun importNudgeFromBackup(jsonContent: String) = startImport(listOf(jsonContent))

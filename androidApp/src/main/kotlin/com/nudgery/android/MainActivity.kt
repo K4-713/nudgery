@@ -40,6 +40,8 @@ import com.nudgery.android.ui.screen.LicensesScreen
 import com.nudgery.android.ui.screen.NudgeDetailScreen
 import com.nudgery.android.ui.screen.NudgeListScreen
 import com.nudgery.android.ui.screen.SettingsScreen
+import androidx.compose.runtime.CompositionLocalProvider
+import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.android.ui.theme.NudgeryTheme
 import com.nudgery.android.viewmodel.NudgeListViewModel
 import com.nudgery.android.viewmodel.SettingsViewModel
@@ -70,6 +72,7 @@ class MainActivity : ComponentActivity() {
                 themePreference = settingsState.themePreference,
                 boldText = settingsState.boldText
             ) {
+              CompositionLocalProvider(LocalEmojiScale provides settingsState.emojiScale) {
                 NotificationPermissionEffect()
                 ExactAlarmRationaleEffect()
 
@@ -183,6 +186,7 @@ class MainActivity : ComponentActivity() {
                         LicensesScreen(onBack = { navController.popBackStack() })
                     }
                 }
+              }
             }
         }
     }

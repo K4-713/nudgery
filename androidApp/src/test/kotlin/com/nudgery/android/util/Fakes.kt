@@ -55,6 +55,14 @@ class FakeAppSettings : AppSettings {
     override suspend fun setChartPalette(palette: ChartPalettePreference) {}
     override suspend fun setDefaultEmojiSkinTone(tone: SkinTone) { _skinTone.value = tone }
     override suspend fun setDefaultEmojiGender(gender: Gender) { _gender.value = gender }
+    private val _emojiRecents = MutableStateFlow<List<String>>(emptyList())
+    override val emojiRecents: Flow<List<String>> = _emojiRecents
+    override suspend fun addEmojiRecent(emoji: String) {
+        _emojiRecents.update { (listOf(emoji) + it).distinct().take(32) }
+    }
+    private val _emojiScale = MutableStateFlow(1f)
+    override val emojiScale: Flow<Float> = _emojiScale
+    override suspend fun setEmojiScale(scale: Float) { _emojiScale.value = scale }
     override fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe> =
         _defaultTimeframes.map { it[nudgeId] ?: Timeframe.WEEKLY }
     override suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe) {

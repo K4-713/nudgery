@@ -46,12 +46,12 @@ the code changes.
 
 ## Emoji input
 
-These decisions govern the planned `EMOJI` question type. They are **Accepted** but not yet
-implemented; see the *Emoji Question Type* section of `TODO.md` for the work breakdown. Their
-`TDD_` tests are written first (DDD) and will fail until the feature lands.
+These decisions govern the `EMOJI` question type. The shared layer and the Android picker are
+implemented (see each entry's **Status**); iOS (ED-9 region/ED-13) and the emoji-scale setting
+(ED-14) remain. See `TODO.md` for outstanding work.
 
 ### ED-1: `EMOJI` is a TEXT question under the hood
-**Status:** Implemented (model/routing) — `QuestionType.EMOJI` routes to the TEXT path for storage, export, charts, and validation; round-trips through backup. Wizard exposure + picker input land with task #8.
+**Status:** Implemented — `QuestionType.EMOJI` routes to the TEXT path (storage/export/charts/validation), round-trips through backup, and is selectable in the create/edit wizard.
 **Context:** Users want an emoji-only answer type, but emoji answers should reuse the existing
 text storage, export, and packed-bubble visualization (which already tokenizes emoji).
 **Decision:** `QuestionType.EMOJI` persists, exports, and charts identically to `TEXT`. It differs
@@ -63,7 +63,7 @@ must round-trip the new type.
 **Tests:** pending — see TODO.md.
 
 ### ED-2: Emoji answers are validated emoji-only, not merely hinted
-**Status:** Implemented (shared logic) — `util.sanitizeToEmoji` / `util.isEmojiOnly`, promoted from the emoji helpers; UI wiring lands with the picker (ED-13, task #8)
+**Status:** Implemented — `util.sanitizeToEmoji` / `util.isEmojiOnly`; the picker enforces emoji-only by construction (taps insert catalog emoji), with the validators available as the save-time guard.
 **Context:** No Android/iOS API can restrict the system keyboard to emoji, so input correctness
 cannot rely on the keyboard. Users may also paste, dictate, or use a hardware keyboard.
 **Decision:** An emoji-only validator (promoted from the existing `extractEmojiWords` /
@@ -74,7 +74,7 @@ shared validator is reused by both platforms.
 **Tests:** pending — see TODO.md (cover paste, mixed text+emoji, garbage, empty).
 
 ### ED-3: Never ship emoji glyphs; render with the device font
-**Status:** Accepted — implementation pending
+**Status:** Implemented — picker/answers/charts render emoji from the device font; no glyph assets shipped
 **Context:** Bundling emoji artwork would create a perpetual update treadmill and bloat.
 **Decision:** Emoji are always rendered using the device's own emoji font. We ship no emoji images.
 **Consequences:** New emoji artwork is the OS vendor's responsibility. We store/display code
@@ -82,7 +82,7 @@ points only.
 **Tests:** pending — see TODO.md.
 
 ### ED-4: Emoji availability is per-device, never the cross-platform intersection
-**Status:** Accepted — implementation pending
+**Status:** Implemented — `PlatformEmojiGlyphFilter` filters the picker grid to what the device can render
 **Context:** Different OS versions render different emoji sets; showing an emoji the device can't
 draw yields tofu (□), and limiting to the iOS∩Android intersection would needlessly hide emoji.
 **Decision:** The picker filters its displayed set at runtime by what the *current device* can
@@ -155,7 +155,7 @@ the setting and mapping can be removed later (if mis-mappings prove grating) wit
 gender+tone composition; non-gendered emoji untouched).
 
 ### ED-8: Variant axes other than skin tone and gender are pick-time only
-**Status:** Accepted — implementation pending
+**Status:** Implemented (skin tone + gender) — long-press variant tray via `EmojiDefaults.variants`; hair/direction variants deferred
 **Context:** Hair components (red/curly/white/bald) attach only to the 3 bare adult figures
 (person/man/woman) and never to role emoji; direction (facing left/right) reaches only a handful of
 emoji. A global default for either would touch almost nothing.
@@ -221,19 +221,43 @@ embedded and to revisit if the data source changes.
 **Tests:** n/a (attribution/config, verified by the credits process, not a runtime behavior).
 
 ### ED-13: Emoji answers are entered via a conventional in-app picker, not the system keyboard
-**Status:** Accepted — implementation pending
+**Status:** Implemented — inline always-open `EmojiPicker` in the answer form (search, top tabs, recents, grid); EMOJI selectable in the wizard
 **Context:** No platform can restrict the system keyboard to emoji (the original reason for rolling
 our own picker). The picker should feel like the emoji pickers users already know, so it needs no
 user-facing explanation.
-**Decision:** `EMOJI` answers are entered through our in-app emoji picker, opened from a **read-only
-answer field** so the system soft keyboard never appears. The picker mirrors standard platform
-emoji-picker conventions — typeahead search ([[ED-11]]), recents, and category navigation, with
-variant selection ([[ED-8]]) and applied defaults ([[ED-6]], [[ED-7]]). Because it follows
-conventions users already know, the picker's mechanics are intentionally **not** documented in the
-user-facing README; the behavior is specified here and in the related EDs. Visual specifics are
-deferred to DESIGN.md until visual decisions are made.
-**Consequences:** Consistent, learnable UX with no bespoke user instructions to maintain. The
-read-only field is the seam that suppresses the keyboard and triggers the picker.
-**Tests:** UX/scope decision — the constituent behaviors are covered by [[ED-6]]…[[ED-11]]; the
-read-only-field / no-soft-keyboard behavior is verified at the UI layer when the picker lands
-(TODO Android-UI task).
+**Decision:** `EMOJI` answers are entered through our in-app emoji picker, which is **embedded
+inline and always-open** on the answer screen (not a pop-up/bottom sheet). An emoji answer is **one
+or more emoji** (tapping appends; a Done/backspace manage the string); the read-only answer display
+never raises the system keyboard. The picker's **search field is the only element that uses the
+system keyboard** (for typeahead) — embedding the picker inline is deliberate so the keyboard rising
+for search resizes the page normally instead of fighting a sheet. The picker mirrors standard
+platform conventions — typeahead search ([[ED-11]]), a recents category, category navigation, and
+long-press variant selection ([[ED-8]]) with applied defaults ([[ED-6]], [[ED-7]]). Because it
+follows conventions users already know, the picker's mechanics are intentionally **not** documented
+in the user-facing README; visual specifics live in DESIGN.md ("Emoji Picker").
+**Consequences:** No sheet-vs-keyboard conflict; predictable fixed layout. Conventions (not vendor
+assets/branding) are copied, so there is no IP exposure — emoji render from the device font (ED-3)
+and icons are generic Material Symbols.
+**Tests:** UX/scope decision — constituent behaviors are covered by [[ED-6]]…[[ED-11]]; the
+no-system-keyboard-for-answer-input behavior is verified at the UI layer when the picker lands.
+
+### ED-14: A global emoji-scale setting applies to emoji surfaces, scoped by role not content
+**Status:** Implemented — `AppSettings.emojiScale` + Settings slider (live sample); applied via `LocalEmojiScale` to the picker grid and EMOJI-answer display
+**Context:** Users often want to see emoji larger (a real gap in most apps; also an accessibility
+win). Because emoji render from the device font (ED-3), scaling is just a font-size multiplier.
+**Decision:** A single app setting controls emoji size, applied to **dedicated emoji surfaces** —
+the picker grid and the EMOJI-answer display (provided app-wide via a `LocalEmojiScale`
+CompositionLocal). The packed-bubble chart is **excluded**: it already sizes emoji by frequency
+(its own visual encoding), which a global multiplier would distort. It is scoped **by
+surface role, not by content**: a surface whose job is to render a standalone emoji scales; emoji
+that appear *inside text* (nudge names — even a name that is just one emoji — TEXT answers, option
+labels) follow the surrounding text size and are unaffected. Selectively enlarging emoji within a
+text run would need inline sizing spans and could break layout, and scaling a single-emoji nudge
+name would blow up the dense main list — both avoided by the role-based scope. The Settings control
+previews the scale on a sample emoji (random from a small "fun" shortlist), mirroring the skin-tone
+swatch pattern.
+**Consequences:** A new persisted setting (`AppSettings`, like the tone/gender defaults). The main
+list and other text surfaces are provably unaffected. Each emoji surface multiplies its base size
+by the scale.
+**Tests:** pending — surface-scoped application (emoji surfaces scale; a single-emoji nudge name
+does not).

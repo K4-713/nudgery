@@ -168,6 +168,7 @@ private fun AnswerTypeSelector(
                 add(QuestionType.OPTION_SINGLE to R.string.answer_type_option_single)
                 add(QuestionType.OPTION_MULTI to R.string.answer_type_option_multi)
                 if (includeText) add(QuestionType.TEXT to R.string.answer_type_text)
+                if (includeText) add(QuestionType.EMOJI to R.string.answer_type_emoji)
             }.forEach { (type, labelRes) ->
                 NudgeryToggleChip(
                     selected = selected == type,

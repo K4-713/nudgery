@@ -6,6 +6,7 @@ import com.nudgery.shared.emoji.Gender
 import com.nudgery.shared.emoji.SkinTone
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class EmojiDefaultsTest {
 
@@ -96,6 +97,18 @@ class EmojiDefaultsTest {
     fun TDD_applyDoesNotToneAnEmojiThatDoesNotAcceptSkinTone() {
         val entry = catalogEntry(grinning, acceptsSkinTone = false)
         assertEquals(grinning, EmojiDefaults.apply(entry, SkinTone.MEDIUM, Gender.NEUTRAL))
+    }
+
+    @Test
+    fun TDD_variantsListsSkinToneAndGenderCombinationsOrNothing() {
+        // ED-8: the long-press tray offers an emoji's variants; a plain emoji has none.
+        val personVariants = EmojiDefaults.variants(catalogEntry(person, acceptsSkinTone = true))
+        assertEquals(person, personVariants.first(), "base form comes first")
+        assertTrue(personVariants.contains(woman), "includes the woman form")
+        assertTrue(personVariants.contains(man), "includes the man form")
+        assertTrue(personVariants.size > 6, "gender × tone combinations")
+
+        assertEquals(listOf(grinning), EmojiDefaults.variants(catalogEntry(grinning, acceptsSkinTone = false)))
     }
 
     private fun catalogEntry(emoji: String, acceptsSkinTone: Boolean) = EmojiCatalogEntry(

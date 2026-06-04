@@ -79,7 +79,8 @@ class AnswerFormViewModelTest {
             scheduledAt = ScheduledAt(scheduledAt),
             questionRepository = repos.questionRepo,
             questionOptionRepository = repos.optionRepo,
-            recordAnswer = repos.recordAnswerUseCase()
+            recordAnswer = repos.recordAnswerUseCase(),
+            appSettings = repos.appSettings
         )
 
     @Test
@@ -99,6 +100,23 @@ class AnswerFormViewModelTest {
         val answers = repos.answerRepo.getAllByNudgeId(nudgeId)
         assertEquals(1, answers.size)
         assertEquals(notificationFiredAt, answers[0].scheduledAt)
+    }
+
+    @Test
+    fun TDD_appendAndBackspaceEmojiBuildTheAnswerAndRecents() = runTest {
+        // ED-13: tapping appends to the emoji answer string and records recents; backspace removes one.
+        val nudgeId = createYesNoNudge()
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.appendEmoji("😀")
+        viewModel.appendEmoji("🐱")
+        advanceUntilIdle()
+        assertEquals("😀🐱", viewModel.uiState.value.currentAnswer)
+        assertEquals(listOf("🐱", "😀"), viewModel.uiState.value.emojiRecents)
+
+        viewModel.backspaceEmoji()
+        assertEquals("😀", viewModel.uiState.value.currentAnswer)
     }
 
     @Test

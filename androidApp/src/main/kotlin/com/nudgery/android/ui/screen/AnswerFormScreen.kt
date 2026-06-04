@@ -37,7 +37,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.viewmodel.AnswerFormUiState
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.unit.sp
+import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.android.viewmodel.AnswerFormViewModel
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.android.viewmodel.ScheduledAt
 import com.nudgery.shared.model.QuestionType
 import kotlinx.datetime.Instant
@@ -94,6 +99,8 @@ fun AnswerFormScreen(
                         uiState = uiState,
                         stepIndex = stepIndex,
                         onAnswerChange = { viewModel.setCurrentAnswer(it) },
+                        onEmojiAppend = { viewModel.appendEmoji(it) },
+                        onEmojiBackspace = { viewModel.backspaceEmoji() },
                         onSave = { viewModel.saveAnswer() },
                         onCancel = { viewModel.dismiss() },
                         modifier = Modifier
@@ -113,6 +120,8 @@ private fun AnswerStep(
     uiState: AnswerFormUiState,
     stepIndex: Int,
     onAnswerChange: (String) -> Unit,
+    onEmojiAppend: (String) -> Unit,
+    onEmojiBackspace: () -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
@@ -161,12 +170,14 @@ private fun AnswerStep(
                 currentAnswer = uiState.currentAnswer,
                 onAnswerChange = onAnswerChange
             )
-            // EMOJI is TEXT under the hood (ED-1). The dedicated emoji picker (ED-13) replaces this
-            // plain field in the picker task (#8); until then EMOJI questions aren't offered in the
-            // create/edit wizard, so this branch is unreachable and just keeps the `when` exhaustive.
-            QuestionType.EMOJI -> TextInput(
+            QuestionType.EMOJI -> EmojiInput(
                 currentAnswer = uiState.currentAnswer,
-                onAnswerChange = onAnswerChange
+                skinTone = uiState.emojiSkinTone,
+                gender = uiState.emojiGender,
+                recents = uiState.emojiRecents,
+                onAppend = onEmojiAppend,
+                onBackspace = onEmojiBackspace,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -364,4 +375,44 @@ private fun TextInput(currentAnswer: String, onAnswerChange: (String) -> Unit) {
         minLines = 3,
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+/**
+ * Emoji answer input (ED-13): a read-only chosen-emoji display with a backspace, above the inline
+ * always-open emoji picker. The answer is one or more emoji; the system keyboard is used only by the
+ * picker's search field.
+ */
+@Composable
+private fun EmojiInput(
+    currentAnswer: String,
+    skinTone: SkinTone,
+    gender: Gender,
+    recents: List<String>,
+    onAppend: (String) -> Unit,
+    onBackspace: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = currentAnswer.ifEmpty { stringResource(R.string.emoji_answer_hint) },
+                // The chosen emoji honor the global emoji scale (ED-14); the empty hint stays normal.
+                fontSize = if (currentAnswer.isEmpty()) 16.sp else (28 * LocalEmojiScale.current).sp,
+                modifier = Modifier.weight(1f)
+            )
+            if (currentAnswer.isNotEmpty()) {
+                TextButton(onClick = onBackspace) { Text("⌫", fontSize = 22.sp) }
+            }
+        }
+        EmojiPicker(
+            recents = recents,
+            defaultSkinTone = skinTone,
+            defaultGender = gender,
+            onPick = onAppend,
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        )
+    }
 }

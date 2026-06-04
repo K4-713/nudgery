@@ -94,6 +94,9 @@ fun sanitizeToEmoji(text: String): String = extractEmojiWords(text).joinToString
  */
 fun isEmojiOnly(text: String): Boolean = text.isNotEmpty() && sanitizeToEmoji(text) == text
 
+/** Removes the last whole emoji from [text] — a backspace for an emoji answer string (ED-13). */
+fun dropLastEmoji(text: String): String = extractEmojiWords(text).dropLast(1).joinToString("")
+
 private fun combineSurrogates(high: Char, low: Char): Int =
     0x10000 + ((high.code - 0xD800) shl 10) + (low.code - 0xDC00)
 

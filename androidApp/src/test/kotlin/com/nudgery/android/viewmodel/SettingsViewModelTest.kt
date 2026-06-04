@@ -74,10 +74,12 @@ class SettingsViewModelTest {
 
         viewModel.setDefaultEmojiSkinTone(SkinTone.MEDIUM)
         viewModel.setDefaultEmojiGender(Gender.WOMAN)
+        viewModel.setEmojiScale(2.0f)
         advanceUntilIdle()
 
         assertEquals(SkinTone.MEDIUM, viewModel.uiState.value.defaultEmojiSkinTone)
         assertEquals(Gender.WOMAN, viewModel.uiState.value.defaultEmojiGender)
+        assertEquals(2.0f, viewModel.uiState.value.emojiScale)
     }
 
     @Test

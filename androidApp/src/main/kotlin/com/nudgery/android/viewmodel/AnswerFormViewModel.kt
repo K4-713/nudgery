@@ -3,11 +3,15 @@ package com.nudgery.android.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nudgery.android.settings.AppSettings
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.usecase.RecordAnswerUseCase
+import com.nudgery.shared.util.dropLastEmoji
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +36,11 @@ data class AnswerFormUiState(
     val questions: List<AnswerFormQuestion> = emptyList(),
     val currentAnswer: String = "",
     val isSubmitting: Boolean = false,
-    val isDismissed: Boolean = false
+    val isDismissed: Boolean = false,
+    // Emoji-answer support (ED-13): defaults applied on pick, plus the recents tab.
+    val emojiSkinTone: SkinTone = SkinTone.DEFAULT,
+    val emojiGender: Gender = Gender.NEUTRAL,
+    val emojiRecents: List<String> = emptyList()
 ) {
     val currentQuestion: AnswerFormQuestion? get() = questions.getOrNull(currentStepIndex)
     val totalSteps: Int get() = questions.size
@@ -43,7 +51,8 @@ class AnswerFormViewModel(
     private val scheduledAt: ScheduledAt,
     private val questionRepository: QuestionRepository,
     private val questionOptionRepository: QuestionOptionRepository,
-    private val recordAnswer: RecordAnswerUseCase
+    private val recordAnswer: RecordAnswerUseCase,
+    private val appSettings: AppSettings
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AnswerFormUiState())
@@ -59,6 +68,9 @@ class AnswerFormViewModel(
 
     init {
         viewModelScope.launch { loadQuestions() }
+        viewModelScope.launch { appSettings.defaultEmojiSkinTone.collect { t -> _uiState.update { it.copy(emojiSkinTone = t) } } }
+        viewModelScope.launch { appSettings.defaultEmojiGender.collect { g -> _uiState.update { it.copy(emojiGender = g) } } }
+        viewModelScope.launch { appSettings.emojiRecents.collect { r -> _uiState.update { it.copy(emojiRecents = r) } } }
     }
 
     private suspend fun loadQuestions() {
@@ -87,6 +99,17 @@ class AnswerFormViewModel(
 
     fun setCurrentAnswer(answer: String) {
         _uiState.update { it.copy(currentAnswer = answer) }
+    }
+
+    /** Appends a picked emoji to the answer string and records it as recent (ED-13). */
+    fun appendEmoji(emoji: String) {
+        _uiState.update { it.copy(currentAnswer = it.currentAnswer + emoji) }
+        viewModelScope.launch { appSettings.addEmojiRecent(emoji) }
+    }
+
+    /** Removes the last emoji from the answer string (the picker's backspace). */
+    fun backspaceEmoji() {
+        _uiState.update { it.copy(currentAnswer = dropLastEmoji(it.currentAnswer)) }
     }
 
     fun saveAnswer() {

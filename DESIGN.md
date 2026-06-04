@@ -335,10 +335,27 @@ Full screen. Launched from a notification or the "Answer Now" button on the deta
 | Option Single | Large tappable list items + "Save Answer" |
 | Option Multi | Checkboxes + "Save Answer" |
 | Text (follow-ups only) | Text field + "Save Answer" |
+| Emoji | Read-only chosen-emoji display + inline emoji picker (see **Emoji Picker**) + "Save Answer" |
 
 ### Selection Visual Treatment
 
 For Yes/No and Option Single, the selected button renders as a filled `Button` (solid primary background) while unselected options render as `OutlinedButton` at 40% opacity (`UNSELECTED_ALPHA`). For Option Multi, the entire row (checkbox + label) drops to 40% opacity for unchecked items. In all cases, dimming only activates once at least one selection has been made — before any selection, all options display at full opacity.
+
+### Emoji Picker
+
+The picker (behavior in ENGINEERING_DECISIONS.md ED-3/4/8/11/13; this is the visual spec) is **embedded inline and always-open** on the EMOJI answer screen — not a pop-up or bottom sheet — so the system keyboard rising for search resizes the page normally instead of fighting a sheet.
+
+Top-to-bottom on the answer page:
+
+- **Chosen-emoji display** — read-only; shows the answer string (one or more emoji, at the emoji-scale size). A backspace control removes the last emoji. Tapping it never raises the system keyboard.
+- **Search field** — pinned above the grid; the *only* element that uses the system keyboard. Typing switches the grid from categories to ranked results (ED-11). Empty search shows the browse grid.
+- **Category tabs** — **at the top on Android** (matching Android-user expectation; iOS will place them at the bottom per its own convention — a deliberate per-platform divergence). The **first tab is Recents, under a clock icon** (a persisted, most-recent-first list). Remaining tabs are the Unicode groups.
+- **Grid** — emoji rendered with the **device font** (no shipped glyphs, ED-3), filtered to what the device can render (ED-4). A normal tap **appends** the emoji (applying the default skin tone/gender, ED-6/7) and keeps the picker open. **Long-press** opens a variant row (skin tone / gender / hair / direction, ED-8); emoji that have variants show a subtle corner indicator.
+- A **"Save Answer"** button submits the whole string (no auto-submit on tap, consistent with the other answer types).
+
+**Icons are generic Material Symbols and emoji come from the device font** — we copy conventions, not any vendor's assets or branding (ED-13).
+
+The grid emoji size honors the global **emoji scale** setting (ED-14). See **Settings Screen → Emoji defaults** for the skin-tone/gender swatch selectors and the emoji-scale control.
 
 ### Top Bar
 

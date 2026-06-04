@@ -31,6 +31,17 @@ object EmojiDefaults {
     private const val ZWJ = 0x200D
     private const val PERSON_PLACEHOLDER = -1 // unifies person/man/woman when neutralizing a key
 
+    /**
+     * All distinct skin-tone × gender variants of [entry], base form first (ED-8 long-press tray).
+     * A single-element result means the emoji has no such variants. Hair/direction variants are not
+     * included in v1.
+     */
+    fun variants(entry: EmojiCatalogEntry): List<String> {
+        val out = LinkedHashSet<String>()
+        for (gender in Gender.entries) for (tone in SkinTone.entries) out.add(apply(entry, tone, gender))
+        return out.toList()
+    }
+
     /** Applies [gender] then [skinTone] to a picked catalog [entry]. */
     fun apply(entry: EmojiCatalogEntry, skinTone: SkinTone, gender: Gender): String {
         var emoji = applyGender(entry.emoji, gender)

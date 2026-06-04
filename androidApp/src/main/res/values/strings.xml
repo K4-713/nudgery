@@ -211,10 +211,15 @@
     <string name="settings_palette_ember">Purple to red</string>
     <string name="settings_palette_ember_description">Recommended for tritanopia</string>
 
+    <string name="emoji_search_hint">Search emoji</string>
+    <string name="emoji_answer_hint">Tap emoji to build your answer</string>
+    <string name="answer_type_emoji">Emoji</string>
+
     <!-- Emoji defaults (skin tone / gender applied to picked emoji that support them) -->
     <string name="settings_emoji_defaults">Emoji defaults</string>
     <string name="settings_emoji_skin_tone">Default skin tone</string>
     <string name="settings_emoji_gender">Default gender</string>
+    <string name="settings_emoji_size">Emoji size</string>
     <string name="settings_skin_tone_default">Default skin tone</string>
     <string name="settings_skin_tone_light">Light skin tone</string>
     <string name="settings_skin_tone_medium_light">Medium-light skin tone</string>

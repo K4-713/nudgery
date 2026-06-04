@@ -65,6 +65,13 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.backup.allNudgesBackupFileBase
 import com.nudgery.android.settings.ThemePreference
+import androidx.compose.material3.Slider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.nudgery.android.settings.EMOJI_SCALE_MAX
+import com.nudgery.android.settings.EMOJI_SCALE_MIN
 import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.android.ui.theme.paletteStops
 import com.nudgery.shared.emoji.EmojiDefaults
@@ -268,8 +275,10 @@ fun SettingsScreen(
             EmojiDefaultSelectors(
                 skinTone = uiState.defaultEmojiSkinTone,
                 gender = uiState.defaultEmojiGender,
+                emojiScale = uiState.emojiScale,
                 onSkinTone = viewModel::setDefaultEmojiSkinTone,
                 onGender = viewModel::setDefaultEmojiGender,
+                onEmojiScale = viewModel::setEmojiScale,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -534,8 +543,10 @@ private fun readJsonEntriesFromZip(bytes: ByteArray): List<String> {
 private fun EmojiDefaultSelectors(
     skinTone: SkinTone,
     gender: Gender,
+    emojiScale: Float,
     onSkinTone: (SkinTone) -> Unit,
     onGender: (Gender) -> Unit,
+    onEmojiScale: (Float) -> Unit,
 ) {
     val handSample = "🖐️" // 🖐️ — a skin-tone-capable sample
     val personSample = "🧑"     // 🧑 — a genderable sample
@@ -590,6 +601,28 @@ private fun EmojiDefaultSelectors(
                     onSelect = { onGender(g) }
                 )
             }
+        }
+
+        // Emoji size (ED-14): a slider with a live sample emoji from a small "fun" shortlist.
+        Text(
+            text = stringResource(R.string.settings_emoji_size),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        )
+        var sliderValue by remember(emojiScale) { mutableFloatStateOf(emojiScale) }
+        val sample = remember { listOf("😀", "🐱", "🦄", "🍕", "🚀", "🎉", "🐢", "🌈").random() }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            Text(text = sample, fontSize = (20 * sliderValue).sp)
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it; onEmojiScale(it) },
+                valueRange = EMOJI_SCALE_MIN..EMOJI_SCALE_MAX,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

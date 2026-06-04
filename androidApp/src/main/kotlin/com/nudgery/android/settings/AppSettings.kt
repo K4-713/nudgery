@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.nudgery.android.ui.theme.ChartPalettePreference
@@ -29,6 +30,12 @@ interface AppSettings {
     suspend fun setChartPalette(palette: ChartPalettePreference)
     suspend fun setDefaultEmojiSkinTone(tone: SkinTone)
     suspend fun setDefaultEmojiGender(gender: Gender)
+    /** Recently picked emoji, most-recent-first (ED-13 recents tab). */
+    val emojiRecents: Flow<List<String>>
+    suspend fun addEmojiRecent(emoji: String)
+    /** Global emoji size multiplier applied to emoji surfaces (ED-14); 1.0 = default. */
+    val emojiScale: Flow<Float>
+    suspend fun setEmojiScale(scale: Float)
     fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe>
     suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe)
 }
@@ -40,6 +47,13 @@ private val KEY_BOLD_TEXT = booleanPreferencesKey("bold_text")
 private val KEY_CHART_PALETTE = stringPreferencesKey("chart_palette")
 private val KEY_EMOJI_SKIN_TONE = stringPreferencesKey("default_emoji_skin_tone")
 private val KEY_EMOJI_GENDER = stringPreferencesKey("default_emoji_gender")
+private val KEY_EMOJI_RECENTS = stringPreferencesKey("emoji_recents")
+private const val MAX_EMOJI_RECENTS = 32
+private val KEY_EMOJI_SCALE = floatPreferencesKey("emoji_scale")
+
+/** Bounds for the global emoji-scale setting (ED-14): from normal size up to 2.5×. */
+const val EMOJI_SCALE_MIN = 1f
+const val EMOJI_SCALE_MAX = 2.5f
 
 class DataStoreAppSettings(private val context: Context) : AppSettings {
 
@@ -89,6 +103,28 @@ class DataStoreAppSettings(private val context: Context) : AppSettings {
 
     override suspend fun setDefaultEmojiGender(gender: Gender) {
         context.dataStore.edit { prefs -> prefs[KEY_EMOJI_GENDER] = gender.name }
+    }
+
+    override val emojiRecents: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        prefs[KEY_EMOJI_RECENTS]?.split('\n')?.filter { it.isNotEmpty() } ?: emptyList()
+    }
+
+    override suspend fun addEmojiRecent(emoji: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[KEY_EMOJI_RECENTS]?.split('\n')?.filter { it.isNotEmpty() } ?: emptyList()
+            val updated = (listOf(emoji) + current).distinct().take(MAX_EMOJI_RECENTS)
+            prefs[KEY_EMOJI_RECENTS] = updated.joinToString("\n")
+        }
+    }
+
+    override val emojiScale: Flow<Float> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_EMOJI_SCALE] ?: 1f).coerceIn(EMOJI_SCALE_MIN, EMOJI_SCALE_MAX)
+    }
+
+    override suspend fun setEmojiScale(scale: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_EMOJI_SCALE] = scale.coerceIn(EMOJI_SCALE_MIN, EMOJI_SCALE_MAX)
+        }
     }
 
     override fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe> =
