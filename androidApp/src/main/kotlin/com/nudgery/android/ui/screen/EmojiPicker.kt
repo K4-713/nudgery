@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -186,8 +187,14 @@ fun EmojiPicker(
             }
         }
 
+        // Cells hug the glyph plus a *constant* gap, so blank space doesn't scale up with the emoji
+        // size (ED-14) — only the glyph does. Floored at the 48dp minimum touch target, which only
+        // governs at the smallest scale. `.sp.toDp()` tracks the glyph's true size incl. font scale.
+        val cellMinSize = with(LocalDensity.current) {
+            maxOf(EMOJI_GRID_MIN_CELL, (28 * emojiScale).sp.toDp() + EMOJI_GRID_CELL_GAP)
+        }
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = (48 * emojiScale).dp),
+            columns = GridCells.Adaptive(minSize = cellMinSize),
             modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
             itemsIndexed(
@@ -200,26 +207,34 @@ fun EmojiPicker(
                 val variants = remember(cell) {
                     cell.entry?.let { EmojiDefaults.variants(it) }?.takeIf { it.size > 1 }
                 }
+                // The cell fills its grid slot so the glyph centers (even gaps on both sides) and the
+                // whole cell — not just the glyph — is the tap target. A small inner box hugs the
+                // glyph so the variant-corner triangle anchors to the emoji rather than the cell edge.
                 Box(
                     modifier = Modifier
-                        .padding(4.dp)
+                        .fillMaxWidth()
                         .combinedClickable(
                             onClick = { onPick(cell.display) },
                             onLongClick = if (variants != null) ({ expandedCell = index }) else null
-                        ),
+                        )
+                        .padding(vertical = 2.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = cell.display, fontSize = (28 * emojiScale).sp, textAlign = TextAlign.Center)
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = cell.display, fontSize = (28 * emojiScale).sp, textAlign = TextAlign.Center)
+                        if (variants != null) {
+                            // Affordance: a small corner triangle marks an emoji whose variants
+                            // (gender/skin tone) are reachable by long-press (ED-8).
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .size((8 * emojiScale).dp)
+                                    .clip(VariantCornerTriangle)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                    }
                     if (variants != null) {
-                        // Affordance: a small corner triangle marks an emoji whose variants
-                        // (gender/skin tone) are reachable by long-press (ED-8).
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size((8 * emojiScale).dp)
-                                .clip(VariantCornerTriangle)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
-                        )
                         DropdownMenu(
                             expanded = expandedCell == index,
                             onDismissRequest = { expandedCell = -1 }
@@ -242,6 +257,14 @@ fun EmojiPicker(
         }
     }
 }
+
+/** Floor for a picker grid cell — the Material 48dp minimum touch target. Only governs at the
+ *  smallest emoji scale; above that the cell is glyph-driven (see `cellMinSize`). */
+private val EMOJI_GRID_MIN_CELL = 48.dp
+
+/** Constant breathing room added around a grid glyph. Fixed (not scaled), so the gaps between emoji
+ *  stay the same as the emoji scale (ED-14) grows rather than widening proportionally. */
+private val EMOJI_GRID_CELL_GAP = 12.dp
 
 /** A right triangle filling the bottom-end corner — the "this emoji has variants" affordance (ED-8). */
 private val VariantCornerTriangle = GenericShape { size, _ ->
