@@ -381,6 +381,7 @@ The emoji picker (in progress) is backed by a catalog generated from Unicode dat
 - **Runtime model:** consumers depend on `EmojiCatalogEntry` (commonMain), not on how it was produced, so the storage shape is swappable (ED-5 names a packed-string fallback if keyword data later inflates the generated size).
 - **Device availability:** `EmojiGlyphFilter` (commonMain) with `PlatformEmojiGlyphFilter` (androidMain, via `Paint.hasGlyph`) filters the catalog to what the device can actually render (ED-4) — no new dependency, since minSdk 26 covers the API.
 - **Validation & presentation:** `util/EmojiText.kt` holds the shared emoji helpers (`extractEmojiWords`, `isSingleEmoji`, now also `sanitizeToEmoji`/`isEmojiOnly` — ED-2, with keycap support) reused by both the packed-bubble tokenizer and the EMOJI answer validator; `emoji/EmojiPresentation.kt` (`normalizeEmojiPresentation`) snaps emoji to their catalog fully-qualified form to guarantee emoji (not text) presentation (ED-9).
+- **Search:** `emoji/EmojiSearch.kt` (`search`) ranks catalog entries by name + CLDR keyword match (exact name > name-word prefix > exact keyword > keyword prefix; multi-word ANDs tokens; no fuzzy/semantic in v1 — ED-11). Pure and shared; the caller restricts input to device-renderable entries (ED-4) and applies default skin tone/gender (ED-6/ED-7) on pick.
 
 ## Security and Privacy
 

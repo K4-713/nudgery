@@ -194,7 +194,7 @@ keyword field. Localization is unlocked by adding locales later.
 keywords).
 
 ### ED-11: Emoji search is shared keyword/prefix matching (no fuzzy/semantic in v1)
-**Status:** Accepted — implementation pending
+**Status:** Implemented (shared logic) — `emoji.EmojiSearch.search`; renderability/defaults applied by the caller (picker, task #8)
 **Context:** Search should feel responsive and "related to the word," but a local, battery-conscious
 app should not ship an ML/embedding model, and CLDR keywords already encode the synonyms users type.
 **Decision:** Search is an in-memory prefix match of the typed token(s) against each emoji's name +
