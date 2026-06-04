@@ -145,6 +145,8 @@ import com.nudgery.shared.usecase.windowStepDays
 import com.nudgery.shared.model.VisualizationData
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
@@ -754,6 +756,7 @@ private fun NudgeryChart(
                         counts = visualization.dailyCounts,
                         windowStart = visualization.windowStart,
                         windowEnd = visualization.windowEnd,
+                        weekAnchor = visualization.weekAnchor,
                         granularity = visualization.granularity,
                         palette = chartPalette,
                         fillViewport = visualization.fillViewport
@@ -871,22 +874,28 @@ private fun TimeWindowScrubber(nav: ChartWindowNav, modifier: Modifier = Modifie
     }
 }
 
-// The weekly (SINGLE_DAY) heat map lays days out in a short, wide grid: 2 rows keeps the squares
-// large and lets ~SINGLE_DAY_GRID_VISIBLE_COLS columns fill the card's 16:9 width (≈8 days/screen),
-// scrolling for older days.
-private const val SINGLE_DAY_GRID_ROWS = 2
-private const val SINGLE_DAY_GRID_VISIBLE_COLS = 4
+// The weekly (SINGLE_DAY) heat map shows its 7 days as a single row of large squares: with so few
+// cells, one row reads at a glance, where a multi-row grid was confusing. All seven fill the card
+// width (SINGLE_DAY_GRID_VISIBLE_COLS targets that many columns on screen) and the row is centered
+// vertically in the card.
+private const val SINGLE_DAY_GRID_ROWS = 1
+private const val SINGLE_DAY_GRID_VISIBLE_COLS = 7
 
 // The yearly (WEEK_GRID) heat map wraps week cells into this many rows and targets
 // WEEK_GRID_VISIBLE_COLS columns per screen (≈ a year: 5 × 11 ≈ 55 weeks), scrolling for older data.
 private const val WEEK_GRID_ROWS = 5
 private const val WEEK_GRID_VISIBLE_COLS = 11
 
+// The yearly view shows about this many month labels across the grid width — spaced ~1/N of the
+// canvas apart so the labels stay sparse (three floating markers) rather than one per month.
+private const val WEEK_GRID_TARGET_MONTH_LABELS = 3
+
 @Composable
 private fun CalendarHeatMapChart(
     counts: List<DailyCount>,
     windowStart: LocalDate,
     windowEnd: LocalDate,
+    weekAnchor: LocalDate,
     granularity: HeatMapGranularity,
     palette: ChartPalettePreference,
     fillViewport: Boolean = false
@@ -940,8 +949,8 @@ private fun CalendarHeatMapChart(
         }
     }
 
-    val weekCells = remember(counts, windowStart, windowEnd) {
-        buildWeekCells(counts, windowStart, windowEnd)
+    val weekCells = remember(counts, windowStart, windowEnd, weekAnchor) {
+        buildWeekCells(counts, windowStart, windowEnd, weekAnchor)
     }
 
     val monthCells = remember(counts, windowStart, windowEnd) {
@@ -1012,6 +1021,11 @@ private fun CalendarHeatMapChart(
                     val byYear = granularity == HeatMapGranularity.MONTH
                     var currentLabelKey = Int.MIN_VALUE
                     var lastLabelEnd = Float.NEGATIVE_INFINITY
+                    // Yearly spaces its month labels ~1/N of the width apart so only ~N float across
+                    // the grid; other granularities keep tight, near-every-period labels.
+                    val labelMinGapPx = if (granularity == HeatMapGranularity.WEEK_GRID)
+                        availableWidthPx / WEEK_GRID_TARGET_MONTH_LABELS
+                    else 4.dp.toPx()
                     unitCells.forEachIndexed { idx, (date, value) ->
                         val colIdx = idx / grid.rows
                         val rowIdx = idx % grid.rows
@@ -1025,7 +1039,7 @@ private fun CalendarHeatMapChart(
                                 val label = if (byYear) date.year.toString()
                                     else date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
                                 val measured = textMeasurer.measure(label, labelStyle)
-                                if (x >= lastLabelEnd + 4.dp.toPx()) {
+                                if (x >= lastLabelEnd + labelMinGapPx) {
                                     drawText(measured, topLeft = Offset(x, 0f))
                                     lastLabelEnd = x + measured.size.width
                                 }
@@ -1090,6 +1104,12 @@ private fun CalendarHeatMapChart(
                 else ->
                     minOf(maxCellByHeight, maxOf(naturalCellByWidth, minCellPx))
             }
+            // Weekly's single row is centered vertically in the card; one short row would otherwise
+            // float against the top of the 16:9 card. Other granularities pin to the top under labels.
+            val singleDayTopPx = if (granularity == HeatMapGranularity.SINGLE_DAY)
+                labelAreaPx + maxOf(0f, (availableHeightPx - labelAreaPx - cellPx) / 2f)
+            else labelAreaPx
+
             val contentWidthPx = if (numberOfCells > 0)
                 numberOfCells * (cellPx + gapPx) - gapPx else 0f
             val needsScroll = !fillViewport && contentWidthPx > availableWidthPx
@@ -1098,10 +1118,10 @@ private fun CalendarHeatMapChart(
                 if (needsScroll) scrollState.scrollTo(scrollState.maxValue)
             }
 
-            val tapModifier = Modifier.pointerInput(granularity, cellPx, gapPx, labelAreaPx, counts) {
+            val tapModifier = Modifier.pointerInput(granularity, cellPx, gapPx, labelAreaPx, singleDayTopPx, counts) {
                 detectTapGestures { offset ->
                     selectedCell = hitTestHeatCell(
-                        offset, granularity, cellPx, gapPx, labelAreaPx,
+                        offset, granularity, cellPx, gapPx, labelAreaPx, singleDayTopPx,
                         singleDayCells, dayGridWeeks, weekCells, monthCells, countByDate
                     )
                 }
@@ -1121,27 +1141,21 @@ private fun CalendarHeatMapChart(
                 when (granularity) {
                     HeatMapGranularity.SINGLE_DAY -> {
                         if (singleDayCells.isEmpty()) return@Canvas
-                        // Column-major layout: each column holds SINGLE_DAY_GRID_ROWS days
-                        // stacked top-to-bottom, columns progress left (oldest) to right (newest).
-                        var currentMonth = -1
-                        var lastLabelEnd = Float.NEGATIVE_INFINITY
+                        // A single centered row (SINGLE_DAY_GRID_ROWS == 1): one cell per column,
+                        // oldest (left) to newest (right).
                         singleDayCells.forEachIndexed { dayIdx, (date, value) ->
                             val colIdx = dayIdx / SINGLE_DAY_GRID_ROWS
                             val rowIdx = dayIdx % SINGLE_DAY_GRID_ROWS
                             val x = colIdx * (cellPx + gapPx)
-                            val y = labelAreaPx + rowIdx * (cellPx + gapPx)
-                            if (rowIdx == 0) {
-                                val month = date.monthNumber
-                                if (colIdx == 0 || month != currentMonth) {
-                                    currentMonth = month
-                                    val label = date.month.name.take(3)
-                                        .lowercase().replaceFirstChar { it.uppercase() }
-                                    val measured = textMeasurer.measure(label, labelStyle)
-                                    if (x >= lastLabelEnd + 4.dp.toPx()) {
-                                        drawText(measured, topLeft = Offset(x, 0f))
-                                        lastLabelEnd = x + measured.size.width
-                                    }
-                                }
+                            val y = singleDayTopPx + rowIdx * (cellPx + gapPx)
+                            // Replace the month label with a single "Monday" marker on the week's one
+                            // Monday square, to orient the row; it sits just above that square. The
+                            // weekly view has no competing labels, so the full word fits comfortably.
+                            if (date.dayOfWeek == DayOfWeek.MONDAY) {
+                                val label = date.dayOfWeek.name
+                                    .lowercase().replaceFirstChar { it.uppercase() }
+                                val measured = textMeasurer.measure(label, labelStyle)
+                                drawText(measured, topLeft = Offset(x, maxOf(0f, y - measured.size.height.toFloat())))
                             }
                             drawRoundRect(
                                 color = when {
@@ -1445,6 +1459,7 @@ private fun hitTestHeatCell(
     cellPx: Float,
     gapPx: Float,
     labelAreaPx: Float,
+    singleDayTopPx: Float,
     singleDayCells: List<Pair<LocalDate, Double?>>,
     dayGridWeeks: List<LocalDate>,
     weekCells: List<Pair<LocalDate, Double?>>,
@@ -1460,8 +1475,10 @@ private fun hitTestHeatCell(
 
     return when (granularity) {
         HeatMapGranularity.SINGLE_DAY -> {
-            if (row !in 0 until SINGLE_DAY_GRID_ROWS) return null
-            val index = column * SINGLE_DAY_GRID_ROWS + row
+            // The single row is centered vertically, so hit-test against its actual top, not the label.
+            val singleDayRow = ((offset.y - singleDayTopPx) / step).toInt()
+            if (offset.y < singleDayTopPx || singleDayRow !in 0 until SINGLE_DAY_GRID_ROWS) return null
+            val index = column * SINGLE_DAY_GRID_ROWS + singleDayRow
             singleDayCells.getOrNull(index)?.let { SelectedHeatCell(it.first, it.second) }
         }
         HeatMapGranularity.DAY -> {
@@ -2235,17 +2252,38 @@ private fun FollowUpAnswerRows(
     }
 }
 
-private fun buildWeekCells(
+/**
+ * Buckets daily [counts] into one cell per 7-day week for the WEEK / WEEK_GRID heat maps. Weeks are
+ * counted from [weekAnchor] (the data-collection start) rather than calendar Mondays, so the first
+ * cell is a full week measured from when tracking began instead of a partial week clipped by a
+ * mid-week window edge. The grid starts at the first whole period that begins inside the window;
+ * when data predates the window (e.g. the yearly view's year-ago edge) the ≤6 leading clipped days
+ * are dropped rather than shown as a misleadingly low partial cell. A `null` value = no data that
+ * week.
+ */
+internal fun buildWeekCells(
     counts: List<DailyCount>,
     windowStart: LocalDate,
-    windowEnd: LocalDate
+    windowEnd: LocalDate,
+    weekAnchor: LocalDate
 ): List<Pair<LocalDate, Double?>> {
+    // Start of the 7-day period (anchored on weekAnchor) that contains [date].
+    fun weekStartOf(date: LocalDate): LocalDate {
+        val periods = weekAnchor.daysUntil(date).floorDiv(7)
+        return weekAnchor.plus(periods * 7, DateTimeUnit.DAY)
+    }
+
     val weeklyMap = mutableMapOf<LocalDate, Double>()
     counts.forEach { dc ->
-        val weekMonday = dc.date.minus(dc.date.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
-        weeklyMap[weekMonday] = (weeklyMap[weekMonday] ?: 0.0) + dc.value
+        val weekStart = weekStartOf(dc.date)
+        weeklyMap[weekStart] = (weeklyMap[weekStart] ?: 0.0) + dc.value
     }
-    val gridStart = windowStart.minus(windowStart.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
+
+    // First whole period that begins on or after the window start (so the leading cell is never a
+    // window-clipped partial week).
+    var gridStart = weekStartOf(windowStart)
+    if (gridStart < windowStart) gridStart = gridStart.plus(7, DateTimeUnit.DAY)
+
     val result = mutableListOf<Pair<LocalDate, Double?>>()
     var week = gridStart
     while (week <= windowEnd) {

@@ -119,8 +119,8 @@ class GetVisualizationDataUseCase(
         val lineYRange = lineGraphYRange(question, allAnswers, timeZone)
 
         return when (question.type) {
-            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays, lineYRange)
-            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays, lineYRange)
+            QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange)
+            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, source.optionsById, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, source.optionsById, includeColumnChart = false)
             QuestionType.TEXT, QuestionType.EMOJI -> buildTextCharts(answers)
@@ -151,6 +151,7 @@ class GetVisualizationDataUseCase(
         timeZone: TimeZone,
         windowStart: LocalDate,
         windowEnd: LocalDate,
+        dataStart: LocalDate,
         granularity: HeatMapGranularity,
         fillViewport: Boolean,
         lineVisibleDays: Int,
@@ -169,7 +170,7 @@ class GetVisualizationDataUseCase(
         val totalNo = answers.count { it.value.uppercase() == "NO" }
 
         return listOf(
-            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport),
+            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, dataStart, granularity, fillViewport),
             VisualizationData.LineGraph(dailyYesPoints, windowStart, windowEnd, lineVisibleDays, lineYRange?.first, lineYRange?.second),
             // YES/NO sit at opposite ends of the palette so they stay clearly distinct.
             VisualizationData.ColumnChart(listOf(
@@ -184,6 +185,7 @@ class GetVisualizationDataUseCase(
         timeZone: TimeZone,
         windowStart: LocalDate,
         windowEnd: LocalDate,
+        dataStart: LocalDate,
         granularity: HeatMapGranularity,
         fillViewport: Boolean,
         lineVisibleDays: Int,
@@ -205,7 +207,7 @@ class GetVisualizationDataUseCase(
 
         return listOf(
             VisualizationData.LineGraph(points, windowStart, windowEnd, lineVisibleDays, lineYRange?.first, lineYRange?.second),
-            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, granularity, fillViewport)
+            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, dataStart, granularity, fillViewport)
         )
     }
 

@@ -37,6 +37,13 @@ sealed class VisualizationData {
         val dailyCounts: List<DailyCount>,
         val windowStart: LocalDate,
         val windowEnd: LocalDate,
+        /**
+         * Data-collection start (earliest recorded answer). The week-bucketed views (`WEEK`,
+         * `WEEK_GRID`) count their 7-day cells from this date rather than from a calendar Monday, so
+         * the first cell is a full week measured from when tracking began — not a partial week left
+         * over from a mid-week window edge.
+         */
+        val weekAnchor: LocalDate,
         val granularity: HeatMapGranularity,
         /** When true, the chart sizes cells to fit the entire dataset in view without scrolling. */
         val fillViewport: Boolean = false
