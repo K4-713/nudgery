@@ -111,6 +111,30 @@ class EmojiDefaultsTest {
         assertEquals(listOf(grinning), EmojiDefaults.variants(catalogEntry(grinning, acceptsSkinTone = false)))
     }
 
+    @Test
+    fun TDD_foldsExplicitGenderFormsThatHaveANeutralSibling() {
+        // ED-7: the picker collapses a concept's woman/man forms into its neutral entry, so only the
+        // gendered forms are folded away — never the neutral form or an ungendered emoji.
+        val entries = listOf(
+            catalogEntry(person, acceptsSkinTone = true),
+            catalogEntry(woman, acceptsSkinTone = true),
+            catalogEntry(man, acceptsSkinTone = true),
+            catalogEntry(grinning, acceptsSkinTone = false),
+        )
+        assertEquals(setOf(woman, man), EmojiDefaults.foldedGenderVariantEmoji(entries))
+    }
+
+    @Test
+    fun TDD_doesNotFoldGenderFormsWhenNeutralIsAbsent() {
+        // ED-7: with no neutral form present to stand in for the group, the woman/man forms keep
+        // their own cells rather than being hidden with nothing to represent them.
+        val entries = listOf(
+            catalogEntry(woman, acceptsSkinTone = true),
+            catalogEntry(man, acceptsSkinTone = true),
+        )
+        assertTrue(EmojiDefaults.foldedGenderVariantEmoji(entries).isEmpty())
+    }
+
     private fun catalogEntry(emoji: String, acceptsSkinTone: Boolean) = EmojiCatalogEntry(
         emoji = emoji, name = "x", group = "g", subgroup = "s", emojiVersion = "1.0",
         acceptsSkinTone = acceptsSkinTone, hairCapable = false, keywords = emptyList()

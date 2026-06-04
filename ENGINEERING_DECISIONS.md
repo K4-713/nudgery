@@ -148,11 +148,20 @@ gendered variants; it **never** overrides an explicitly gendered pick (tapping �
 same "convert the default, respect the explicit" rule as [[ED-6]]. The neutral↔woman↔man mapping is
 *derived* from the generated catalog (ED-5) by relating each gendered sequence to its neutral base,
 not hand-curated. Gender and skin-tone defaults compose (neutral person → woman → woman + tone).
+In the **picker grid**, a genderable concept appears as a *single* cell: its neutral entry, shown in
+the user's default gender. The concept's explicit woman/man catalog entries (ED-5 stores each as its
+own entry) are folded out of the grid via `EmojiDefaults.foldedGenderVariantEmoji` and reached only
+through the long-press variant tray (ED-8) — otherwise the default-gender form would appear twice
+(once as the defaulted neutral cell, once as its own gendered cell). Folding is computed from the
+same device-filtered (ED-4) entries the grid shows, so a group collapses only when its neutral form
+is present to represent it.
 **Consequences:** Real reach (~100 concepts) for the self-representation case. Requires the derived
 mapping and care around ZWJ structure. **Reversible:** stored answers are plain emoji strings, so
 the setting and mapping can be removed later (if mis-mappings prove grating) without migrating data.
 **Tests:** pending — see TODO.md (default applied to neutral base; explicit gender preserved;
-gender+tone composition; non-gendered emoji untouched).
+gender+tone composition; non-gendered emoji untouched). `EmojiDefaultsTest` — gendered forms with a
+neutral sibling are folded out of the grid; the neutral and ungendered forms are not; no fold when
+the neutral form is absent.
 
 ### ED-8: Variant axes other than skin tone and gender are pick-time only
 **Status:** Implemented (skin tone + gender) — long-press variant tray via `EmojiDefaults.variants`; hair/direction variants deferred
@@ -161,7 +170,9 @@ gender+tone composition; non-gendered emoji untouched).
 emoji. A global default for either would touch almost nothing.
 **Decision:** Hair and direction are offered as per-emoji variant selection in the picker (e.g.
 long-press / variant strip), **not** as global default settings. (Revisit only if Unicode greatly
-expands where these apply.)
+expands where these apply.) A grid cell whose emoji has selectable variants (skin tone and/or gender)
+is marked with a small bottom-corner triangle, so the long-press tray is discoverable rather than
+hidden.
 **Consequences:** Settings stay minimal; no hair/direction default tables to maintain. Power users
 still reach these variants at pick time.
 **Tests:** pending — see TODO.md (picker surfaces hair/direction variants where they exist).

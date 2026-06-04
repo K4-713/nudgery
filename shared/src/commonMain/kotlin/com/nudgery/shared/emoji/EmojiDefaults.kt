@@ -42,6 +42,21 @@ object EmojiDefaults {
         return out.toList()
     }
 
+    /**
+     * The emoji of the explicitly-gendered (woman/man) forms of every genderable concept in
+     * [entries] that *also* has a neutral form there (ED-7). The picker hides these from its
+     * top-level grid: the neutral concept stands in for the whole group — shown in the user's
+     * default gender (ED-7) and expandable to every variant on long-press (ED-8) — so a gendered
+     * form never gets its own cell (which would otherwise duplicate the default-gender form).
+     *
+     * Computed from the same (already device-filtered, ED-4) [entries] the grid shows, so a group is
+     * only collapsed when its neutral form is actually present to represent it.
+     */
+    fun foldedGenderVariantEmoji(entries: List<EmojiCatalogEntry>): Set<String> =
+        buildGenderGroups(entries).values
+            .flatMap { byGender -> byGender.filterKeys { it != Gender.NEUTRAL }.values }
+            .toSet()
+
     /** Applies [gender] then [skinTone] to a picked catalog [entry]. */
     fun apply(entry: EmojiCatalogEntry, skinTone: SkinTone, gender: Gender): String {
         var emoji = applyGender(entry.emoji, gender)

@@ -1,6 +1,7 @@
 package com.nudgery.android.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -92,7 +94,14 @@ fun EmojiPicker(
         val glyphFilter = PlatformEmojiGlyphFilter()
         EmojiCatalog.entries.filter { glyphFilter.canRender(it.emoji) }
     }
-    val byGroup = remember(renderable) { renderable.groupBy { it.group } }
+    // Fold each genderable concept's woman/man forms into its neutral entry (ED-7): they're offered
+    // on long-press, not as their own cells, so the grid shows one cell per concept (in the user's
+    // default gender) rather than the neutral + every gendered duplicate.
+    val displayEntries = remember(renderable) {
+        val folded = EmojiDefaults.foldedGenderVariantEmoji(renderable)
+        renderable.filterNot { it.emoji in folded }
+    }
+    val byGroup = remember(displayEntries) { displayEntries.groupBy { it.group } }
     val recentsLabel = stringResource(R.string.emoji_recents_tab)
     val tabs = remember(byGroup, recentsLabel) {
         listOf(EmojiTab(Icons.Outlined.Schedule, recentsLabel, entries = null)) +
@@ -111,7 +120,7 @@ fun EmojiPicker(
         fun of(entry: EmojiCatalogEntry) = PickerCell(entry.applyDefaults(defaultSkinTone, defaultGender), entry)
         val tabEntries = tabs[selectedTab].entries
         when {
-            query.isNotBlank() -> EmojiSearch.search(query, renderable).map { of(it) }
+            query.isNotBlank() -> EmojiSearch.search(query, displayEntries).map { of(it) }
             tabEntries == null -> recents.map { PickerCell(it, null) } // recents tab: final picks, no variant tray
             else -> tabEntries.map { of(it) }
         }
@@ -180,6 +189,15 @@ fun EmojiPicker(
                 ) {
                     Text(text = cell.display, fontSize = (28 * emojiScale).sp, textAlign = TextAlign.Center)
                     if (variants != null) {
+                        // Affordance: a small corner triangle marks an emoji whose variants
+                        // (gender/skin tone) are reachable by long-press (ED-8).
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .size((8 * emojiScale).dp)
+                                .clip(VariantCornerTriangle)
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
                         DropdownMenu(
                             expanded = expandedCell == index,
                             onDismissRequest = { expandedCell = -1 }
@@ -201,6 +219,14 @@ fun EmojiPicker(
             }
         }
     }
+}
+
+/** A right triangle filling the bottom-end corner — the "this emoji has variants" affordance (ED-8). */
+private val VariantCornerTriangle = GenericShape { size, _ ->
+    moveTo(size.width, 0f)
+    lineTo(size.width, size.height)
+    lineTo(0f, size.height)
+    close()
 }
 
 /** A grid cell: the [display] emoji (defaults applied) and the source [entry] for variant lookup
