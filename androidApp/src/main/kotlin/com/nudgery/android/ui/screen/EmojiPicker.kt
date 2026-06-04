@@ -5,19 +5,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,12 +30,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.EmojiObjects
+import androidx.compose.material.icons.outlined.EmojiPeople
+import androidx.compose.material.icons.outlined.EmojiSymbols
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Celebration
+import androidx.compose.material.icons.outlined.Mood
+import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.Schedule
 import com.nudgery.android.R
 import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.shared.emoji.EmojiCatalogEntry
@@ -43,21 +58,19 @@ import com.nudgery.shared.emoji.EmojiCatalog
 import com.nudgery.shared.emoji.PlatformEmojiGlyphFilter
 import com.nudgery.shared.emoji.SkinTone
 
-/** Unicode groups shown as picker tabs, in display order, each with a representative emoji "icon"
- *  (device-font rendered, so no icon dependency). The "Component" group (skin tones, hair) is omitted. */
-private val CATEGORY_TABS: List<Pair<String, String>> = listOf(
-    "Smileys & Emotion" to "😀", // 😀
-    "People & Body" to "🧑",       // 🧑
-    "Animals & Nature" to "🐻",    // 🐻
-    "Food & Drink" to "🍔",        // 🍔
-    "Travel & Places" to "✈️",     // ✈️
-    "Activities" to "⚽",                // ⚽
-    "Objects" to "💡",             // 💡
-    "Symbols" to "❤️",             // ❤️
-    "Flags" to "🏁",               // 🏁
+/** Unicode groups shown as picker tabs, in display order, each with an outline (wireframe) icon in
+ *  the app's icon style. The "Component" group (skin tones, hair) is omitted. */
+private val CATEGORY_TABS: List<Pair<String, ImageVector>> = listOf(
+    "Smileys & Emotion" to Icons.Outlined.Mood,
+    "People & Body" to Icons.Outlined.EmojiPeople,
+    "Animals & Nature" to Icons.Outlined.Pets,
+    "Food & Drink" to Icons.Outlined.Restaurant,
+    "Travel & Places" to Icons.Outlined.DirectionsCar,
+    "Activities" to Icons.Outlined.Celebration,
+    "Objects" to Icons.Outlined.EmojiObjects,
+    "Symbols" to Icons.Outlined.EmojiSymbols,
+    "Flags" to Icons.Outlined.Flag,
 )
-
-private const val RECENTS_TAB_EMOJI = "🕐" // 🕐
 
 /**
  * Inline, always-open emoji picker (ENGINEERING_DECISIONS.md ED-13): search field, top category
@@ -80,10 +93,12 @@ fun EmojiPicker(
         EmojiCatalog.entries.filter { glyphFilter.canRender(it.emoji) }
     }
     val byGroup = remember(renderable) { renderable.groupBy { it.group } }
-    val tabs = remember(byGroup) {
-        listOf(RecentsTab) + CATEGORY_TABS.mapNotNull { (group, tabEmoji) ->
-            byGroup[group]?.let { CategoryTab(tabEmoji, it) }
-        }
+    val recentsLabel = stringResource(R.string.emoji_recents_tab)
+    val tabs = remember(byGroup, recentsLabel) {
+        listOf(EmojiTab(Icons.Outlined.Schedule, recentsLabel, entries = null)) +
+            CATEGORY_TABS.mapNotNull { (group, icon) ->
+                byGroup[group]?.let { EmojiTab(icon, group, it) }
+            }
     }
 
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -94,15 +109,16 @@ fun EmojiPicker(
     // (so the grid previews exactly what a tap inserts). Recomputed only when an input changes.
     val cells: List<PickerCell> = remember(query, selectedTab, defaultSkinTone, defaultGender, recents, tabs) {
         fun of(entry: EmojiCatalogEntry) = PickerCell(entry.applyDefaults(defaultSkinTone, defaultGender), entry)
+        val tabEntries = tabs[selectedTab].entries
         when {
             query.isNotBlank() -> EmojiSearch.search(query, renderable).map { of(it) }
-            tabs[selectedTab] is RecentsTab -> recents.map { PickerCell(it, null) } // recents have no variant tray
-            else -> (tabs[selectedTab] as CategoryTab).entries.map { of(it) }
+            tabEntries == null -> recents.map { PickerCell(it, null) } // recents tab: final picks, no variant tray
+            else -> tabEntries.map { of(it) }
         }
     }
     var expandedCell by remember { mutableIntStateOf(-1) }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxSize()) {
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
@@ -113,14 +129,33 @@ fun EmojiPicker(
         )
 
         // Category tabs are hidden while searching (the grid shows ranked results instead).
+        // Compact wireframe tabs: outline icons, tight spacing, and a fixed dp size so the emoji
+        // scale (ED-14) never enlarges them.
         if (query.isBlank()) {
-            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 8.dp) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(if (tab is CategoryTab) tab.tabEmoji else RECENTS_TAB_EMOJI, fontSize = 20.sp) }
-                    )
+                    val selected = selectedTab == index
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .clickable { selectedTab = index }
+                            .padding(6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.contentDescription,
+                            tint = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -172,9 +207,13 @@ fun EmojiPicker(
  *  (null for recents, which are already-final picks with no variant tray). */
 private data class PickerCell(val display: String, val entry: EmojiCatalogEntry?)
 
-private sealed interface EmojiTab
-private data object RecentsTab : EmojiTab
-private data class CategoryTab(val tabEmoji: String, val entries: List<EmojiCatalogEntry>) : EmojiTab
+/** A picker tab: its wireframe [icon], accessibility [contentDescription], and the [entries] it
+ *  shows ([entries] is null for the Recents tab, which renders the dynamic recents list). */
+private data class EmojiTab(
+    val icon: ImageVector,
+    val contentDescription: String,
+    val entries: List<EmojiCatalogEntry>?,
+)
 
 private fun EmojiCatalogEntry.applyDefaults(skinTone: SkinTone, gender: Gender): String =
     EmojiDefaults.apply(this, skinTone, gender)

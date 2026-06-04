@@ -182,7 +182,12 @@ private fun AnswerStep(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        // The emoji picker fills the remaining space itself; other (small) answer inputs need this
+        // weighted spacer to push the buttons to the bottom. Two weighted children would split the
+        // space and starve the picker, so it is omitted for EMOJI.
+        if (question.question.type != QuestionType.EMOJI) {
+            Spacer(modifier = Modifier.weight(1f))
+        }
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -393,7 +398,7 @@ private fun EmojiInput(
     onBackspace: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxSize()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)
