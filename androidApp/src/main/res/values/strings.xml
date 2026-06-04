@@ -211,6 +211,20 @@
     <string name="settings_palette_ember">Purple to red</string>
     <string name="settings_palette_ember_description">Recommended for tritanopia</string>
 
+    <!-- Emoji defaults (skin tone / gender applied to picked emoji that support them) -->
+    <string name="settings_emoji_defaults">Emoji defaults</string>
+    <string name="settings_emoji_skin_tone">Default skin tone</string>
+    <string name="settings_emoji_gender">Default gender</string>
+    <string name="settings_skin_tone_default">Default skin tone</string>
+    <string name="settings_skin_tone_light">Light skin tone</string>
+    <string name="settings_skin_tone_medium_light">Medium-light skin tone</string>
+    <string name="settings_skin_tone_medium">Medium skin tone</string>
+    <string name="settings_skin_tone_medium_dark">Medium-dark skin tone</string>
+    <string name="settings_skin_tone_dark">Dark skin tone</string>
+    <string name="settings_gender_neutral">Neutral</string>
+    <string name="settings_gender_woman">Woman</string>
+    <string name="settings_gender_man">Man</string>
+
     <!-- Heat map legend -->
     <string name="heatmap_no_data">no data</string>
     <string name="heatmap_legend_day">1 square = 1 day</string>

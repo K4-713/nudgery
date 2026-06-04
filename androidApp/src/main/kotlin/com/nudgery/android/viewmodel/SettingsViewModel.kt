@@ -9,6 +9,9 @@ import com.nudgery.android.backup.nudgeBackupFileName
 import com.nudgery.android.settings.AppSettings
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
+import kotlinx.coroutines.flow.Flow
 import com.nudgery.shared.model.ExportFormat
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.usecase.DeleteNudgeUseCase
@@ -47,6 +50,8 @@ data class SettingsUiState(
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
     val boldText: Boolean = false,
     val chartPalette: ChartPalettePreference = ChartPalettePreference.SPECTRUM,
+    val defaultEmojiSkinTone: SkinTone = SkinTone.DEFAULT,
+    val defaultEmojiGender: Gender = Gender.NEUTRAL,
     val importStatus: ImportStatus = ImportStatus.Idle
 )
 
@@ -69,13 +74,20 @@ class SettingsViewModel(
     // In-flight import; null when no import is running. Mutated only on the main dispatcher.
     private var importSession: ImportSession? = null
 
+    // The two emoji defaults are grouped so the outer combine stays within its typed arity.
+    private val emojiDefaults: Flow<Pair<SkinTone, Gender>> = combine(
+        appSettings.defaultEmojiSkinTone,
+        appSettings.defaultEmojiGender
+    ) { tone, gender -> tone to gender }
+
     val uiState: StateFlow<SettingsUiState> = combine(
         appSettings.themePreference,
         appSettings.boldText,
         appSettings.chartPalette,
+        emojiDefaults,
         _importStatus
-    ) { theme, bold, palette, importStatus ->
-        SettingsUiState(theme, bold, palette, importStatus)
+    ) { theme, bold, palette, emoji, importStatus ->
+        SettingsUiState(theme, bold, palette, emoji.first, emoji.second, importStatus)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setTheme(pref: ThemePreference) {
@@ -88,6 +100,14 @@ class SettingsViewModel(
 
     fun setChartPalette(palette: ChartPalettePreference) {
         viewModelScope.launch { appSettings.setChartPalette(palette) }
+    }
+
+    fun setDefaultEmojiSkinTone(tone: SkinTone) {
+        viewModelScope.launch { appSettings.setDefaultEmojiSkinTone(tone) }
+    }
+
+    fun setDefaultEmojiGender(gender: Gender) {
+        viewModelScope.launch { appSettings.setDefaultEmojiGender(gender) }
     }
 
     fun importNudgeFromBackup(jsonContent: String) = startImport(listOf(jsonContent))

@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.nudgery.android.ui.theme.ChartPalettePreference
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.shared.model.Timeframe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,9 +20,15 @@ interface AppSettings {
     val themePreference: Flow<ThemePreference>
     val boldText: Flow<Boolean>
     val chartPalette: Flow<ChartPalettePreference>
+    /** Default skin tone applied to picked emoji that support it (ED-6). */
+    val defaultEmojiSkinTone: Flow<SkinTone>
+    /** Default gender applied to picked neutral person emoji (ED-7). */
+    val defaultEmojiGender: Flow<Gender>
     suspend fun setThemePreference(pref: ThemePreference)
     suspend fun setBoldText(bold: Boolean)
     suspend fun setChartPalette(palette: ChartPalettePreference)
+    suspend fun setDefaultEmojiSkinTone(tone: SkinTone)
+    suspend fun setDefaultEmojiGender(gender: Gender)
     fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe>
     suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe)
 }
@@ -30,6 +38,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 private val KEY_THEME = stringPreferencesKey("theme_preference")
 private val KEY_BOLD_TEXT = booleanPreferencesKey("bold_text")
 private val KEY_CHART_PALETTE = stringPreferencesKey("chart_palette")
+private val KEY_EMOJI_SKIN_TONE = stringPreferencesKey("default_emoji_skin_tone")
+private val KEY_EMOJI_GENDER = stringPreferencesKey("default_emoji_gender")
 
 class DataStoreAppSettings(private val context: Context) : AppSettings {
 
@@ -63,6 +73,22 @@ class DataStoreAppSettings(private val context: Context) : AppSettings {
 
     override suspend fun setChartPalette(palette: ChartPalettePreference) {
         context.dataStore.edit { prefs -> prefs[KEY_CHART_PALETTE] = palette.name }
+    }
+
+    override val defaultEmojiSkinTone: Flow<SkinTone> = context.dataStore.data.map { prefs ->
+        prefs[KEY_EMOJI_SKIN_TONE]?.let { runCatching { SkinTone.valueOf(it) }.getOrNull() } ?: SkinTone.DEFAULT
+    }
+
+    override val defaultEmojiGender: Flow<Gender> = context.dataStore.data.map { prefs ->
+        prefs[KEY_EMOJI_GENDER]?.let { runCatching { Gender.valueOf(it) }.getOrNull() } ?: Gender.NEUTRAL
+    }
+
+    override suspend fun setDefaultEmojiSkinTone(tone: SkinTone) {
+        context.dataStore.edit { prefs -> prefs[KEY_EMOJI_SKIN_TONE] = tone.name }
+    }
+
+    override suspend fun setDefaultEmojiGender(gender: Gender) {
+        context.dataStore.edit { prefs -> prefs[KEY_EMOJI_GENDER] = gender.name }
     }
 
     override fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe> =

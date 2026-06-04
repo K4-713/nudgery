@@ -122,7 +122,7 @@ sanity (counts, known emoji present) at build time; a `commonTest` checks the ge
 present and well-formed.
 
 ### ED-6: Default skin tone is an app setting we apply via the Unicode modifier
-**Status:** Implemented (apply logic) — `emoji.EmojiDefaults.applySkinTone`/`apply`; settings persistence + UI tracked separately
+**Status:** Implemented — `emoji.EmojiDefaults.applySkinTone`/`apply`; default persisted in `AppSettings` with a Settings swatch selector; applied on pick by the picker (task #8)
 **Context:** The OS does not expose the user's keyboard skin-tone preference, and a self-rendered
 picker must decide a default tone.
 **Decision:** A user setting selects a default skin tone, applied by appending the Unicode
@@ -134,7 +134,7 @@ Explicit user choices are respected.
 **Tests:** pending — see TODO.md (un-toned default applied; explicit tone preserved; VS16/ZWJ cases).
 
 ### ED-7: Default gender is an app setting, applied only to neutral person forms
-**Status:** Implemented (apply logic) — `emoji.EmojiDefaults.applyGender`/`apply` with a catalog-derived gender map (older-adult/child figures unmapped in v1); settings persistence + UI tracked separately
+**Status:** Implemented — `emoji.EmojiDefaults.applyGender`/`apply` (catalog-derived map; older-adult/child figures unmapped in v1); default persisted in `AppSettings` with a Settings swatch selector; applied on pick by the picker (task #8)
 **Context:** Users often use a person emoji to represent themselves, so a preferred gender is worth
 defaulting. Unlike skin tone (ED-6), gender is not a single appended modifier — it is encoded as
 distinct base characters (🧑/👨/👩) or ZWJ sequences with ♀/♂ — and reaches a substantial set:

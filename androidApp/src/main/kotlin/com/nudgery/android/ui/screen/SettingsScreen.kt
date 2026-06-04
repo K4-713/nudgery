@@ -22,6 +22,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -59,6 +67,9 @@ import com.nudgery.android.backup.allNudgesBackupFileBase
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.android.ui.theme.paletteStops
+import com.nudgery.shared.emoji.EmojiDefaults
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.android.viewmodel.CollisionResolution
 import com.nudgery.android.viewmodel.ImportStatus
 import com.nudgery.android.viewmodel.SettingsViewModel
@@ -250,6 +261,16 @@ fun SettingsScreen(
                     onSelect = { viewModel.setChartPalette(ChartPalettePreference.EMBER) }
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            SettingsSectionLabel(stringResource(R.string.settings_emoji_defaults))
+            EmojiDefaultSelectors(
+                skinTone = uiState.defaultEmojiSkinTone,
+                gender = uiState.defaultEmojiGender,
+                onSkinTone = viewModel::setDefaultEmojiSkinTone,
+                onGender = viewModel::setDefaultEmojiGender,
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -501,4 +522,95 @@ private fun readJsonEntriesFromZip(bytes: ByteArray): List<String> {
         }
     }
     return contents
+}
+
+/**
+ * Default skin-tone (ED-6) and gender (ED-7) selectors, shown as swatches of the actual emoji
+ * variants — the convention both Android and iOS keyboards use. The Fitzpatrick/gender names are
+ * not shown as labels (matching those keyboards) but are exposed as content descriptions for
+ * screen readers, mirroring TalkBack/VoiceOver.
+ */
+@Composable
+private fun EmojiDefaultSelectors(
+    skinTone: SkinTone,
+    gender: Gender,
+    onSkinTone: (SkinTone) -> Unit,
+    onGender: (Gender) -> Unit,
+) {
+    val handSample = "🖐️" // 🖐️ — a skin-tone-capable sample
+    val personSample = "🧑"     // 🧑 — a genderable sample
+
+    val tones = listOf(
+        SkinTone.DEFAULT to R.string.settings_skin_tone_default,
+        SkinTone.LIGHT to R.string.settings_skin_tone_light,
+        SkinTone.MEDIUM_LIGHT to R.string.settings_skin_tone_medium_light,
+        SkinTone.MEDIUM to R.string.settings_skin_tone_medium,
+        SkinTone.MEDIUM_DARK to R.string.settings_skin_tone_medium_dark,
+        SkinTone.DARK to R.string.settings_skin_tone_dark,
+    )
+    val genders = listOf(
+        Gender.NEUTRAL to R.string.settings_gender_neutral,
+        Gender.WOMAN to R.string.settings_gender_woman,
+        Gender.MAN to R.string.settings_gender_man,
+    )
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text(
+            text = stringResource(R.string.settings_emoji_skin_tone),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+        )
+        Row(
+            modifier = Modifier.selectableGroup().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            tones.forEach { (tone, nameRes) ->
+                EmojiSwatch(
+                    emoji = EmojiDefaults.applySkinTone(handSample, tone),
+                    contentDescription = stringResource(nameRes),
+                    selected = skinTone == tone,
+                    onSelect = { onSkinTone(tone) }
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.settings_emoji_gender),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        )
+        Row(
+            modifier = Modifier.selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            genders.forEach { (g, nameRes) ->
+                EmojiSwatch(
+                    emoji = EmojiDefaults.applyGender(personSample, g),
+                    contentDescription = stringResource(nameRes),
+                    selected = gender == g,
+                    onSelect = { onGender(g) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiSwatch(
+    emoji: String,
+    contentDescription: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .border(if (selected) 2.dp else 1.dp, borderColor, CircleShape)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = emoji, fontSize = 24.sp)
+    }
 }

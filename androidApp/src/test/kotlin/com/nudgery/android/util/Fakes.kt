@@ -9,6 +9,8 @@ import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.model.Schedule
 import com.nudgery.shared.model.TimezoneChangeEvent
 import com.nudgery.android.settings.AppSettings
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.android.settings.ThemePreference
 import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.shared.model.Timeframe
@@ -40,13 +42,19 @@ import kotlinx.datetime.Instant
 
 class FakeAppSettings : AppSettings {
     private val _defaultTimeframes = MutableStateFlow<Map<String, Timeframe>>(emptyMap())
+    private val _skinTone = MutableStateFlow(SkinTone.DEFAULT)
+    private val _gender = MutableStateFlow(Gender.NEUTRAL)
 
     override val themePreference: Flow<ThemePreference> = flowOf(ThemePreference.SYSTEM)
     override val boldText: Flow<Boolean> = flowOf(false)
     override val chartPalette: Flow<ChartPalettePreference> = flowOf(ChartPalettePreference.SPECTRUM)
+    override val defaultEmojiSkinTone: Flow<SkinTone> = _skinTone
+    override val defaultEmojiGender: Flow<Gender> = _gender
     override suspend fun setThemePreference(pref: ThemePreference) {}
     override suspend fun setBoldText(bold: Boolean) {}
     override suspend fun setChartPalette(palette: ChartPalettePreference) {}
+    override suspend fun setDefaultEmojiSkinTone(tone: SkinTone) { _skinTone.value = tone }
+    override suspend fun setDefaultEmojiGender(gender: Gender) { _gender.value = gender }
     override fun getDefaultTimeframe(nudgeId: String): Flow<Timeframe> =
         _defaultTimeframes.map { it[nudgeId] ?: Timeframe.WEEKLY }
     override suspend fun setDefaultTimeframe(nudgeId: String, timeframe: Timeframe) {

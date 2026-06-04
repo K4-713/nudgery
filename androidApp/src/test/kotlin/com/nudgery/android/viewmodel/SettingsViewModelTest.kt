@@ -1,6 +1,8 @@
 package com.nudgery.android.viewmodel
 
 import com.nudgery.android.util.TestViewModelRepositories
+import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.shared.model.Nudge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,6 +63,22 @@ class SettingsViewModelTest {
     }
 
     private suspend fun nudgeNames() = repos.nudgeRepo.observeAll().first().map { it.name }
+
+    @Test
+    fun TDD_setEmojiDefaults_persistAndSurfaceInState() = runTest {
+        // ED-6/ED-7: choosing the default skin tone and gender persists and shows in settings state.
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(SkinTone.DEFAULT, viewModel.uiState.value.defaultEmojiSkinTone)
+        assertEquals(Gender.NEUTRAL, viewModel.uiState.value.defaultEmojiGender)
+
+        viewModel.setDefaultEmojiSkinTone(SkinTone.MEDIUM)
+        viewModel.setDefaultEmojiGender(Gender.WOMAN)
+        advanceUntilIdle()
+
+        assertEquals(SkinTone.MEDIUM, viewModel.uiState.value.defaultEmojiSkinTone)
+        assertEquals(Gender.WOMAN, viewModel.uiState.value.defaultEmojiGender)
+    }
 
     @Test
     fun TDD_import_whenNoNameConflict_succeeds() = runTest {
