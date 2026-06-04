@@ -1,0 +1,16 @@
+{
+  "uniqueId": "org.unicode:emoji-cldr-data",
+  "artifactVersion": "Emoji 16.0 / CLDR 46",
+  "name": "Unicode Emoji & CLDR Annotation Data",
+  "description": "The emoji picker's catalog and search keywords are generated at build time from Unicode's emoji-test.txt (UTS #51 emoji test data) and CLDR annotation data (English). No third-party code is bundled — only data derived from these files is embedded in the app.",
+  "website": "https://www.unicode.org",
+  "developers": [
+    {
+      "name": "Unicode, Inc.",
+      "organisationUrl": "https://www.unicode.org"
+    }
+  ],
+  "licenses": [
+    "Unicode-3.0"
+  ]
+}

@@ -15,8 +15,11 @@ package com.nudgery.buildtools.emoji
  */
 object EmojiCatalogGenerator {
 
-    /** Entries per generated chunk function, kept well under the 64 KB per-method bytecode limit. */
-    const val CHUNK_SIZE = 200
+    /**
+     * Entries per generated chunk function, kept well under the 64 KB per-method bytecode limit.
+     * Sized conservatively because each entry also carries a CLDR keyword list (ED-10).
+     */
+    const val CHUNK_SIZE = 100
 
     private const val PACKAGE = "com.nudgery.shared.emoji"
 
@@ -28,10 +31,19 @@ object EmojiCatalogGenerator {
         val emojiVersion: String,
         val acceptsSkinTone: Boolean,
         val hairCapable: Boolean,
+        /** CLDR search keywords (ED-10); empty when none are annotated. */
+        val keywords: List<String> = emptyList(),
     )
 
-    /** Derives the catalog's base concepts (and their variant-capability flags) from all entries. */
-    fun baseConcepts(entries: List<EmojiTestEntry>): List<BaseConcept> {
+    /**
+     * Derives the catalog's base concepts (variant-capability flags + search keywords) from all
+     * entries. [keywordsByKey] maps an FE0F-normalized emoji to its CLDR keywords (see
+     * [CldrAnnotationParser]); concepts with no annotation get an empty list.
+     */
+    fun baseConcepts(
+        entries: List<EmojiTestEntry>,
+        keywordsByKey: Map<String, List<String>> = emptyMap(),
+    ): List<BaseConcept> {
         val fullyQualified = entries.filter { it.qualification == EmojiQualification.FULLY_QUALIFIED }
 
         // A base concept appears with a skin tone if some toned entry, with its tone stripped, equals
@@ -57,6 +69,7 @@ object EmojiCatalogGenerator {
                     emojiVersion = entry.emojiVersion,
                     acceptsSkinTone = entry.codePoints in skinToneBaseKeys,
                     hairCapable = entry.codePoints in hairBaseKeys,
+                    keywords = keywordsByKey[CldrAnnotationParser.normalizeKey(entry.emoji)].orEmpty(),
                 )
             }
     }
@@ -95,7 +108,7 @@ object EmojiCatalogGenerator {
                     appendLine(
                         "        EmojiCatalogEntry(\"${esc(c.emoji)}\", \"${esc(c.name)}\", " +
                             "\"${esc(c.group)}\", \"${esc(c.subgroup)}\", \"${esc(c.emojiVersion)}\", " +
-                            "${c.acceptsSkinTone}, ${c.hairCapable}),"
+                            "${c.acceptsSkinTone}, ${c.hairCapable}, ${keywordsLiteral(c.keywords)}),"
                     )
                 }
                 appendLine("    )")
@@ -103,6 +116,11 @@ object EmojiCatalogGenerator {
             appendLine("}")
         }
     }
+
+    /** Renders a keyword list as a Kotlin `listOf("…")` literal, or `emptyList()` when empty. */
+    private fun keywordsLiteral(keywords: List<String>): String =
+        if (keywords.isEmpty()) "emptyList()"
+        else keywords.joinToString(prefix = "listOf(", postfix = ")") { "\"${esc(it)}\"" }
 
     /** Escapes the characters that are special inside a Kotlin double-quoted string literal. */
     private fun esc(s: String): String =

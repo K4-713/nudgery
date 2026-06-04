@@ -138,7 +138,10 @@ tasks.register("generateCredits") {
     val licenseJson = layout.buildDirectory
         .file("generated/aboutLibraries/release/res/raw/aboutlibraries.json")
     val creditsFile = rootProject.layout.projectDirectory.file("CREDITS.md")
+    // Manual license definitions (e.g. Unicode-3.0) for licenses AboutLibraries doesn't bundle text for.
+    val licensesConfigDir = layout.projectDirectory.dir("config/licenses").asFile
     inputs.file(licenseJson)
+    inputs.dir(licensesConfigDir)
     outputs.file(creditsFile)
 
     doLast {
@@ -207,11 +210,30 @@ tasks.register("generateCredits") {
             }
 
         sb.appendLine("---").appendLine()
+        // AboutLibraries may key a manually-defined license by a content hash rather than its SPDX id,
+        // so also index by spdxId to resolve a library's license reference.
+        val licensesBySpdx = licenses.values.mapNotNull { lic ->
+            (lic["spdxId"] as? String)?.let { it to lic }
+        }.toMap()
+
+        // AboutLibraries only bundles text for licenses it recognizes; for the rest (e.g. Unicode-3.0)
+        // fall back to the licenseContent in our manual config/licenses/<spdxId>.json.
+        fun configLicenseContent(spdxId: String?): String? {
+            if (spdxId.isNullOrBlank()) return null
+            val file = licensesConfigDir.resolve("${spdxId.lowercase()}.json")
+            if (!file.exists()) return null
+            @Suppress("UNCHECKED_CAST")
+            val data = groovy.json.JsonSlurper().parseText(file.readText()) as Map<String, Any?>
+            return (data["licenseContent"] as? String)?.takeIf { it.isNotBlank() }
+        }
+
         sb.appendLine("## License texts").appendLine()
         licUsage.keys.sorted().forEach { key ->
-            val lic = licenses[key]
+            val lic = licenses[key] ?: licensesBySpdx[key]
+            val spdxId = (lic?.get("spdxId") as? String) ?: key
             sb.appendLine("### ${(lic?.get("name") as? String) ?: key}").appendLine()
             val content = (lic?.get("content") as? String)?.takeIf { it.isNotBlank() }
+                ?: configLicenseContent(spdxId)
             if (content != null) {
                 sb.appendLine("```").appendLine(content.trimEnd()).appendLine("```").appendLine()
             } else {

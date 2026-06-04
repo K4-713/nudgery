@@ -1,3 +1,4 @@
+import com.nudgery.buildtools.emoji.CldrAnnotationParser
 import com.nudgery.buildtools.emoji.EmojiCatalogGenerator
 import com.nudgery.buildtools.emoji.EmojiTestParser
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -13,19 +14,32 @@ plugins {
 // parser/generator live in buildSrc (build-time only, never shipped). Generated-on-build (not
 // committed) — the vendored emoji-test.txt is the source of truth. Annual refresh = swap that file.
 val emojiTestFile = layout.projectDirectory.file("emoji-data/emoji-test.txt").asFile
+val cldrAnnotationsFile = layout.projectDirectory.file("emoji-data/cldr-annotations-en.xml").asFile
+val cldrAnnotationsDerivedFile = layout.projectDirectory.file("emoji-data/cldr-annotationsDerived-en.xml").asFile
 val emojiCatalogOutputDir = layout.buildDirectory.dir("generated/emojiCatalog/kotlin")
 
 val generateEmojiCatalog = tasks.register("generateEmojiCatalog") {
     group = "build"
-    description = "Generates the emoji catalog Kotlin source from emoji-data/emoji-test.txt (ED-5)."
+    description = "Generates the emoji catalog (base concepts + CLDR keywords) Kotlin source (ED-5/ED-10)."
     val input = emojiTestFile
+    val cldrAnnotations = cldrAnnotationsFile
+    val cldrDerived = cldrAnnotationsDerivedFile
     val outputDir = emojiCatalogOutputDir
-    inputs.file(input)
+    inputs.files(input, cldrAnnotations, cldrDerived)
     outputs.dir(outputDir)
     doLast {
-        val baseConcepts = EmojiCatalogGenerator.baseConcepts(EmojiTestParser.parse(input.readText()))
+        val keywordsByKey = CldrAnnotationParser.parseKeywords(
+            cldrAnnotations.readText(), cldrDerived.readText()
+        )
+        val baseConcepts = EmojiCatalogGenerator.baseConcepts(
+            EmojiTestParser.parse(input.readText()), keywordsByKey
+        )
         require(baseConcepts.size > 1000) {
             "Emoji catalog looks malformed: only ${baseConcepts.size} base concepts parsed from $input"
+        }
+        val withKeywords = baseConcepts.count { it.keywords.isNotEmpty() }
+        require(withKeywords > baseConcepts.size / 2) {
+            "CLDR keyword coverage looks wrong: only $withKeywords/${baseConcepts.size} concepts have keywords"
         }
         val packageDir = outputDir.get().asFile.resolve("com/nudgery/shared/emoji")
         packageDir.mkdirs()
@@ -34,7 +48,8 @@ val generateEmojiCatalog = tasks.register("generateEmojiCatalog") {
         logger.lifecycle(
             "generateEmojiCatalog: ${baseConcepts.size} base concepts " +
                 "(${baseConcepts.count { it.acceptsSkinTone }} accept skin tone, " +
-                "${baseConcepts.count { it.hairCapable }} hair-capable)"
+                "${baseConcepts.count { it.hairCapable }} hair-capable, " +
+                "$withKeywords with CLDR keywords)"
         )
     }
 }

@@ -73,6 +73,29 @@ class EmojiCatalogGeneratorTest {
     }
 
     @Test
+    fun attachesKeywordsByNormalizedEmoji() {
+        // ED-10: CLDR keywords are matched to base concepts by their FE0F-normalized emoji.
+        val keywords = mapOf(CldrAnnotationParser.normalizeKey("😀") to listOf("happy", "smile"))
+        val concepts = EmojiCatalogGenerator.baseConcepts(EmojiTestParser.parse(sample), keywords)
+        assertEquals(listOf("happy", "smile"), concepts.first { it.name == "grinning face" }.keywords)
+        assertEquals(emptyList<String>(), concepts.first { it.name == "person" }.keywords)
+    }
+
+    @Test
+    fun emitsKeywordsAsListLiteralOrEmptyList() {
+        // ED-10: keywords are emitted as listOf("…"); absent keywords become emptyList().
+        val withKeywords = listOf(
+            EmojiCatalogGenerator.BaseConcept("😀", "grinning face", "g", "s", "1.0", false, false, listOf("happy", "smile"))
+        )
+        assertTrue(EmojiCatalogGenerator.generateSource(withKeywords).contains("listOf(\"happy\", \"smile\")"))
+
+        val withoutKeywords = listOf(
+            EmojiCatalogGenerator.BaseConcept("😀", "grinning face", "g", "s", "1.0", false, false, emptyList())
+        )
+        assertTrue(EmojiCatalogGenerator.generateSource(withoutKeywords).contains("false, false, emptyList())"))
+    }
+
+    @Test
     fun escapesStringLiteralSpecialCharacters() {
         val tricky = listOf(
             EmojiCatalogGenerator.BaseConcept("😀", "price \$5 \"x\"", "g", "s", "1.0", false, false)

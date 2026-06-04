@@ -32,6 +32,17 @@ class GeneratedEmojiCatalogTest {
     }
 
     @Test
+    fun TDD_attachesCldrKeywordsForSearch() {
+        // ED-10: catalog entries carry CLDR search keywords for typeahead.
+        val grinning = entries.first { it.name == "grinning face" }
+        assertTrue(grinning.keywords.isNotEmpty(), "grinning face should have CLDR keywords")
+        assertTrue(
+            entries.count { it.keywords.isNotEmpty() } > entries.size / 2,
+            "most concepts should carry keywords"
+        )
+    }
+
+    @Test
     fun TDD_flagsSkinToneCapableConcepts() {
         // ED-6: concepts with skin-tone variants are flagged so the picker can derive them by rule.
         assertTrue(entries.any { it.acceptsSkinTone }, "some concepts should accept skin tone")

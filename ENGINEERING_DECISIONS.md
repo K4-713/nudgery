@@ -178,7 +178,7 @@ rule, not a user setting.
 emoji untouched).
 
 ### ED-10: Emoji search keywords come from CLDR annotations
-**Status:** Accepted — implementation pending
+**Status:** Implemented — `CldrAnnotationParser` + generator; 100% keyword coverage on v16.0 / CLDR 46 (English)
 **Context:** Typeahead search must surface emoji by the words a user types. `emoji-test.txt` (ED-5)
 carries only the CLDR short name (😂 = "face with tears of joy"), so searching it alone misses the
 synonyms people actually type ("lol", "crying laughing"). Unicode CLDR annotations
@@ -210,7 +210,7 @@ tolerance is a possible later enhancement.
 unrenderable matches excluded).
 
 ### ED-12: Embedded CLDR-derived keyword data is credited manually
-**Status:** Accepted — implementation pending
+**Status:** Implemented — `config/libraries/unicode-emoji-data.json` + `config/licenses/unicode-3.0.json`; renders in CREDITS.md & the in-app licenses screen
 **Context:** CLDR is a Unicode-licensed data source, not a Maven dependency, so the automatic
 credits pipeline (AboutLibraries → `CREDITS.md`) does not cover it.
 **Decision:** The CLDR-derived keyword data (and the Unicode emoji data of ED-5) are credited via a

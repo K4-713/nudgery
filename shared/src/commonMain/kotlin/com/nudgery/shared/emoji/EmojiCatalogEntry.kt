@@ -21,4 +21,6 @@ data class EmojiCatalogEntry(
     val acceptsSkinTone: Boolean,
     /** True when a hair-component variant of this concept exists (ED-8, pick-time only). */
     val hairCapable: Boolean,
+    /** CLDR search keywords for typeahead (ED-10); empty when none are annotated. */
+    val keywords: List<String> = emptyList(),
 )
