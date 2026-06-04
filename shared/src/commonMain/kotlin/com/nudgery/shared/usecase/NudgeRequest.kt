@@ -70,3 +70,37 @@ sealed class UpdateNudgeResult {
     data class Success(val nudgeId: String) : UpdateNudgeResult()
     data object NudgeNotFound : UpdateNudgeResult()
 }
+
+// --- Storage normalization (ENGINEERING_DECISIONS.md ED-16) ---
+// Every user-typed text field is trimmed at the save boundary so untrimmed text can never reach
+// storage. Soft keyboards routinely append a trailing space after autocomplete or a tapped
+// suggestion; left in place it would, for an emoji-only string, defeat the emoji-only detection that
+// drives emoji scaling (ED-14), and elsewhere produce stray-whitespace data we'd have to special-case
+// at display time. Each use case normalizes its request once, up front, so the same comparisons it
+// makes against already-stored (already-trimmed) text see the trimmed form too.
+
+/** Trims a required user-typed text field to its stored form. */
+internal fun String.normalizedForStorage(): String = trim()
+
+/** Trims an optional user-typed field; a value that is blank once trimmed becomes `null` (absent). */
+internal fun String?.normalizedOptionalForStorage(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+
+internal fun QuestionRequest.normalized(): QuestionRequest = copy(
+    text = text.normalizedForStorage(),
+    options = options.map { it.normalizedForStorage() },
+    triggerAnswerValue = triggerAnswerValue.normalizedOptionalForStorage()
+)
+
+internal fun CreateNudgeRequest.normalized(): CreateNudgeRequest = copy(
+    name = name.normalizedOptionalForStorage(),
+    mainQuestion = mainQuestion.normalized(),
+    followUpQuestions = followUpQuestions.map { it.normalized() }
+)
+
+internal fun UpdateNudgeRequest.normalized(): UpdateNudgeRequest = copy(
+    name = name.normalizedOptionalForStorage(),
+    mainQuestionText = mainQuestionText.normalizedOptionalForStorage(),
+    optionUpdates = optionUpdates.map { it.copy(newText = it.newText.normalizedForStorage()) },
+    newOptions = newOptions.map { it.normalizedForStorage() },
+    followUpReplacements = followUpReplacements?.map { it.copy(request = it.request.normalized()) }
+)

@@ -22,7 +22,9 @@ class CreateNudgeUseCase(
     private val scheduleRepository: ScheduleRepository,
     private val notificationScheduler: NotificationScheduler
 ) {
-    suspend fun execute(request: CreateNudgeRequest): CreateNudgeResult {
+    suspend fun execute(rawRequest: CreateNudgeRequest): CreateNudgeResult {
+        // Trim every user-typed field up front so untrimmed text can't reach storage (ED-16).
+        val request = rawRequest.normalized()
         if (!request.mainQuestion.type.allowsFollowUps && request.followUpQuestions.isNotEmpty()) {
             return CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps
         }

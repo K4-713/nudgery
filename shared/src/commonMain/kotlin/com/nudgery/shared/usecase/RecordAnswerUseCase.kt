@@ -15,12 +15,14 @@ class RecordAnswerUseCase(private val answerRepository: AnswerRepository) {
         scheduledAt: Instant = Clock.System.now()
     ): String {
         val answerId = generateUuid()
+        // Trim the answer text at the save boundary (ED-16); a no-op for structured/emoji values.
+        val storedValue = value.normalizedForStorage()
         answerRepository.insert(
             Answer(
                 id = answerId,
                 nudgeId = nudgeId,
                 questionId = questionId,
-                value = value,
+                value = storedValue,
                 scheduledAt = scheduledAt,
                 answeredAt = Clock.System.now(),
                 isHidden = false

@@ -24,7 +24,11 @@ class UpdateNudgeUseCase(
     private val nudgeEditRepository: NudgeEditRepository,
     private val notificationScheduler: NotificationScheduler
 ) {
-    suspend fun execute(request: UpdateNudgeRequest): UpdateNudgeResult {
+    suspend fun execute(rawRequest: UpdateNudgeRequest): UpdateNudgeResult {
+        // Trim every user-typed field up front (ED-16). Normalizing before the change-detection
+        // comparisons below means a trailing space alone never reads as an edit (which would write a
+        // spurious edit-history entry and bump updatedAt).
+        val request = rawRequest.normalized()
         val nudge = nudgeRepository.getById(request.nudgeId)
             ?: return UpdateNudgeResult.NudgeNotFound
         val questions = questionRepository.getByNudgeId(request.nudgeId)

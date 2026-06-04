@@ -63,6 +63,34 @@ class NudgeEditTest {
     }
 
     @Test
+    fun TDD_nudgeNameTrimmedOnEdit() = runTest {
+        // ENGINEERING_DECISIONS.md ED-16: edits are trimmed at the save boundary like creates.
+        val nudgeId = createYesNoNudge()
+
+        updateNudge.execute(UpdateNudgeRequest(nudgeId = nudgeId, name = "  Walk 🐶  "))
+
+        val nudge = repos.nudgeRepository.getById(nudgeId)
+        assertNotNull(nudge)
+        assertEquals("Walk 🐶", nudge.name)
+    }
+
+    @Test
+    fun TDD_trailingSpaceOnlyEditNotRecordedAsChange() = runTest {
+        // ED-16: normalizing before change-detection means re-submitting the same question text with
+        // only an added trailing space is not mistaken for an edit — no edit-history entry, no rewrite.
+        val nudgeId = createYesNoNudge(questionText = "Original question?")
+        val original = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+
+        updateNudge.execute(UpdateNudgeRequest(nudgeId = nudgeId, mainQuestionText = "Original question? "))
+
+        val edits = repos.nudgeEditRepository.getByNudgeId(nudgeId)
+        assertTrue(edits.isEmpty(), "a trailing-space-only edit should not be recorded")
+        val after = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        assertEquals("Original question?", after.text)
+        assertEquals(original.text, after.text)
+    }
+
+    @Test
     fun TDD_nudgeBaseQuestionTypeCannotBeChanged() = runTest {
         // README "Editing Nudges": "Nudge configuration [can] be edited, except for the
         //   base type of the main question"

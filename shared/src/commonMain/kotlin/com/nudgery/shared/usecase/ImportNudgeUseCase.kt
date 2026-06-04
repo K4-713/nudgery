@@ -23,7 +23,9 @@ class ImportNudgeUseCase(
     private val answerRepository: AnswerRepository,
     private val notificationScheduler: NotificationScheduler
 ) {
-    suspend fun execute(request: ImportNudgeRequest): String {
+    suspend fun execute(rawRequest: ImportNudgeRequest): String {
+        // Import is a save boundary too: trim every restored text field up front (ED-16).
+        val request = rawRequest.normalized()
         val now = Clock.System.now()
         val nudgeId = generateUuid()
 

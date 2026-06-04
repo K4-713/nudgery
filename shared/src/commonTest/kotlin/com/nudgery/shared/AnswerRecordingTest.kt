@@ -68,6 +68,26 @@ class AnswerRecordingTest {
     }
 
     @Test
+    fun TDD_textAnswerTrimmedOnRecord() = runTest {
+        // ENGINEERING_DECISIONS.md ED-16: a free-text answer is trimmed at the save boundary, so
+        // stray surrounding whitespace never reaches storage.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How was your day?", QuestionType.TEXT),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val questionId = repos.questionRepository.getByNudgeId(result.nudgeId)
+            .first { it.isMainQuestion }.id
+
+        recordAnswer.execute(result.nudgeId, questionId, "  pretty good  ")
+
+        val answers = repos.answerRepository.getAllByNudgeId(result.nudgeId)
+        assertEquals(1, answers.size)
+        assertEquals("pretty good", answers[0].value)
+    }
+
+    @Test
     fun TDD_answerRecordedWithNudgeAndQuestionReference() = runTest {
         // ARCHITECTURE.md Answer: nudgeId FK → Nudge, questionId FK → Question
         val (nudgeId, questionId) = createYesNoNudge()

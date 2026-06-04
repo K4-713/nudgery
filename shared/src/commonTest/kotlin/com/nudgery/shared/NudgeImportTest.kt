@@ -61,6 +61,43 @@ class NudgeImportTest {
     )
 
     @Test
+    fun TDD_importTrimsTextFields() = runTest {
+        // ENGINEERING_DECISIONS.md ED-16: import is a save boundary too — restored name, question
+        // text, options, and answer values are trimmed on the way in.
+        val request = ImportNudgeRequest(
+            name = "  Imported 🐶  ",
+            isEnabled = true,
+            schedule = dailyScheduleRequest(),
+            questions = listOf(
+                ImportQuestionRequest(
+                    orderIndex = 0,
+                    text = "  How do you feel?  ",
+                    type = QuestionType.OPTION_SINGLE,
+                    options = listOf("  Good  ", "  Bad  ")
+                )
+            ),
+            answers = listOf(
+                ImportAnswerRequest(
+                    questionOrderIndex = 0,
+                    value = "Good",
+                    scheduledAt = Clock.System.now(),
+                    answeredAt = Clock.System.now()
+                )
+            )
+        )
+
+        val nudgeId = importNudge.execute(request)
+
+        val nudge = repos.nudgeRepository.getById(nudgeId)
+        assertNotNull(nudge)
+        assertEquals("Imported 🐶", nudge.name)
+        val question = repos.questionRepository.getByNudgeId(nudgeId).first { it.isMainQuestion }
+        assertEquals("How do you feel?", question.text)
+        val options = repos.questionOptionRepository.getByQuestionId(question.id).sortedBy { it.orderIndex }
+        assertEquals(listOf("Good", "Bad"), options.map { it.text })
+    }
+
+    @Test
     fun TDD_import_createsNudgeWithCorrectName() = runTest {
         // README: import recreates the nudge from a JSON backup
         val request = ImportNudgeRequest(

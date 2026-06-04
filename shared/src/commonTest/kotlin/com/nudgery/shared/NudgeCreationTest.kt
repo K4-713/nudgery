@@ -48,6 +48,61 @@ class NudgeCreationTest {
     )
 
     @Test
+    fun TDD_nudgeNameTrimmedOnCreate() = runTest {
+        // ENGINEERING_DECISIONS.md ED-16: user-typed text is trimmed at the save boundary, so a
+        // trailing space (e.g. from keyboard autocomplete) can't reach storage and break, say, the
+        // emoji-only detection that drives emoji scaling.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Did you sleep well?", QuestionType.YES_NO),
+                schedule = dailySchedule(),
+                name = "  🐶  "
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val nudge = repos.nudgeRepository.getById(result.nudgeId)
+        assertNotNull(nudge)
+        assertEquals("🐶", nudge.name)
+    }
+
+    @Test
+    fun TDD_questionAndOptionTextTrimmedOnCreate() = runTest {
+        // ED-16: question text and option text are trimmed at save time, too.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(
+                    "  How do you feel?  ",
+                    QuestionType.OPTION_SINGLE,
+                    options = listOf("  Good  ", "  Bad  ")
+                ),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val question = repos.questionRepository.getByNudgeId(result.nudgeId).first { it.isMainQuestion }
+        assertEquals("How do you feel?", question.text)
+        val options = repos.questionOptionRepository.getByQuestionId(question.id).sortedBy { it.orderIndex }
+        assertEquals(listOf("Good", "Bad"), options.map { it.text })
+    }
+
+    @Test
+    fun TDD_blankNameFallsBackToQuestionText() = runTest {
+        // ED-16: a name that is only whitespace collapses to "absent", so the nudge falls back to
+        // its (trimmed) question text rather than being saved as a blank name.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("  Did you stretch?  ", QuestionType.YES_NO),
+                schedule = dailySchedule(),
+                name = "   "
+            )
+        )
+        assertIs<CreateNudgeResult.Success>(result)
+        val nudge = repos.nudgeRepository.getById(result.nudgeId)
+        assertNotNull(nudge)
+        assertEquals("Did you stretch?", nudge.name)
+    }
+
+    @Test
     fun TDD_createNudgeWithYesNoQuestion() = runTest {
         // README "Setting Up a Nudge": "choose what kind of answer you want with the main question (Yes or No...)"
         val result = createNudge.execute(

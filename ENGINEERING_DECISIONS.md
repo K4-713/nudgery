@@ -281,3 +281,25 @@ adopt it. Material's `expandedHeight` parameter is used rather than a custom bar
 app-bar styling and scroll behavior.
 **Tests:** `EmojiScaleTest` — emoji-only scaled title grows past default; mixed/plain/unscaled titles
 return the default; growth never drops below the default.
+
+### ED-16: User-typed text is trimmed at the save boundary, never at display
+**Status:** Implemented — `request.normalized()` at the top of each create/update/import use case; `RecordAnswerUseCase` trims the answer value
+**Context:** Soft keyboards routinely append a trailing space after autocomplete or a tapped
+suggestion. Saved verbatim, that stray whitespace makes an otherwise emoji-only string fail
+`util.isEmojiOnly` (so it doesn't scale, ED-14) and generally produces dirty data that every display
+site would otherwise have to defend against.
+**Decision:** Normalize at the **single save boundary**, not at display: every user-typed text field
+is trimmed (both ends) just before it is persisted, so untrimmed text can never enter storage and no
+read path needs to compensate. Covered fields: nudge name, question text, question-option text,
+follow-up trigger values, and answer values (a no-op for structured or emoji answers). Optional name
+fields that are blank once trimmed collapse to "absent" (`null`) rather than an empty string. Each
+use case calls `request.normalized()` **before** its change-detection comparisons, so a trailing
+space alone is not mistaken for an edit (which would write a spurious `NudgeEdit` and bump
+`updatedAt`). Import is treated as a save boundary too; trimming uniformly keeps its option-text-keyed
+trigger/answer resolution internally consistent. Internal-only whitespace is preserved.
+**Consequences:** One normalization step per save path rather than scattered per-field trimming;
+display code can assume stored text is already trimmed. Pre-existing untrimmed rows are cleaned the
+next time they're saved (and on re-import), but are not bulk-migrated.
+**Tests:** `NudgeCreationTest`, `NudgeEditTest`, `NudgeImportTest`, `AnswerRecordingTest` — names,
+question text, options, and answer values are stored trimmed; a trailing-space-only edit is not
+recorded as a change.
