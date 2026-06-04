@@ -24,6 +24,13 @@ class PlatformEmojiGlyphFilter(private val paint: Paint = Paint()) : EmojiGlyphF
     fun isWide(emoji: String): Boolean =
         singleEmojiWidth > 0f && paint.measureText(emoji) > singleEmojiWidth * WIDE_RATIO_THRESHOLD
 
+    /**
+     * Advance width of [emoji] with this paint's text size, in px. Used to compare a tone/gender
+     * variant's rendering to its base: a variant that the font combines into one glyph has ~the same
+     * width as the base, while one that falls back to separate component glyphs is much wider.
+     */
+    fun glyphWidth(emoji: String): Float = paint.measureText(emoji)
+
     /** Advance width of one single-person glyph, measured once with this paint's text size. */
     private val singleEmojiWidth: Float by lazy { paint.measureText(REFERENCE_SINGLE_EMOJI) }
 

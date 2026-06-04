@@ -79,20 +79,37 @@ object EmojiDefaults {
     }
 
     /**
-     * Inserts [skinTone]'s modifier after the emoji's base component (superseding a VS16 right after
-     * it). No-op when [skinTone] is [SkinTone.DEFAULT] or [emoji] is already skin-toned.
+     * Applies [skinTone]'s modifier to [emoji] by rule. For a single-base emoji (a hand, a single
+     * face/person, a role sequence) the modifier goes after the leading base, superseding a VS16
+     * right after it. For a **multi-person** sequence (couple, kiss, family) it goes after *every*
+     * person component — that is what yields the valid fully-qualified sequence the font can ligate
+     * into one glyph; toning only the first figure produces a malformed string that falls back to
+     * separate component glyphs (ED-7). No-op when [skinTone] is [SkinTone.DEFAULT] or [emoji] is
+     * already skin-toned.
      */
     fun applySkinTone(emoji: String, skinTone: SkinTone): String {
         val modifier = skinTone.modifier ?: return emoji
         val codePoints = decodeCodePoints(emoji)
         if (codePoints.isEmpty() || codePoints.any { it in 0x1F3FB..0x1F3FF }) return emoji
-        val out = ArrayList<Int>(codePoints.size + 1)
-        out.add(codePoints[0])
-        out.add(modifier)
-        // The modifier supersedes the base component's emoji-presentation selector, if present.
-        val rest = if (codePoints.size > 1 && codePoints[1] == 0xFE0F) 2 else 1
-        for (i in rest until codePoints.size) out.add(codePoints[i])
-        return encodeCodePoints(out)
+
+        val hasPerson = codePoints.any { it in PERSON_COMPONENTS }
+        val out = ArrayList<Int>(codePoints.size + 2)
+        var i = 0
+        var toned = false
+        while (i < codePoints.size) {
+            val cp = codePoints[i]
+            out.add(cp)
+            // Multi-person: tone each figure. Otherwise: tone only the leading base.
+            val isToneTarget = if (hasPerson) cp in PERSON_COMPONENTS else i == 0
+            if (isToneTarget) {
+                out.add(modifier)
+                toned = true
+                // The modifier supersedes this base's emoji-presentation selector (VS16), if present.
+                if (i + 1 < codePoints.size && codePoints[i + 1] == 0xFE0F) i++
+            }
+            i++
+        }
+        return if (toned) encodeCodePoints(out) else emoji
     }
 
     // --- Gender mapping derived from the catalog (ED-7) ---

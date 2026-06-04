@@ -1555,31 +1555,54 @@ private fun PackedBubbleChart(
             val wordPx = if (emojiOnly) (r * 1.0f).coerceIn(18f * emojiFloor, 52f * emojiFloor)
                          else (r * 0.5f).coerceIn(9f, 26f)
             val labelMaxWidth = (r * if (emojiOnly) 2f else 1.7f).toInt().coerceAtLeast(1)
-            val wordLayout = textMeasurer.measure(
-                text = c.entry.label,
-                style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-                constraints = Constraints(maxWidth = labelMaxWidth)
-            )
-            // Word centered on the bubble's center.
-            drawText(
-                wordLayout,
-                topLeft = Offset(cx - wordLayout.size.width / 2f, cy - wordLayout.size.height / 2f)
-            )
-
-            // Count tucked just beneath the word, only when there is room.
-            if (r >= 26f) {
-                val countLayout = textMeasurer.measure(
+            val wordLayout = if (emojiOnly) {
+                // An emoji is atomic — never ellipsize it to "…" (a wide multi-person glyph would
+                // otherwise vanish into an ellipsis). Measure it unconstrained, then shrink the glyph
+                // to fit the bubble if it's wider than the bubble.
+                val natural = textMeasurer.measure(
+                    text = c.entry.label,
+                    style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
+                    maxLines = 1
+                )
+                if (natural.size.width > labelMaxWidth && natural.size.width > 0) {
+                    val fitted = wordPx * labelMaxWidth / natural.size.width
+                    textMeasurer.measure(
+                        text = c.entry.label,
+                        style = TextStyle(color = textColor, fontSize = fitted.toSp(), fontWeight = FontWeight.Bold),
+                        maxLines = 1
+                    )
+                } else natural
+            } else {
+                textMeasurer.measure(
+                    text = c.entry.label,
+                    style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    constraints = Constraints(maxWidth = labelMaxWidth)
+                )
+            }
+            // The count is shown only in the full-screen view: the thumbnail conveys frequency by
+            // bubble size, where a tiny digit would be unreadable and would spill past the small
+            // bubble's edge. When shown, the label and count are centered together as one block so
+            // neither clips the bubble.
+            val countLayout = if (zoomable && r >= 26f) {
+                textMeasurer.measure(
                     text = c.entry.count.toString(),
                     style = TextStyle(color = textColor.copy(alpha = 0.8f), fontSize = (wordPx * 0.7f).toSp()),
                     maxLines = 1
                 )
+            } else null
+
+            val countGap = if (countLayout != null) 2f else 0f
+            val groupHeight = wordLayout.size.height + countGap + (countLayout?.size?.height ?: 0)
+            val wordTop = cy - groupHeight / 2f
+            drawText(wordLayout, topLeft = Offset(cx - wordLayout.size.width / 2f, wordTop))
+            if (countLayout != null) {
                 drawText(
                     countLayout,
                     topLeft = Offset(
                         cx - countLayout.size.width / 2f,
-                        cy + wordLayout.size.height / 2f + 1f
+                        wordTop + wordLayout.size.height + countGap
                     )
                 )
             }

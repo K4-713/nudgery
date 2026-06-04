@@ -46,6 +46,16 @@ class EmojiDefaultsTest {
     }
 
     @Test
+    fun TDD_skinToneAppliesToEveryPersonInAMultiPersonSequence() {
+        // ED-7: a couple/kiss must get the tone on *every* figure to stay one ligated glyph; toning
+        // only the first figure produced a malformed sequence that rendered as separate components.
+        // 👩‍❤️‍💋‍👨 + light → 👩🏻‍❤️‍💋‍👨🏻 (the fully-qualified "kiss: woman, man, light skin tone").
+        val kiss = cp(0x1F469, 0x200D, 0x2764, 0xFE0F, 0x200D, 0x1F48B, 0x200D, 0x1F468)
+        val tonedKiss = cp(0x1F469, 0x1F3FB, 0x200D, 0x2764, 0xFE0F, 0x200D, 0x1F48B, 0x200D, 0x1F468, 0x1F3FB)
+        assertEquals(tonedKiss, EmojiDefaults.applySkinTone(kiss, SkinTone.LIGHT))
+    }
+
+    @Test
     fun TDD_skinToneNeverOverridesAnExistingTone() {
         val toned = cp(0x1F44D, 0x1F3FD)
         assertEquals(toned, EmojiDefaults.applySkinTone(toned, SkinTone.DARK))

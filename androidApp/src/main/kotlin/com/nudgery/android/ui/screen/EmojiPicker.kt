@@ -125,7 +125,8 @@ fun EmojiPicker(
     val cells: List<PickerCell> = remember(query, selectedTab, defaultSkinTone, defaultGender, recents, tabs, glyphFilter) {
         fun cellFor(display: String, entry: EmojiCatalogEntry?) =
             PickerCell(display, entry, isWide = glyphFilter.isWide(display))
-        fun of(entry: EmojiCatalogEntry) = cellFor(entry.applyDefaults(defaultSkinTone, defaultGender), entry)
+        fun of(entry: EmojiCatalogEntry) =
+            cellFor(displayForm(entry, defaultSkinTone, defaultGender, glyphFilter), entry)
         val tabEntries = tabs[selectedTab].entries
         when {
             query.isNotBlank() -> EmojiSearch.search(query, displayEntries).map { of(it) }
@@ -203,9 +204,16 @@ fun EmojiPicker(
                 // and overlap neighbors (clamped so a narrow grid never asks for more than it has).
                 span = { _, cell -> GridItemSpan(if (cell.isWide) minOf(2, maxLineSpan) else 1) }
             ) { index, cell ->
-                // Skin-tone/gender variants for this emoji, or null if it has none (ED-8).
-                val variants = remember(cell) {
-                    cell.entry?.let { EmojiDefaults.variants(it) }?.takeIf { it.size > 1 }
+                // Skin-tone/gender variants, or null if there are none (ED-8). Only variants the
+                // device renders as a single combined glyph are offered — some multi-person emoji
+                // have a combined glyph only without skin tone, and a toned variant that falls back to
+                // separate component glyphs shouldn't appear in the tray.
+                val variants = remember(cell, glyphFilter) {
+                    cell.entry?.let { entry ->
+                        val all = EmojiDefaults.variants(entry)
+                        val baseWidth = glyphFilter.glyphWidth(all.first())
+                        all.filter { glyphFilter.glyphWidth(it) <= baseWidth * COMBINED_GLYPH_TOLERANCE }
+                    }?.takeIf { it.size > 1 }
                 }
                 // The cell fills its grid slot so the glyph centers (even gaps on both sides) and the
                 // whole cell — not just the glyph — is the tap target. A small inner box hugs the
@@ -287,5 +295,30 @@ private data class EmojiTab(
     val entries: List<EmojiCatalogEntry>?,
 )
 
-private fun EmojiCatalogEntry.applyDefaults(skinTone: SkinTone, gender: Gender): String =
-    EmojiDefaults.apply(this, skinTone, gender)
+/** Largest a tone/gender variant may render relative to its neutral base and still count as a single
+ *  combined glyph. The font draws a ligated variant at ~the base width; a variant it can't combine
+ *  falls back to separate component glyphs and is much wider. */
+private const val COMBINED_GLYPH_TOLERANCE = 1.4f
+
+/**
+ * The string to display and insert for [entry] with the user's [skinTone]/[gender] applied — but
+ * falling back to a form the device renders as a single glyph when the toned/gendered form doesn't
+ * ligate. Some multi-person emoji (e.g. people holding hands) have a combined glyph only without skin
+ * tone; rather than show that as an expanded run of component emoji, prefer the combined glyph,
+ * keeping as much of the preference as still fits (drop tone first, then gender, then neutral base).
+ */
+private fun displayForm(
+    entry: EmojiCatalogEntry,
+    skinTone: SkinTone,
+    gender: Gender,
+    glyphFilter: PlatformEmojiGlyphFilter
+): String {
+    val baseWidth = glyphFilter.glyphWidth(entry.emoji)
+    val candidates = listOf(
+        EmojiDefaults.apply(entry, skinTone, gender),         // full preference
+        EmojiDefaults.apply(entry, SkinTone.DEFAULT, gender), // drop tone, keep gender
+        EmojiDefaults.apply(entry, skinTone, Gender.NEUTRAL)  // drop gender, keep tone
+    )
+    return candidates.firstOrNull { glyphFilter.glyphWidth(it) <= baseWidth * COMBINED_GLYPH_TOLERANCE }
+        ?: entry.emoji // neutral base always combines (it is why the entry is shown)
+}
