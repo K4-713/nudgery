@@ -76,6 +76,7 @@ import com.nudgery.android.ui.theme.ChartPalettePreference
 import com.nudgery.android.ui.theme.paletteStops
 import com.nudgery.shared.emoji.EmojiDefaults
 import com.nudgery.shared.emoji.Gender
+import com.nudgery.shared.emoji.PlatformEmojiGlyphFilter
 import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.android.viewmodel.CollisionResolution
 import com.nudgery.android.viewmodel.ImportStatus
@@ -610,7 +611,16 @@ private fun EmojiDefaultSelectors(
             modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
         )
         var sliderValue by remember(emojiScale) { mutableFloatStateOf(emojiScale) }
-        val sample = remember { listOf("😀", "🐱", "🦄", "🍕", "🚀", "🎉", "🐢", "🌈").random() }
+        // Fun "size" sample: wild animals (no typical urban pets, nothing with political overtones),
+        // filtered to what this device can actually render so it never shows tofu.
+        val sample = remember {
+            val candidates = listOf(
+                "🦒", "🦓", "🦏", "🦘", "🦥", "🦦", "🐧", "🦉", "🦩", "🐙", "🐳",
+                "🦚", "🦔", "🐉", "🦄", "🐢"
+            )
+            val glyphFilter = PlatformEmojiGlyphFilter()
+            candidates.filter { glyphFilter.canRender(it) }.ifEmpty { candidates }.random()
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
