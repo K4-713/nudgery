@@ -23,8 +23,8 @@ class CreateNudgeUseCase(
     private val notificationScheduler: NotificationScheduler
 ) {
     suspend fun execute(request: CreateNudgeRequest): CreateNudgeResult {
-        if (request.mainQuestion.type == QuestionType.TEXT && request.followUpQuestions.isNotEmpty()) {
-            return CreateNudgeResult.Failure.TextMainCannotHaveFollowUps
+        if (!request.mainQuestion.type.allowsFollowUps && request.followUpQuestions.isNotEmpty()) {
+            return CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps
         }
 
         for (question in listOf(request.mainQuestion) + request.followUpQuestions) {

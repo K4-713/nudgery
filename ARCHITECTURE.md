@@ -142,8 +142,8 @@ Belongs to a `Nudge`. The first question (orderIndex 0) is the main question; su
 | scaleMin | Int? | Null unless `type = SCALE`; lower bound of the slider range |
 | scaleMax | Int? | Null unless `type = SCALE`; upper bound of the slider range |
 
-**QuestionType** enum: `YES_NO`, `SCALE`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`
-`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `TEXT` is valid for both main and follow-up questions, but a `TEXT` main question cannot have follow-ups — there are no fixed answers to define a trigger condition on (`QuestionType.allowsFollowUps` is false for `TEXT`). The create wizard skips the follow-up step for a `TEXT` main question, and the detail screen hides its follow-up row.
+**QuestionType** enum: `YES_NO`, `SCALE`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`, `EMOJI`
+`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `EMOJI` is a TEXT question under the hood (ED-1): it stores, exports, and charts exactly like `TEXT`, differing only in input (emoji-only via the picker). `TEXT` and `EMOJI` are the **free-form** types (`QuestionType.isFreeformType`): valid for main and follow-up questions, but a free-form *main* question cannot have follow-ups — there are no fixed answers to define a trigger condition on (`QuestionType.allowsFollowUps` is false for both). The create wizard skips the follow-up step for a free-form main question, and the detail screen hides its follow-up row.
 
 **TriggerOperator** enum: `EQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`
 `CONTAINS` is used for `OPTION_MULTI` follow-ups: the trigger fires when the stored option ID appears anywhere in the comma-separated multi-select answer string.
@@ -352,6 +352,7 @@ Navigation is unified through `ChartWindowNav` passed into every chart: time-bas
 | OPTION_SINGLE | Bar chart, column chart, packed bubble chart |
 | OPTION_MULTI | Bar chart, packed bubble chart |
 | TEXT | Packed bubble chart (word/emoji frequency) |
+| EMOJI | Packed bubble chart (emoji frequency) — same path as TEXT (ED-1) |
 
 **Android rendering:**
 

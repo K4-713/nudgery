@@ -161,6 +161,13 @@ private fun AnswerStep(
                 currentAnswer = uiState.currentAnswer,
                 onAnswerChange = onAnswerChange
             )
+            // EMOJI is TEXT under the hood (ED-1). The dedicated emoji picker (ED-13) replaces this
+            // plain field in the picker task (#8); until then EMOJI questions aren't offered in the
+            // create/edit wizard, so this branch is unreachable and just keeps the `when` exhaustive.
+            QuestionType.EMOJI -> TextInput(
+                currentAnswer = uiState.currentAnswer,
+                onAnswerChange = onAnswerChange
+            )
         }
 
         Spacer(modifier = Modifier.weight(1f))

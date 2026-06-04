@@ -69,7 +69,23 @@ class QuestionSetupTest {
                 schedule = dailySchedule()
             )
         )
-        assertIs<CreateNudgeResult.Failure.TextMainCannotHaveFollowUps>(result)
+        assertIs<CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps>(result)
+    }
+
+    @Test
+    fun TDD_emojiMainQuestionCannotHaveFollowUps() = runTest {
+        // README "Setting Up a Nudge": "anything that isn't free text or emoji" can have follow-ups —
+        //   an EMOJI main is free-form (ED-1), so like TEXT it cannot.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("How do you feel?", QuestionType.EMOJI),
+                followUpQuestions = listOf(
+                    QuestionRequest("A follow-up", QuestionType.YES_NO)
+                ),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps>(result)
     }
 
     @Test

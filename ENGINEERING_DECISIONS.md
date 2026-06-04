@@ -51,7 +51,7 @@ implemented; see the *Emoji Question Type* section of `TODO.md` for the work bre
 `TDD_` tests are written first (DDD) and will fail until the feature lands.
 
 ### ED-1: `EMOJI` is a TEXT question under the hood
-**Status:** Accepted — implementation pending
+**Status:** Implemented (model/routing) — `QuestionType.EMOJI` routes to the TEXT path for storage, export, charts, and validation; round-trips through backup. Wizard exposure + picker input land with task #8.
 **Context:** Users want an emoji-only answer type, but emoji answers should reuse the existing
 text storage, export, and packed-bubble visualization (which already tokenizes emoji).
 **Decision:** `QuestionType.EMOJI` persists, exports, and charts identically to `TEXT`. It differs

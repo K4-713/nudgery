@@ -117,7 +117,7 @@ class GetVisualizationDataUseCase(
             QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, granularity, fillViewport, lineVisibleDays)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, source.optionsById, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, source.optionsById, includeColumnChart = false)
-            QuestionType.TEXT -> buildTextCharts(answers)
+            QuestionType.TEXT, QuestionType.EMOJI -> buildTextCharts(answers)
         }
     }
 

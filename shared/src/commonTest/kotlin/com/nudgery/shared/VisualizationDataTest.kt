@@ -480,6 +480,16 @@ class VisualizationDataTest {
     }
 
     @Test
+    fun TDD_emojiQuestionProvidesPackedBubble() = runTest {
+        // README "Viewing Nudges": "EMOJI | Packed bubble chart". EMOJI charts as TEXT (ED-1).
+        val (nudgeId, questionId) = createNudgeAndRecordAnswer(QuestionType.EMOJI, answerValue = "😀🐱")
+        val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+
+        assertTrue(charts.any { it is VisualizationData.PackedBubble },
+            "EMOJI should produce a PackedBubble")
+    }
+
+    @Test
     fun TDD_textPackedBubbleExcludesStopWords() = runTest {
         // Stop words (function words like "the", "was", "and") should be filtered from the packed bubble chart
         val (nudgeId, followUpId) = createNudgeWithTextFollowUp()
