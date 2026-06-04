@@ -763,9 +763,9 @@ private fun NudgeryChart(
 }
 
 // One full-width swipe across a time-based chart slides the shared window by this many times the
-// selected timeframe's span — e.g. 3 weeks per swipe on the weekly view, 3 months on monthly,
-// 3 years on yearly. Raise this to scroll through history faster, lower it for finer control.
-private const val FULL_SWIPE_TIMEFRAME_MULTIPLIER = 3
+// selected timeframe's span — e.g. 2 weeks per swipe on the weekly view, 2 months on monthly,
+// 2 years on yearly. Raise this to scroll through history faster, lower it for finer control.
+private const val FULL_SWIPE_TIMEFRAME_MULTIPLIER = 2
 
 /** Horizontal drag that slides the shared window; dragging right reveals older data. */
 private fun Modifier.timeWindowDrag(nav: ChartWindowNav): Modifier {
