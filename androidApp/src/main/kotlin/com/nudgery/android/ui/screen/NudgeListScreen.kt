@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +51,11 @@ import com.nudgery.android.viewmodel.NudgeListViewModel
 import com.nudgery.android.viewmodel.NudgeSummary
 import kotlinx.datetime.Instant
 import org.koin.androidx.compose.koinViewModel
+
+/** Bottom clearance reserved below the nudge list so the last card scrolls clear of the floating
+ *  "New Nudge" button rather than being trapped under it: the 56dp FAB plus its 16dp margin top and
+ *  bottom. */
+private val NUDGE_LIST_FAB_CLEARANCE = 88.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +120,13 @@ fun NudgeListScreen(
                 modifier = Modifier.padding(innerPadding)
             )
             else -> LazyColumn(
-                contentPadding = innerPadding,
+                // Extra bottom padding so the last card can scroll clear of the floating "New Nudge"
+                // button instead of being trapped under it (the FAB's height is not folded into the
+                // Scaffold's innerPadding, unlike a bottomBar). Horizontal inset stays on the modifier.
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = innerPadding.calculateBottomPadding() + NUDGE_LIST_FAB_CLEARANCE
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxSize()
