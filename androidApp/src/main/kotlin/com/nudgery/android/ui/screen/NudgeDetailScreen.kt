@@ -7,7 +7,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -37,6 +36,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +56,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -157,6 +159,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.FileProvider
 import com.nudgery.shared.model.ExportFormat
 import org.koin.androidx.compose.koinViewModel
@@ -626,6 +629,15 @@ private fun FullScreenChartDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // A Dialog owns a separate window that does NOT inherit the activity's enableEdgeToEdge()
+        // setup, so by default it consumes the system-bar insets and they read as zero inside —
+        // which would let the bottom row of timeframe chips draw behind the navigation bar. Opting
+        // this window out of decor-fit makes it truly edge-to-edge so Compose receives the real
+        // insets, and the Scaffold below insets its content (the chips) clear of the bars.
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            dialogWindow?.let { WindowCompat.setDecorFitsSystemWindows(it, false) }
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -673,12 +685,14 @@ private fun FullScreenChartDialog(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
+                    // The Scaffold's innerPadding already insets the bottom navigation bar now that
+                    // the dialog window is edge-to-edge, so the selector only adds its own breathing
+                    // room — no navigationBarsPadding(), which would double the inset.
                     TimeframeSelector(
                         selectedTimeframe = selectedTimeframe,
                         onTimeframeSelect = onTimeframeSelect,
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
-                            .navigationBarsPadding()
                             .padding(bottom = 16.dp)
                     )
                 }
