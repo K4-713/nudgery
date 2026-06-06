@@ -214,6 +214,7 @@
     <string name="settings_palette_ember_description">Recommended for tritanopia</string>
 
     <string name="emoji_search_hint">Search emoji</string>
+    <string name="emoji_search_clear">Clear search</string>
     <string name="emoji_recents_tab">Recently used</string>
     <string name="emoji_answer_hint">Tap emoji to build your answer</string>
     <string name="answer_type_emoji">Emoji</string>

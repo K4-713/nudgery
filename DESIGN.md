@@ -347,10 +347,10 @@ The picker (behavior in ENGINEERING_DECISIONS.md ED-3/4/8/11/13; this is the vis
 
 Top-to-bottom on the answer page:
 
-- **Chosen-emoji display** — read-only; shows the answer string (one or more emoji, at the emoji-scale size). A backspace control removes the last emoji. Tapping it never raises the system keyboard.
-- **Search field** — pinned above the grid; the *only* element that uses the system keyboard. Typing switches the grid from categories to ranked results (ED-11). Empty search shows the browse grid.
+- **Chosen-emoji display** — read-only; shows the answer string (one or more emoji, at the emoji-scale size). A backspace control removes the last emoji. Tapping it never raises the system keyboard. It **stays visible even while the search keyboard is up**, so a tap that appends to the answer is always reflected on screen.
+- **Search field** — pinned above the grid; the *only* element that uses the system keyboard. Typing switches the grid from categories to ranked results (ED-11). Empty search shows the browse grid. A trailing **clear (circle-✕)** control wipes the search text (shown only when the field is non-empty).
 - **Category tabs** — **at the top on Android** (matching Android-user expectation; iOS will place them at the bottom per its own convention — a deliberate per-platform divergence). The **first tab is Recents, under a clock icon** (a persisted, most-recent-first list). Remaining tabs are the Unicode groups.
-- **Grid** — emoji rendered with the **device font** (no shipped glyphs, ED-3), filtered to what the device can render (ED-4). A normal tap **appends** the emoji (applying the default skin tone/gender, ED-6/7) and keeps the picker open. **Long-press** opens a variant row (skin tone / gender / hair / direction, ED-8); emoji that have variants show a subtle corner indicator.
+- **Grid** — emoji rendered with the **device font** (no shipped glyphs, ED-3), filtered to what the device can render (ED-4). A normal tap **appends** the emoji (applying the default skin tone/gender, ED-6/7) and keeps the picker open. If the search keyboard is up, the tap also **dismisses it** — restoring the full answer screen (chosen-emoji display, Save/Cancel) so the appended answer is visible; the search text is left intact (clear it via the field's ✕). **Long-press** opens a variant row (skin tone / gender / hair / direction, ED-8); emoji that have variants show a subtle corner indicator.
 - A **"Save Answer"** button submits the whole string (no auto-submit on tap, consistent with the other answer types).
 
 **Icons are generic Material Symbols and emoji come from the device font** — we copy conventions, not any vendor's assets or branding (ED-13).

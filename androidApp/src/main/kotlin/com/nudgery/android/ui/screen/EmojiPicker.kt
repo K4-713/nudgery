@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -37,11 +38,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.EmojiObjects
@@ -120,6 +124,18 @@ fun EmojiPicker(
     var query by remember { mutableStateOf("") }
     val emojiScale = LocalEmojiScale.current // ED-14: emoji surfaces honor the global scale
 
+    // Picking an emoji applies it and then dismisses the search keyboard so the whole answer screen
+    // (chosen-emoji display, Save/Cancel) is visible again — otherwise a tap during search silently
+    // fills the answer behind the keyboard. The search text is left intact (clear it via the field's
+    // ✕). A no-op when the keyboard is already down (browsing categories/recents).
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val pick: (String) -> Unit = { emoji ->
+        onPick(emoji)
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+
     // The emoji strings to show: search results, recents, or the selected category — defaults applied
     // (so the grid previews exactly what a tap inserts). Recomputed only when an input changes.
     val cells: List<PickerCell> = remember(query, selectedTab, defaultSkinTone, defaultGender, recents, tabs, glyphFilter) {
@@ -151,6 +167,18 @@ fun EmojiPicker(
             onValueChange = { query = it },
             placeholder = { Text(stringResource(R.string.emoji_search_hint)) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            // A circle-✕ to wipe the search text (the keyboard, and so search mode, can be dismissed
+            // by a pick — leaving the query filled — so the user needs an explicit way to clear it).
+            trailingIcon = if (query.isNotEmpty()) {
+                {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(
+                            Icons.Filled.Cancel,
+                            contentDescription = stringResource(R.string.emoji_search_clear)
+                        )
+                    }
+                }
+            } else null,
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         )
@@ -222,7 +250,7 @@ fun EmojiPicker(
                     modifier = Modifier
                         .fillMaxWidth()
                         .combinedClickable(
-                            onClick = { onPick(cell.display) },
+                            onClick = { pick(cell.display) },
                             onLongClick = if (variants != null) ({ expandedCell = index }) else null
                         )
                         .padding(vertical = 2.dp),
@@ -254,7 +282,7 @@ fun EmojiPicker(
                                         fontSize = (28 * emojiScale).sp,
                                         modifier = Modifier
                                             .padding(6.dp)
-                                            .clickable { onPick(variant); expandedCell = -1 }
+                                            .clickable { pick(variant); expandedCell = -1 }
                                     )
                                 }
                             }
