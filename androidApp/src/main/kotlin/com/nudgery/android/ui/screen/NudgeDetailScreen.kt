@@ -7,9 +7,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +40,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +60,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -157,6 +163,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.FileProvider
 import com.nudgery.shared.model.ExportFormat
 import org.koin.androidx.compose.koinViewModel
@@ -432,6 +439,11 @@ fun NudgeDetailScreen(
     }
 
     if (showFullScreenChart && uiState.visualizations.isNotEmpty()) {
+        // A Dialog's own window does not reliably report the system-bar insets to Compose, so capture
+        // them here in the activity composition (where edge-to-edge makes them correct) and hand them
+        // down for the dialog to apply explicitly. This call site sits outside the parent Scaffold's
+        // content, so the insets haven't been consumed yet.
+        val systemBarInsets = WindowInsets.systemBars.asPaddingValues()
         FullScreenChartDialog(
             visualizations = uiState.visualizations,
             selectedIndex = selectedChartIndex,
@@ -441,6 +453,7 @@ fun NudgeDetailScreen(
             onDismiss = { showFullScreenChart = false },
             chartPalette = chartPalette,
             windowLabel = uiState.windowLabel,
+            systemBarInsets = systemBarInsets,
             nav = windowNav
         )
     }
@@ -615,6 +628,7 @@ private fun FullScreenChartDialog(
     onTimeframeSelect: (Timeframe) -> Unit,
     onDismiss: () -> Unit,
     chartPalette: ChartPalettePreference,
+    systemBarInsets: PaddingValues = PaddingValues(),
     nav: ChartWindowNav = ChartWindowNav.None,
     windowLabel: String = "",
     title: String? = null
@@ -626,13 +640,29 @@ private fun FullScreenChartDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        // A Dialog owns a separate window that does not reliably report the system-bar insets to
+        // Compose, so its own WindowInsets read as zero. We instead apply [systemBarInsets] —
+        // captured by the caller in the activity composition — explicitly (see the padded Box below),
+        // and zero out the Scaffold's/TopAppBar's own (unreliable) inset handling so it can't double
+        // up. Opting the window out of decor-fit makes it draw edge-to-edge so that explicit padding,
+        // rather than the platform decor, is the single source of truth for placement.
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            dialogWindow?.let { WindowCompat.setDecorFitsSystemWindows(it, false) }
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
             Scaffold(
+                // Insets are applied by the outer padding (systemBarInsets), so the Scaffold and its
+                // bars must add none of their own — otherwise the bottom chips would be double-inset
+                // or (when the dialog reports zero) fall under the navigation bar.
+                modifier = Modifier.padding(systemBarInsets),
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 topBar = {
                     TopAppBar(
+                        windowInsets = WindowInsets(0, 0, 0, 0),
                         title = { Text(title ?: visualizationLabel(visualizations[safeIndex])) },
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
@@ -673,12 +703,13 @@ private fun FullScreenChartDialog(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
+                    // The navigation-bar inset is already applied by the outer Scaffold padding
+                    // (systemBarInsets), so the selector only adds its own breathing room.
                     TimeframeSelector(
                         selectedTimeframe = selectedTimeframe,
                         onTimeframeSelect = onTimeframeSelect,
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
-                            .navigationBarsPadding()
                             .padding(bottom = 16.dp)
                     )
                 }
