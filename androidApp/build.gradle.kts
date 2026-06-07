@@ -1,8 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.aboutlibraries)
+}
+
+// Release signing is driven by an untracked keystore.properties at the repo root (see .gitignore),
+// so the upload keystore and its passwords never enter committed code. When the file is absent — a
+// fresh clone, or CI without the secrets — the release build is left unsigned rather than failing,
+// so the project still builds and tests run.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 val gitVersionCode: Int = try {
@@ -37,8 +50,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Only define the release signing config when the keystore.properties file is present;
+        // otherwise the release build stays unsigned (see note above) instead of erroring.
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Null when keystore.properties is absent → an unsigned release build (still builds).
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

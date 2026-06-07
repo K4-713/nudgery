@@ -20,6 +20,7 @@ local.properties
 
 # Secrets — never commit
 *.keystore
+*.jks
 keystore.properties
 google-services.json
 

@@ -2,13 +2,16 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="108mm"
-   height="108mm"
-   viewBox="0 0 108 108"
+   width="72mm"
+   height="72mm"
+   viewBox="0 0 72 72"
    version="1.1"
    id="svg5"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
-   sodipodi:docname="Nudgery Final.svg"
+   sodipodi:docname="Nudgery Favicon Cropped.svg"
+   inkscape:export-filename="/srv/rando/nudgery/art/favicon-32x32.png"
+   inkscape:export-xdpi="11.288889"
+   inkscape:export-ydpi="11.288889"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,23 +27,23 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.87705101"
-     inkscape:cx="6.8411072"
-     inkscape:cy="197.25192"
+     inkscape:cx="-77.532549"
+     inkscape:cy="128.84085"
      inkscape:window-width="1666"
      inkscape:window-height="899"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="layer1"
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:snap-object-midpoints="true">
     <sodipodi:guide
-       position="54.000002,53.999997"
+       position="36.000001,36.000002"
        orientation="1,0"
        id="guide348" />
     <sodipodi:guide
-       position="54.000002,53.999997"
+       position="36.000001,36.000002"
        orientation="0,-1"
        id="guide350" />
   </sodipodi:namedview>
@@ -122,47 +125,38 @@
      id="layer1"
      inkscape:label="Background (Slices)"
      style="display:inline"
-     sodipodi:insensitive="true">
-    <rect
-       style="display:inline;fill:#cfaddd;fill-opacity:1;stroke-width:0.264583"
+     sodipodi:insensitive="true"
+     transform="translate(-18,-18.000006)">
+    <path
        id="rect23600"
-       width="107.99999"
-       height="107.99999"
-       x="7.6293945e-06"
-       y="0" />
+       style="display:inline;fill:#cfaddd;fill-opacity:1;stroke-width:0.999999"
+       d="M 68.03125,68.03125 V 340.1582 H 340.1582 V 68.03125 Z"
+       transform="scale(0.26458333)"
+       inkscape:export-filename="/srv/rando/websites/nudgery.k4-713.com/public/assets/icons/favicon-256x256.png"
+       inkscape:export-xdpi="90.310791"
+       inkscape:export-ydpi="90.310791" />
     <path
        id="path13364"
-       style="fill:#e3baa4;stroke-width:0.276469"
-       d="M 113.89317,69.576668 A 35.153923,35.954666 0 0 1 78.739243,105.53133 35.153923,35.954666 0 0 1 43.58532,69.576668 35.153923,35.954666 0 0 1 78.739243,33.622002 35.153923,35.954666 0 0 1 113.89317,69.576668 Z" />
+       style="fill:#e3baa4;stroke-width:1.04492"
+       d="M 297.59766,127.07617 A 132.86522,135.89165 0 0 0 164.73242,262.9668 132.86522,135.89165 0 0 0 188.28125,340.1582 H 340.1582 V 134.24023 a 132.86522,135.89165 0 0 0 -42.56054,-7.16406 z"
+       transform="scale(0.26458333)" />
     <path
        id="path7973"
-       style="fill:#fecc58;stroke-width:0.264583"
-       d="M 102.6824,75.551201 A 18.441164,18.096012 0 0 1 84.241234,93.647213 18.441164,18.096012 0 0 1 65.80007,75.551201 18.441164,18.096012 0 0 1 84.241234,57.455189 18.441164,18.096012 0 0 1 102.6824,75.551201 Z" />
+       style="fill:#fecc58;stroke-width:0.999999"
+       d="m 318.39258,217.1543 a 69.698888,68.394376 0 0 0 -69.69922,68.39258 69.698888,68.394376 0 0 0 27.8125,54.61132 H 340.1582 V 220.58008 a 69.698888,68.394376 0 0 0 -21.76562,-3.42578 z"
+       transform="scale(0.26458333)" />
     <path
        id="path18155"
-       style="fill:#c8a8f0;stroke-width:0.445722"
-       transform="rotate(-33.5)"
-       d="M 109.28447,19.688953 A 102.21835,41.577396 0 0 1 7.0661216,61.26635 102.21835,41.577396 0 0 1 -95.152232,19.688953 102.21835,41.577396 0 0 1 7.0661216,-21.888443 102.21835,41.577396 0 0 1 109.28447,19.688953 Z" />
-  </g>
-  <g
-     inkscape:groupmode="layer"
-     id="layer15"
-     inkscape:label="Reference Circle"
-     style="display:none"
-     sodipodi:insensitive="true">
-    <circle
-       style="opacity:1;fill:#ff00ff;fill-opacity:1;fill-rule:evenodd;stroke-width:0.0663389"
-       id="path140"
-       cx="54"
-       cy="54.000004"
-       r="36" />
+       style="fill:#c8a8f0;stroke-width:1.68462"
+       d="m 68.03125,68.03125 v 158.8125 A 157.14291,386.33707 56.5 0 0 150.07617,178.35156 157.14291,386.33707 56.5 0 0 286.04883,68.03125 Z"
+       transform="scale(0.26458333)" />
   </g>
   <g
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="Favicon Crop"
-     style="display:none"
-     sodipodi:insensitive="true">
+     style="display:inline"
+     transform="translate(-18,-18.000006)">
     <rect
        style="fill:#c20000;fill-opacity:0;stroke-width:4.24726;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:0.89905;paint-order:fill markers stroke"
        id="rect863"
@@ -175,7 +169,8 @@
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Hand"
-     style="display:inline">
+     style="display:inline"
+     transform="translate(-18,-18.000006)">
     <path
        id="path5044-3"
        style="display:inline;fill:#ecdeff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.0514543"
