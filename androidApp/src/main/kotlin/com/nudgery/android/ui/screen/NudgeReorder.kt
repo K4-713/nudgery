@@ -15,6 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -41,6 +43,7 @@ internal fun <T> List<T>.moveItem(from: Int, to: Int): List<T> {
 internal class NudgeDragDropState(
     private val state: LazyListState,
     private val scope: CoroutineScope,
+    private val autoScrollThreshold: Float,
     private val onMove: (from: Int, to: Int) -> Unit,
 ) {
     var draggingItemIndex by mutableStateOf<Int?>(null)
@@ -94,23 +97,38 @@ internal class NudgeDragDropState(
         }
 
         if (targetItem != null) {
+            // When the swap involves the first visible item, re-pin the list to its current scroll
+            // position so the reorder doesn't make the list re-anchor and jump. Without this, moving
+            // an item into the very top slot silently fails — it would only ever reach 2nd place.
+            val firstIndex = state.firstVisibleItemIndex
+            val firstOffset = state.firstVisibleItemScrollOffset
+            if (draggingItem.index == firstIndex || targetItem.index == firstIndex) {
+                scope.launch { state.scrollToItem(firstIndex, firstOffset) }
+            }
             onMove(draggingItem.index, targetItem.index)
             draggingItemIndex = targetItem.index
             return true
         }
 
-        // No reorder target: if the lifted item is pushed past a viewport edge, request auto-scroll.
+        // No reorder target: start auto-scrolling once the lifted item nears a viewport edge (within
+        // autoScrollThreshold), not only once it is fully past it. This lets the list scroll while the
+        // finger stays clear of the system navigation area at the very bottom of the screen — dragging
+        // into that area otherwise lets the OS steal the gesture, dropping the nudge mid-scroll.
         val overscroll = when {
             draggingItemDraggedDelta > 0 ->
-                (endOffset - state.layoutInfo.viewportEndOffset).coerceAtLeast(0f)
+                (endOffset - (state.layoutInfo.viewportEndOffset - autoScrollThreshold)).coerceAtLeast(0f)
             draggingItemDraggedDelta < 0 ->
-                (startOffset - state.layoutInfo.viewportStartOffset).coerceAtMost(0f)
+                (startOffset - (state.layoutInfo.viewportStartOffset + autoScrollThreshold)).coerceAtMost(0f)
             else -> 0f
         }
         if (overscroll != 0f) scrollChannel.trySend(overscroll)
         return false
     }
 }
+
+/** Distance from a viewport edge at which drag-to-reorder starts auto-scrolling. Generous enough that
+ *  the finger never has to reach the bottom system-navigation area to keep scrolling. */
+private val NUDGE_AUTO_SCROLL_EDGE = 88.dp
 
 /** Remembers a [NudgeDragDropState] and pumps its auto-scroll requests into the list. */
 @Composable
@@ -119,7 +137,10 @@ internal fun rememberNudgeDragDropState(
     onMove: (from: Int, to: Int) -> Unit,
 ): NudgeDragDropState {
     val scope = rememberCoroutineScope()
-    val state = remember(lazyListState) { NudgeDragDropState(lazyListState, scope, onMove) }
+    val autoScrollThreshold = with(LocalDensity.current) { NUDGE_AUTO_SCROLL_EDGE.toPx() }
+    val state = remember(lazyListState, autoScrollThreshold) {
+        NudgeDragDropState(lazyListState, scope, autoScrollThreshold, onMove)
+    }
     LaunchedEffect(state) {
         while (true) {
             val diff = state.scrollChannel.receive()
