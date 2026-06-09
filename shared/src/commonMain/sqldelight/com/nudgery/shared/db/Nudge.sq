@@ -3,24 +3,31 @@ CREATE TABLE Nudge (
     name TEXT NOT NULL,
     isEnabled INTEGER NOT NULL DEFAULT 1,
     createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
+    updatedAt TEXT NOT NULL,
+    -- ED-19: user-defined list position. Inserts append (MAX+1); reordering rewrites a dense 0..n.
+    sortOrder INTEGER NOT NULL DEFAULT 0
 );
 
 selectAll:
-SELECT * FROM Nudge ORDER BY createdAt ASC;
+SELECT * FROM Nudge ORDER BY sortOrder ASC, createdAt ASC;
 
 selectById:
 SELECT * FROM Nudge WHERE id = :id;
 
+-- ED-19: a new nudge appends to the end of the list (COALESCE handles the empty-table case → 0).
 insert:
-INSERT INTO Nudge (id, name, isEnabled, createdAt, updatedAt)
-VALUES (:id, :name, :isEnabled, :createdAt, :updatedAt);
+INSERT INTO Nudge (id, name, isEnabled, createdAt, updatedAt, sortOrder)
+VALUES (:id, :name, :isEnabled, :createdAt, :updatedAt, (SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM Nudge));
 
 update:
 UPDATE Nudge SET name = :name, isEnabled = :isEnabled, updatedAt = :updatedAt WHERE id = :id;
 
 setEnabled:
 UPDATE Nudge SET isEnabled = :isEnabled, updatedAt = :updatedAt WHERE id = :id;
+
+-- ED-19: reordering rewrites each nudge's position; callers run these together in one transaction.
+updateSortOrder:
+UPDATE Nudge SET sortOrder = :sortOrder WHERE id = :id;
 
 delete:
 DELETE FROM Nudge WHERE id = :id;

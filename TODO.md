@@ -1,5 +1,24 @@
 # Next Steps
 
+## Drag-and-Drop Nudge Reordering
+Long-press to pick up a nudge on the main list and drag to reorder, with an accent-tinted lift
+(wash + shadow on the lifted card, accent outline on the landing gap), the rest of the list
+animating to make space, auto-scroll at the edges, and haptics. Binding storage rules live in
+ENGINEERING_DECISIONS.md (ED-19).
+
+**Work breakdown:**
+- [x] Phase 1 — Data foundation: `Nudge.sortOrder` column + migration 3 (backfill by `createdAt`),
+      `selectAll` orders by it, inserts append, `ReorderNudgesUseCase`, TDD tests (`NudgeReorderTest`).
+- [ ] Phase 2 — Drag-and-drop UI on the main list: long-press lift, accent wash + shadow,
+      `Modifier.animateItem()` make-space, accent-tinted landing-gap outline, edge auto-scroll,
+      haptics; commit the new order via `ReorderNudgesUseCase` on drop.
+- [ ] Phase 3 — Accessibility: "Move up" / "Move down" custom semantics actions on each row so the
+      reorder is usable without long-press-drag.
+- [ ] Phase 4 — Backup/restore order (ED-19): full-ZIP backups preserve relative order; single-nudge
+      JSON imports append. Add the field to the backup format + round-trip tests.
+- [ ] Phase 5 — Docs: DESIGN.md interaction spec for the drag/lift/gap behavior; README if the
+      reordering is surfaced as a user-facing feature.
+
 ## Emoji Question Type
 Add an `EMOJI` question type: a TEXT question under the hood, but whose input is restricted to emoji-only, entered through our own emoji picker for an A+ cross-platform experience.
 

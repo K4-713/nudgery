@@ -1,0 +1,11 @@
+-- ED-19: user-defined nudge list order. Additive column defaulting to 0, then backfilled so each
+-- existing nudge's position matches its current createdAt order — upgrading users see no change
+-- until they deliberately reorder. The backfill ranks each row by the number of rows that sort
+-- before it (createdAt, tiebroken by id) so positions are a dense 0..n with no ties.
+ALTER TABLE Nudge ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0;
+
+UPDATE Nudge SET sortOrder = (
+    SELECT COUNT(*) FROM Nudge AS earlier
+    WHERE earlier.createdAt < Nudge.createdAt
+       OR (earlier.createdAt = Nudge.createdAt AND earlier.id < Nudge.id)
+);

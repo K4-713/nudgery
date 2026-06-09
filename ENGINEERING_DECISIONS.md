@@ -371,3 +371,22 @@ bound in `appModule`. The notification id derivation is centralized in `nudgeNot
 so the worker (which posts) and the presenter (which dismisses) cannot drift.
 **Tests:** `AnswerRecordingTest` (recording an answer dismisses that nudge's alert via a fake
 `AlertPresenter`, and the dismissed id is the answered nudge's).
+
+### ED-19: Nudge list order is user-defined and persisted
+**Status:** Implemented (ordering foundation) — `Nudge.sortOrder` column (migration 3, backfilled by `createdAt`); `selectAll` orders by it; inserts append; `ReorderNudgesUseCase` rewrites positions in one transaction. Backup/restore order behavior is a separate decision that lands with the export work (full ZIP preserves relative order; single-nudge JSON appends).
+**Context:** Nudges were shown in a fixed `createdAt` order with no way to reorder. Users want their
+most-used nudges where they want them, reachable by drag-and-drop on the main list.
+**Decision:** The list has an explicit, persisted order. A `sortOrder` integer column on `Nudge`
+defines it; the list query orders by `sortOrder` (tiebreak `createdAt`). Inserts **append**
+(`sortOrder = COALESCE(MAX(sortOrder), -1) + 1`, computed in the insert statement) so creating or
+importing a nudge never reshuffles existing ones. Reordering rewrites **all** positions to a dense
+`0..n` sequence in a single transaction — the list is a small personal set, so full reassignment is
+cheap and avoids fractional-rank bookkeeping. The migration backfills existing rows by their current
+`createdAt` order, so upgrading users see no change until they deliberately reorder. Reordering is a
+pure ordering concern: no other nudge data (timestamps, answers, schedule) changes.
+**Consequences:** Additive schema migration (migration 3) defaulting `sortOrder` to 0, then
+backfilling by `createdAt`. `NudgeRepository.reorder(orderedIds)` rewrites positions transactionally.
+The insert query auto-assigns the next position, so `CreateNudgeUseCase`/`ImportNudgeUseCase` need no
+change to append.
+**Tests:** `NudgeReorderTest` (new nudges append in creation order; `ReorderNudgesUseCase` persists
+the new order; migration 3 backfills `sortOrder` by `createdAt`).

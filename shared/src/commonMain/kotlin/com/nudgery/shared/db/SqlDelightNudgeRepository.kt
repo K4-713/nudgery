@@ -63,11 +63,20 @@ class SqlDelightNudgeRepository(private val database: NudgeryDatabase) : NudgeRe
         database.nudgeQueries.delete(nudgeId)
     }
 
+    override suspend fun reorder(orderedNudgeIds: List<String>) = withContext(Dispatchers.Default) {
+        database.nudgeQueries.transaction {
+            orderedNudgeIds.forEachIndexed { index, id ->
+                database.nudgeQueries.updateSortOrder(sortOrder = index.toLong(), id = id)
+            }
+        }
+    }
+
     private fun com.nudgery.shared.db.Nudge.toDomain() = Nudge(
         id = id,
         name = name,
         isEnabled = isEnabled != 0L,
         createdAt = Instant.parse(createdAt),
-        updatedAt = Instant.parse(updatedAt)
+        updatedAt = Instant.parse(updatedAt),
+        sortOrder = sortOrder.toInt()
     )
 }

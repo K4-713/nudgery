@@ -28,6 +28,7 @@ import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.ImportNudgeUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
+import com.nudgery.shared.usecase.ReorderNudgesUseCase
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
 import org.koin.dsl.module
@@ -49,6 +50,7 @@ val sharedModule = module {
     factory { DeleteNudgeUseCase(get(), get()) }
     factory { UpdateNudgeUseCase(get(), get(), get(), get(), get(), get()) }
     factory { RecordAnswerUseCase(get(), get()) }
+    factory { ReorderNudgesUseCase(get()) }
     factory { SetAnswerHiddenUseCase(get()) }
     factory { ComputeNextFireTimeUseCase() }
     factory { CatchUpMissedFiresUseCase(get(), get()) }

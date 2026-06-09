@@ -296,59 +296,62 @@ fun NudgeDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            // Main question text
-            if (uiState.mainQuestionText.isNotEmpty()) {
-                item {
-                    Text(
-                        text = uiState.mainQuestionText,
-                        style = emojiScaledStyle(uiState.mainQuestionText, MaterialTheme.typography.titleMedium),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Schedule row
-            uiState.schedule?.let { schedule ->
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+            // Header block: question text, schedule, and follow-up rows. Grouped into a single item
+            // with tight internal spacing so these single-line rows don't inherit the 16dp inter-card
+            // spacing of the LazyColumn — that gap, on top of the rows' 48dp icon-button height, left
+            // a lot of dead vertical space between them.
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Main question text — extra top padding so it isn't crowded against the title bar.
+                    if (uiState.mainQuestionText.isNotEmpty()) {
                         Text(
-                            text = com.nudgery.android.viewmodel.ScheduleFormState.fromSchedule(schedule).toDescription(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
+                            text = uiState.mainQuestionText,
+                            style = emojiScaledStyle(uiState.mainQuestionText, MaterialTheme.typography.titleMedium),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 12.dp)
                         )
-                        IconButton(onClick = onEditScheduleClick) {
-                            Icon(
-                                imageVector = Icons.Outlined.CalendarMonth,
-                                contentDescription = stringResource(R.string.detail_edit_schedule)
+                    }
+
+                    // Schedule row
+                    uiState.schedule?.let { schedule ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = com.nudgery.android.viewmodel.ScheduleFormState.fromSchedule(schedule).toDescription(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
                             )
+                            IconButton(onClick = onEditScheduleClick) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CalendarMonth,
+                                    contentDescription = stringResource(R.string.detail_edit_schedule)
+                                )
+                            }
                         }
                     }
-                }
-            }
 
-            // Follow-up questions row — hidden for free-text main questions, which can't have them.
-            if (uiState.mainQuestionType?.allowsFollowUps == true) {
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = if (uiState.followUpCount > 0)
-                                stringResource(R.string.detail_followup_count, uiState.followUpCount)
-                            else
-                                stringResource(R.string.detail_followup_questions),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = onEditFollowUpsClick) {
-                            Icon(
-                                imageVector = Icons.Outlined.QuestionAnswer,
-                                contentDescription = stringResource(R.string.detail_edit_followups)
+                    // Follow-up questions row — hidden for free-text main questions, which can't have them.
+                    if (uiState.mainQuestionType?.allowsFollowUps == true) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = if (uiState.followUpCount > 0)
+                                    stringResource(R.string.detail_followup_count, uiState.followUpCount)
+                                else
+                                    stringResource(R.string.detail_followup_questions),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
                             )
+                            IconButton(onClick = onEditFollowUpsClick) {
+                                Icon(
+                                    imageVector = Icons.Outlined.QuestionAnswer,
+                                    contentDescription = stringResource(R.string.detail_edit_followups)
+                                )
+                            }
                         }
                     }
                 }

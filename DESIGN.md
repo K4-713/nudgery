@@ -518,10 +518,12 @@ This step is accessible from both the creation wizard and the edit wizard. The e
 
 Top to bottom:
 
-1. **Main question text** — `titleMedium`, `onSurfaceVariant`; shown just below the nudge name
+1. **Main question text** — `titleMedium`, `onSurfaceVariant`; shown just below the nudge name, with a little top padding so it isn't crowded against the title bar
 2. **Schedule** — inline with a calendar (`CalendarMonth`) icon; tapping the icon navigates to `EditNudgeScreen` at `initialStep = 2` (schedule step)
 3. **Follow-up questions** — shows count ("N follow-up question(s)") when any exist, or the label "Follow-up questions" when none; inline with an edit icon (`QuestionAnswer`); tapping navigates to `EditNudgeScreen` at `initialStep = 1` (follow-ups step)
 4. **"Answer Now" button** — pill-shaped, prominent
+
+Items 1–3 form a **tight header group** — they share much less vertical spacing than the gap that separates them from the Answer button and the chart cards below, so the single-line schedule and follow-up rows read as a compact block rather than floating in empty space. Their edit icons still keep full 48dp touch targets.
 5. **Main chart** — with a vertical column of icons outside the upper-right corner:
    - Chart type icon (opens chart editor)
    - Download icon (opens export menu: Export data (CSV), Export data (TSV), Back up nudge (JSON))

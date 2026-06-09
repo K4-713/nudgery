@@ -91,6 +91,12 @@ class FakeNudgeRepository : NudgeRepository {
     override suspend fun delete(nudgeId: String) {
         _nudges.update { list -> list.filter { it.id != nudgeId } }
     }
+    override suspend fun reorder(orderedNudgeIds: List<String>) {
+        _nudges.update { list ->
+            val byId = list.associateBy { it.id }
+            orderedNudgeIds.mapNotNull { byId[it] } + list.filter { it.id !in orderedNudgeIds }
+        }
+    }
 }
 
 class FakeQuestionRepository : QuestionRepository {

@@ -126,6 +126,7 @@ The top-level user-created item. Contains one main `Question` and zero or more f
 | isEnabled | Boolean | Disabled nudges do not fire notifications |
 | createdAt | Instant | |
 | updatedAt | Instant | |
+| sortOrder | Int | ED-19: user-defined list position. List query orders by it; inserts append (`MAX+1`); `ReorderNudgesUseCase` rewrites a dense 0..n. Migration 3 backfills by `createdAt` |
 
 ### Question
 Belongs to a `Nudge`. The first question (orderIndex 0) is the main question; subsequent questions are follow-ups.

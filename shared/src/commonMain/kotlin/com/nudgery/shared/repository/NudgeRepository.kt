@@ -13,4 +13,10 @@ interface NudgeRepository {
     suspend fun update(nudge: Nudge)
     suspend fun setEnabled(nudgeId: String, isEnabled: Boolean)
     suspend fun delete(nudgeId: String)
+
+    /**
+     * Persists a new list order (ED-19). [orderedNudgeIds] is the full set of nudge ids in their new
+     * order; each is assigned its index as `sortOrder`, in a single transaction.
+     */
+    suspend fun reorder(orderedNudgeIds: List<String>)
 }
