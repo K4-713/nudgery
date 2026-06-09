@@ -144,6 +144,31 @@ class AnswerFormViewModelTest {
     }
 
     @Test
+    fun TDD_answerNowMainAndFollowUpShareOneScheduledAt() = runTest {
+        // ENGINEERING_DECISIONS.md ED-20: every answer in one session shares a single scheduledAt, so
+        // an off-schedule "Answer Now" main + follow-up stay in one response group in the raw-data
+        // table instead of splitting (which detached the follow-up under the table header).
+        val nudgeId = createYesNoNudge(withFollowUp = true)
+        val viewModel = buildViewModel(nudgeId, scheduledAt = null)
+        advanceUntilIdle()
+
+        viewModel.setCurrentAnswer("YES") // main answer triggers the follow-up
+        viewModel.saveAnswer()
+        advanceUntilIdle()
+        viewModel.setCurrentAnswer("YES") // follow-up answer, recorded moments later
+        viewModel.saveAnswer()
+        advanceUntilIdle()
+
+        val answers = repos.answerRepo.getAllByNudgeId(nudgeId)
+        assertEquals("Both answers should be recorded", 2, answers.size)
+        assertEquals(
+            "Main and follow-up must share one scheduledAt",
+            answers[0].scheduledAt,
+            answers[1].scheduledAt
+        )
+    }
+
+    @Test
     fun TDD_followUpAppearsAfterMainQuestionIsAnswered() = runTest {
         // DESIGN.md: "Follow-up questions appear as subsequent pages after the previous answer
         //   is submitted"

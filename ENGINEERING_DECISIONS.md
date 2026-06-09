@@ -390,3 +390,20 @@ The insert query auto-assigns the next position, so `CreateNudgeUseCase`/`Import
 change to append.
 **Tests:** `NudgeReorderTest` (new nudges append in creation order; `ReorderNudgesUseCase` persists
 the new order; migration 3 backfills `sortOrder` by `createdAt`).
+
+### ED-20: All answers in one answer-form session share a single scheduledAt
+**Status:** Implemented — `AnswerFormViewModel.sessionScheduledAt` (captured once per session)
+**Context:** A "response" in the raw-data table is one main answer plus the follow-ups it triggered,
+grouped by `scheduledAt`. The answer form computed `scheduledAt.instant ?: Clock.System.now()`
+*per question*, so an off-schedule "Answer Now" gave the main answer and its follow-up timestamps a
+few seconds apart. They then fell into different `scheduledAt` groups, and the follow-up-only group
+(answered slightly later) sorted *above* the main answer — the follow-up appeared detached, wedged
+under the table header instead of beneath its answer. Notification answers were unaffected because
+their `scheduledAt` is a fixed fire time shared across the session.
+**Decision:** Every answer recorded in a single answer-form session (the main question plus any
+follow-ups it triggers) shares one `scheduledAt`: the notification's fire time when present, or a
+single timestamp captured at the first answer for an off-schedule "Answer Now". The occurrence is the
+unit; follow-ups inherit the main answer's time, never their own wall-clock time. This keeps a
+response intact under the table's per-`scheduledAt` grouping.
+**Tests:** `AnswerFormViewModelTest` (an Answer-Now main + follow-up are recorded with identical
+`scheduledAt`; the existing notification-time and current-time-for-single-answer tests still hold).

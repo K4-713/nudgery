@@ -68,6 +68,13 @@ class AnswerFormViewModel(
     private data class BufferedAnswer(val questionId: String, val value: String, val scheduledAt: Instant)
     private val pendingAnswers = mutableListOf<BufferedAnswer>()
 
+    // Every answer in one form session (main + any follow-ups) belongs to the same occurrence, so
+    // they must share a single scheduledAt: the notification's fire time, or — for an off-schedule
+    // "Answer Now" — one timestamp captured at the first answer. Recomputing Clock.System.now() per
+    // question would give the main answer and its follow-up timestamps a few seconds apart, splitting
+    // one response across the raw-data table's per-scheduledAt grouping (ED-20).
+    private val sessionScheduledAt: Instant by lazy { scheduledAt.instant ?: Clock.System.now() }
+
     init {
         viewModelScope.launch { loadQuestions() }
         viewModelScope.launch { appSettings.defaultEmojiSkinTone.collect { t -> _uiState.update { it.copy(emojiSkinTone = t) } } }
@@ -124,8 +131,7 @@ class AnswerFormViewModel(
         _uiState.update { it.copy(isSubmitting = true) }
 
         viewModelScope.launch {
-            val effectiveScheduledAt = scheduledAt.instant ?: Clock.System.now()
-            pendingAnswers.add(BufferedAnswer(currentQuestion.question.id, answer, effectiveScheduledAt))
+            pendingAnswers.add(BufferedAnswer(currentQuestion.question.id, answer, sessionScheduledAt))
             Log.d(TAG, "Buffered answer for question ${currentQuestion.question.id}: $answer")
 
             val updatedQuestions = if (currentQuestion.question.isMainQuestion) {
