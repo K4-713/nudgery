@@ -1,9 +1,107 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
-  <rect id="rect23600" width="107.99999" height="107.99999" x="7.6293945e-06" y="0" fill="#cfaddd" fill-opacity="1"/>
-  <path id="path13364" d="M 113.89317,69.576668 A 35.153923,35.954666 0 0 1 78.739243,105.53133 35.153923,35.954666 0 0 1 43.58532,69.576668 35.153923,35.954666 0 0 1 78.739243,33.622002 35.153923,35.954666 0 0 1 113.89317,69.576668 Z" fill="#e3baa4"/>
-  <path id="path7973" d="M 102.6824,75.551201 A 18.441164,18.096012 0 0 1 84.241234,93.647213 18.441164,18.096012 0 0 1 65.80007,75.551201 18.441164,18.096012 0 0 1 84.241234,57.455189 18.441164,18.096012 0 0 1 102.6824,75.551201 Z" fill="#fecc58"/>
-  <g transform="rotate(-33.5)">
-    <path id="path18155" d="M 109.28447,19.688953 A 102.21835,41.577396 0 0 1 7.0661216,61.26635 102.21835,41.577396 0 0 1 -95.152232,19.688953 102.21835,41.577396 0 0 1 7.0661216,-21.888443 102.21835,41.577396 0 0 1 109.28447,19.688953 Z" fill="#c8a8f0"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="108"
+   height="108"
+   viewBox="0 0 108 108"
+   version="1.1"
+   id="svg2363"
+   sodipodi:docname="ic_launcher_background_export.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title
+     id="title2430">IC Launcher Background Export</title>
+  <defs
+     id="defs2367" />
+  <sodipodi:namedview
+     id="namedview2365"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="5.7685185"
+     inkscape:cx="38.398074"
+     inkscape:cy="53.913323"
+     inkscape:window-width="1666"
+     inkscape:window-height="899"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2363" />
+  <rect
+     id="rect23600"
+     width="107.99999"
+     height="107.99999"
+     x="7.6293945e-06"
+     y="0"
+     fill="#cfaddd"
+     fill-opacity="1" />
+  <path
+     id="path13364"
+     d="M 113.89317,69.576668 A 35.153923,35.954666 0 0 1 78.739243,105.53133 35.153923,35.954666 0 0 1 43.58532,69.576668 35.153923,35.954666 0 0 1 78.739243,33.622002 35.153923,35.954666 0 0 1 113.89317,69.576668 Z"
+     fill="#e3baa4" />
+  <path
+     id="path7973"
+     d="M 102.6824,75.551201 A 18.441164,18.096012 0 0 1 84.241234,93.647213 18.441164,18.096012 0 0 1 65.80007,75.551201 18.441164,18.096012 0 0 1 84.241234,57.455189 18.441164,18.096012 0 0 1 102.6824,75.551201 Z"
+     fill="#fecc58" />
+  <g
+     transform="rotate(-33.5)"
+     id="g2361">
+    <path
+       id="path18155"
+       d="M 109.28447,19.688953 A 102.21835,41.577396 0 0 1 7.0661216,61.26635 102.21835,41.577396 0 0 1 -95.152232,19.688953 102.21835,41.577396 0 0 1 7.0661216,-21.888443 102.21835,41.577396 0 0 1 109.28447,19.688953 Z"
+       fill="#c8a8f0" />
   </g>
+  <metadata
+     id="metadata2426">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:date>June 2026</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Katie Horn</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>© 2026 Katie Horn — licensed under CC BY-NC-SA 4.0</dc:title>
+          </cc:Agent>
+        </dc:rights>
+        <dc:publisher>
+          <cc:Agent>
+            <dc:title>K4-713</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:title>IC Launcher Background Export</dc:title>
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by-nc-sa/4.0/" />
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Notice" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Attribution" />
+        <cc:prohibits
+           rdf:resource="http://creativecommons.org/ns#CommercialUse" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#ShareAlike" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
 </svg>

@@ -1,3 +1,43 @@
+Nudgery — Licensing Scope
+==========================
+
+Except where noted below, Nudgery's own source code and assets are released
+into the public domain under the Creative Commons CC0 1.0 Universal dedication,
+the full text of which follows below.
+
+The following are NOT covered by CC0.
+
+Original artwork — CC BY-NC-SA 4.0
+----------------------------------
+The app icon, the Play Store feature banner, and the alert/notification icon
+are original hand-drawn works by Katie Horn, licensed under the Creative
+Commons Attribution-NonCommercial-ShareAlike 4.0 International license
+(CC-BY-NC-SA-4.0), NOT CC0. See art/LICENSE for the full text. This applies to
+the source artwork
+in art/ and to its derived renderings shipped in the app:
+
+  - art/  (all files: Nudgery Final / HandOnly / Favicon, ic_launcher_*,
+           Alert Icon, alert_icon_export, ic_notification_export,
+           Nudgery Feature Graphic, feature.png, play_store_icon.png)
+  - androidApp/src/main/res/mipmap-*/ic_launcher.png
+  - androidApp/src/main/res/drawable/ic_launcher_foreground.xml
+  - androidApp/src/main/res/drawable/ic_launcher_background.xml
+  - androidApp/src/main/res/drawable/ic_missed_alert.xml
+  - shared/src/androidMain/res/drawable/ic_notification.xml
+
+Bundled third-party components — original licenses
+--------------------------------------------------
+  - Atkinson Hyperlegible Next (typeface, by the Braille Institute of America)
+      SIL Open Font License 1.1 (OFL-1.1)
+  - Unicode emoji data
+      Unicode License v3.0
+
+Full attribution and the complete text of the third-party licenses are
+included in CREDITS.md and in the app under Settings -> About ->
+Open-source licenses.
+
+--------------------------------------------------------------------------
+
 Creative Commons Legal Code
 
 CC0 1.0 Universal

@@ -12,7 +12,12 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title
+     id="title1961">Alert Icon</title>
   <sodipodi:namedview
      id="namedview7"
      pagecolor="#ffffff"
@@ -24,10 +29,10 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.049450749"
-     inkscape:cx="414.55389"
-     inkscape:cy="293.22104"
-     inkscape:window-width="1874"
-     inkscape:window-height="1016"
+     inkscape:cx="-1385.2166"
+     inkscape:cy="303.33211"
+     inkscape:window-width="1666"
+     inkscape:window-height="899"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -103,4 +108,48 @@
        d="m 103.75792,107.81458 c -6.756335,1.22596 -13.020692,4.95269 -17.586121,10.31139 -3.082386,3.3409 -5.647754,7.8584 -5.012989,12.6828 0.842023,6.31387 5.911197,11.38284 11.606876,13.08381 8.715194,2.62422 19.087684,-1.09824 23.915994,-9.29054 2.38334,-3.925 2.85713,-8.80607 2.19391,-13.32502 -0.44262,-3.40914 -2.87315,-5.89169 -4.91383,-8.36703 -1.95833,-2.17528 -4.31267,-4.37733 -7.21594,-4.85089 -0.99688,-0.0684 -1.98496,-0.29422 -2.9879,-0.24452 z"
        sodipodi:nodetypes="ccccccccc" />
   </g>
+  <metadata
+     id="metadata1957">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:date>June 2026</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Katie Horn</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>© 2026 Katie Horn — licensed under CC BY-NC-SA 4.0</dc:title>
+          </cc:Agent>
+        </dc:rights>
+        <dc:publisher>
+          <cc:Agent>
+            <dc:title>K4-713</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:title>Alert Icon</dc:title>
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by-nc-sa/4.0/" />
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Notice" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Attribution" />
+        <cc:prohibits
+           rdf:resource="http://creativecommons.org/ns#CommercialUse" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#ShareAlike" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
 </svg>

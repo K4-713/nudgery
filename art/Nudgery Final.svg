@@ -12,7 +12,12 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title
+     id="title1671">Nudgery Final</title>
   <sodipodi:namedview
      id="namedview7"
      pagecolor="#ffffff"
@@ -24,7 +29,7 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.87705101"
-     inkscape:cx="6.8411072"
+     inkscape:cx="-95.205409"
      inkscape:cy="197.25192"
      inkscape:window-width="1666"
      inkscape:window-height="899"
@@ -186,4 +191,48 @@
        style="display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.0514542"
        d="m 39.205389,31.120464 c -0.163202,2.203492 -0.05618,4.499953 -0.310547,6.650391 4.287141,-2.753419 9.645011,-4.108958 14.689121,-3.057055 2.34605,0.490131 4.7218,1.707934 5.82897,3.938987 1.28485,2.427537 1.61231,5.196398 2.27675,7.823081 0.94406,3.167467 2.2135,6.313233 4.16775,9.043336 2.53814,3.664604 5.66394,6.952244 9.23161,9.68931 1.35382,1.029113 2.70117,2.083987 3.93757,3.254403 1.5468,1.423541 2.2172,3.766659 1.42062,5.746361 -0.96093,2.517239 -3.94463,3.659669 -6.47102,3.218409 -4.04484,-0.80709 -7.6515,-3.176307 -10.48372,-6.11777 -3.27276,-3.422733 -5.54038,-7.832246 -6.19308,-12.539433 -0.64025,-3.499774 -1.43008,-7.300068 -4.13116,-9.841801 -1.29502,-1.388877 -3.26925,-2.150312 -5.15257,-1.73512 -1.81948,0.274355 -3.43653,2.025537 -3.05605,3.928258 0.45068,2.434342 2.46136,4.128129 3.4234,6.340095 1.68559,2.868542 2.66199,6.52922 1.2579,9.709329 -1.36852,4.298402 -6.70642,6.821768 -10.894165,5.143096 -1.505447,-0.62053 -2.883015,-1.845021 -3.144895,-3.522002 -0.547468,-2.811924 1.165289,-5.350894 1.769531,-8 0.542619,-3.3042 -0.143847,-6.761834 -1.222656,-9.828125 -0.943683,-2.612636 -2.278162,-5.229377 -3.915677,-7.54082 -1.273625,-1.838644 -2.656881,-3.698988 -4.484533,-5.008298 -0.769979,-0.368982 -1.704997,0.154172 -1.739928,1.01874 -0.253348,1.389505 0.676045,3.182284 2.255373,3.096784 3.965951,2.188621 6.36997,6.365952 7.596177,10.601378 0.746448,2.424638 1.184364,5.006728 0.671778,7.526158 -0.395434,2.381406 -1.435071,4.610581 -2.696066,6.642916 -0.710429,2.647238 1.304722,5.29032 3.717205,6.190041 1.183226,0.458019 2.479855,0.41303 3.726778,0.45408 2.359098,-0.12063 4.619368,-0.881514 6.519288,-2.21926 1.79228,-1.353681 3.38288,-3.290849 3.65234,-5.585938 0.0822,-3.008925 -1.00838,-5.865143 -2.22589,-8.562583 -0.64644,-1.603376 -1.37368,-3.23757 -1.51044,-4.978432 -0.10135,-1.201313 0.85955,-2.362933 2.09401,-2.34491 2.48432,-0.02452 4.72968,1.895527 5.44345,4.221622 1.27226,3.983194 1.67557,8.13875 3.32087,11.997149 1.10107,2.882128 2.59597,5.666446 4.79232,7.868462 2.95998,3.052414 7.06969,5.032724 11.32591,5.273304 2.09795,-0.0754 4.34411,-0.57398 5.93058,-2.02917 1.431,-1.603917 2.20693,-3.830418 2.04921,-5.973791 -0.47977,-2.261218 -2.33062,-3.882074 -3.99932,-5.334932 -2.12567,-1.690159 -4.40066,-3.212126 -6.27427,-5.1981 -5.71989,-5.774924 -9.30685,-13.572444 -10.09039,-21.653595 -0.5987,-3.330046 -3.40769,-6.062471 -6.71806,-6.683055 -3.45866,-0.959149 -7.05225,-0.06761 -10.44671,0.711797 -2.20585,0.196964 -4.656176,-0.627419 -5.919786,-2.526656 l -0.009,0.09959 z" />
   </g>
+  <metadata
+     id="metadata1669">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Nudgery Final</dc:title>
+        <dc:date>June 2026</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Katie Horn</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>© 2026 Katie Horn — licensed under CC BY-NC-SA 4.0</dc:title>
+          </cc:Agent>
+        </dc:rights>
+        <dc:publisher>
+          <cc:Agent>
+            <dc:title>K4-713</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by-nc-sa/4.0/" />
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Notice" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Attribution" />
+        <cc:prohibits
+           rdf:resource="http://creativecommons.org/ns#CommercialUse" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#ShareAlike" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
 </svg>

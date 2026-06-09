@@ -121,3 +121,9 @@ No, not exactly. You can ask yourself anything you want using Nudgery, so it's a
 
 ## Why won't my Emoji question show me a bar chart?
 There are simply too many options to draw if the whole current universe of your phone's emoji are valid responses. If you want a bar chart, set up either a single option or multi-select option main question, and add the smaller set of Emoji you want to answer with as fixed options.
+
+# License
+Code written for this project is effectively released into the public domain under a Creative Commons CC0 license.
+Original artwork for this project (app icon, banner, alert icon, etc) is released under a Creative Commons CC-BY-NC-SA license, generally meaning the custom artwork can be used or remixed with attribution, but only for non-commercial purposes, and you must use the same license if you make a derivitive work of your own.
+
+The full dedication is in [LICENSE](LICENSE).
