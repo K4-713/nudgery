@@ -34,6 +34,7 @@ import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.GetVisualizationDataUseCase
 import com.nudgery.shared.usecase.ImportNudgeUseCase
 import com.nudgery.shared.usecase.RecordAnswerUseCase
+import com.nudgery.shared.usecase.ReorderNudgesUseCase
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
 import kotlinx.coroutines.flow.Flow
@@ -247,6 +248,7 @@ class TestViewModelRepositories {
     fun exportAnswersUseCase() = ExportAnswersUseCase(nudgeRepo, questionRepo, optionRepo, answerRepo, scheduleRepo)
     fun getVisualizationDataUseCase() = GetVisualizationDataUseCase(answerRepo, questionRepo, optionRepo)
     fun recordAnswerUseCase() = RecordAnswerUseCase(answerRepo, alertPresenter)
+    fun reorderNudgesUseCase() = ReorderNudgesUseCase(nudgeRepo)
     fun importNudgeUseCase() = ImportNudgeUseCase(
         nudgeRepo, questionRepo, optionRepo, scheduleRepo, answerRepo, scheduler
     )

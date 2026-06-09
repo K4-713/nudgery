@@ -47,7 +47,8 @@ class NudgeListViewModelTest {
             answerRepository = repos.answerRepo,
             notificationFireRepository = repos.notificationFireRepo,
             computeNextFireTime = ComputeNextFireTimeUseCase(),
-            updateNudge = repos.updateNudgeUseCase()
+            updateNudge = repos.updateNudgeUseCase(),
+            reorderNudges = repos.reorderNudgesUseCase()
         )
     }
 

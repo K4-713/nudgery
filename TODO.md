@@ -9,9 +9,10 @@ ENGINEERING_DECISIONS.md (ED-19).
 **Work breakdown:**
 - [x] Phase 1 — Data foundation: `Nudge.sortOrder` column + migration 3 (backfill by `createdAt`),
       `selectAll` orders by it, inserts append, `ReorderNudgesUseCase`, TDD tests (`NudgeReorderTest`).
-- [ ] Phase 2 — Drag-and-drop UI on the main list: long-press lift, accent wash + shadow,
+- [x] Phase 2 — Drag-and-drop UI on the main list: long-press lift (accent wash + shadow, scale),
       `Modifier.animateItem()` make-space, accent-tinted landing-gap outline, edge auto-scroll,
-      haptics; commit the new order via `ReorderNudgesUseCase` on drop.
+      haptics; commits the new order via `ReorderNudgesUseCase` on drop. (`NudgeReorder.kt` engine +
+      `NudgeListScreen.kt` wiring; `MoveItemTest` covers the pure reorder.)
 - [ ] Phase 3 — Accessibility: "Move up" / "Move down" custom semantics actions on each row so the
       reorder is usable without long-press-drag.
 - [ ] Phase 4 — Backup/restore order (ED-19): full-ZIP backups preserve relative order; single-nudge

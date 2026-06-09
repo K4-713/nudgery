@@ -12,6 +12,7 @@ import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.usecase.ComputeNextFireTimeUseCase
+import com.nudgery.shared.usecase.ReorderNudgesUseCase
 import com.nudgery.shared.usecase.UpdateNudgeRequest
 import com.nudgery.shared.usecase.UpdateNudgeUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +46,8 @@ class NudgeListViewModel(
     private val answerRepository: AnswerRepository,
     private val notificationFireRepository: NotificationFireRepository,
     private val computeNextFireTime: ComputeNextFireTimeUseCase,
-    private val updateNudge: UpdateNudgeUseCase
+    private val updateNudge: UpdateNudgeUseCase,
+    private val reorderNudges: ReorderNudgesUseCase
 ) : ViewModel() {
 
     // Combine nudges, notification fires, and answers so the list refreshes reactively
@@ -69,6 +71,14 @@ class NudgeListViewModel(
             val current = uiState.value?.find { it.nudgeId == nudgeId } ?: return@launch
             updateNudge.execute(UpdateNudgeRequest(nudgeId = nudgeId, isEnabled = !current.isEnabled))
             Log.i(TAG, "Toggled nudge $nudgeId enabled → ${!current.isEnabled}")
+        }
+    }
+
+    /** Persists a user-defined list order after a drag-to-reorder (ED-19). */
+    fun reorder(orderedNudgeIds: List<String>) {
+        viewModelScope.launch {
+            reorderNudges.execute(orderedNudgeIds)
+            Log.i(TAG, "Reordered ${orderedNudgeIds.size} nudges")
         }
     }
 

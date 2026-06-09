@@ -2,7 +2,9 @@
 
 package com.nudgery.android.ui.screen
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +19,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -43,10 +47,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.nudgery.android.R
 import com.nudgery.android.ui.theme.emojiScaledStyle
 import com.nudgery.android.viewmodel.NudgeListViewModel
@@ -58,6 +67,11 @@ import org.koin.androidx.compose.koinViewModel
  *  "New Nudge" button rather than being trapped under it: the 56dp FAB plus its 16dp margin top and
  *  bottom. */
 private val NUDGE_LIST_FAB_CLEARANCE = 88.dp
+
+/** Lift treatment for a picked-up nudge during drag-to-reorder (ED-19): a slight scale-up and a
+ *  raised shadow so the card reads as floating above the list. */
+private const val LIFTED_NUDGE_SCALE = 1.03f
+private val LIFTED_NUDGE_ELEVATION = 12.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,26 +135,94 @@ fun NudgeListScreen(
                 onCreateClick = onCreateClick,
                 modifier = Modifier.padding(innerPadding)
             )
-            else -> LazyColumn(
-                // Extra bottom padding so the last card can scroll clear of the floating "New Nudge"
-                // button instead of being trapped under it (the FAB's height is not folded into the
-                // Scaffold's innerPadding, unlike a bottomBar). Horizontal inset stays on the modifier.
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + NUDGE_LIST_FAB_CLEARANCE
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
-                itemsIndexed(currentNudges, key = { _, n -> n.nudgeId }) { _, nudge ->
-                    NudgeListItem(
-                        nudge = nudge,
-                        exactAlarmGranted = exactAlarmGranted,
-                        onClick = { onNudgeClick(nudge.nudgeId) },
-                        onToggleEnabled = { viewModel.toggleEnabled(nudge.nudgeId) }
-                    )
+            else -> {
+                val lazyListState = rememberLazyListState()
+                val haptics = LocalHapticFeedback.current
+                // Local working copy the drag reorders optimistically (ED-19, Phase 2); resynced from
+                // the source list whenever we're not mid-drag, and persisted on drop.
+                var localOrder by remember { mutableStateOf(currentNudges) }
+                val dragDropState = rememberNudgeDragDropState(lazyListState) { from, to ->
+                    localOrder = localOrder.moveItem(from, to)
+                    // A light tick each time the order actually changes under the finger.
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+                LaunchedEffect(currentNudges) {
+                    if (dragDropState.draggingItemIndex == null) localOrder = currentNudges
+                }
+
+                LazyColumn(
+                    state = lazyListState,
+                    // Extra bottom padding so the last card can scroll clear of the floating "New Nudge"
+                    // button instead of being trapped under it (the FAB's height is not folded into the
+                    // Scaffold's innerPadding, unlike a bottomBar). Horizontal inset stays on the modifier.
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = innerPadding.calculateBottomPadding() + NUDGE_LIST_FAB_CLEARANCE
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .pointerInput(dragDropState) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { offset ->
+                                    dragDropState.onDragStart(offset)
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragDropState.onDrag(dragAmount)
+                                },
+                                onDragEnd = {
+                                    val newOrder = localOrder.map { it.nudgeId }
+                                    dragDropState.onDragInterrupted()
+                                    // Only persist when the order actually changed.
+                                    if (newOrder != currentNudges.map { it.nudgeId }) {
+                                        viewModel.reorder(newOrder)
+                                    }
+                                },
+                                onDragCancel = { dragDropState.onDragInterrupted() }
+                            )
+                        }
+                ) {
+                    itemsIndexed(localOrder, key = { _, n -> n.nudgeId }) { index, nudge ->
+                        val isDragging = index == dragDropState.draggingItemIndex
+                        if (isDragging) {
+                            // The lifted card floats under the finger while an accent-tinted outline
+                            // stays behind it, marking the slot where it would land if dropped now.
+                            Box(modifier = Modifier.zIndex(1f).fillMaxWidth()) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .border(
+                                            width = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = MaterialTheme.shapes.medium
+                                        )
+                                )
+                                NudgeListItem(
+                                    nudge = nudge,
+                                    exactAlarmGranted = exactAlarmGranted,
+                                    onClick = {},
+                                    onToggleEnabled = {},
+                                    lifted = true,
+                                    modifier = Modifier.graphicsLayer {
+                                        translationY = dragDropState.draggingItemOffset
+                                        scaleX = LIFTED_NUDGE_SCALE
+                                        scaleY = LIFTED_NUDGE_SCALE
+                                    }
+                                )
+                            }
+                        } else {
+                            NudgeListItem(
+                                nudge = nudge,
+                                exactAlarmGranted = exactAlarmGranted,
+                                onClick = { onNudgeClick(nudge.nudgeId) },
+                                onToggleEnabled = { viewModel.toggleEnabled(nudge.nudgeId) },
+                                modifier = Modifier.animateItem()
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -179,7 +261,8 @@ private fun NudgeListItem(
     exactAlarmGranted: Boolean,
     onClick: () -> Unit,
     onToggleEnabled: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lifted: Boolean = false
 ) {
     val context = LocalContext.current
     var showApproximateDialog by remember { mutableStateOf(false) }
@@ -205,7 +288,18 @@ private fun NudgeListItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        // ED-19 lift: a faint accent wash + raised shadow while the card is picked up for reordering.
+        colors = if (lifted) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        } else {
+            CardDefaults.cardColors()
+        },
+        elevation = if (lifted) {
+            CardDefaults.cardElevation(defaultElevation = LIFTED_NUDGE_ELEVATION)
+        } else {
+            CardDefaults.cardElevation()
+        }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
