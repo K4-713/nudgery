@@ -20,6 +20,34 @@ ENGINEERING_DECISIONS.md (ED-19).
 - [ ] Phase 5 — Docs: DESIGN.md interaction spec for the drag/lift/gap behavior; README if the
       reordering is surfaced as a user-facing feature.
 
+## Detail Screen Edit-Affordance Redesign (exploration)
+Tighten the detail-screen header and clarify how each part is edited. Not yet decided — captured
+here from a design discussion. **Hard constraint:** the main chart only renders when there is data
+(`if (uiState.visualizations.isNotEmpty())`), so the main question text cannot live *only* as the
+chart title — it would vanish for a brand-new, answer-less nudge. The question needs an always-present
+home. Note follow-up chart cards already title themselves with their question text; the main chart
+does not, so titling it would add nice symmetry. Follow-ups with no chartable data have no card, so
+per-card pencils can't be the *only* way to manage follow-ups — a "manage follow-ups" entry must remain.
+
+Options considered:
+- **A — Question as chart title + inline pencils:** main chart titled by the main question with a
+  trailing pencil; follow-up cards get pencils too; a fallback question header covers the no-data
+  state. Nice symmetry, edit co-located; downside is the question lives in two places by data state
+  and jumps slot when data first appears.
+- **B — Tap-the-thing-to-edit, drop the icon buttons (recommended):** question header, schedule line,
+  and follow-up line each become directly tappable (open their wizard step) with a small trailing
+  pencil glyph; remove the chunky 48dp `IconButton`s. Tightest, keeps deep-links, question always
+  visible; tappable text is slightly less discoverable (the glyph mitigates).
+- **C — Chips for metadata:** question header with a pencil; collapse schedule + follow-up into
+  tappable chips that open their edit steps. Most compressed; "0 follow-ups" chip reads awkwardly.
+- **D — One consolidated Edit:** drop all per-section icons; the single top-bar pencil opens the
+  wizard. Cleanest body, but loses the deep-links and pushes editing a layer away.
+
+Underlying principle: explicit pencil = most discoverable; tappable-text-with-glyph = tighter but
+needs the hint; full consolidation = cleanest but least direct. (A partial down-payment already
+landed: the header rows were grouped tightly and the edit icons shrunk from 48dp `IconButton`s to a
+compact ~40dp `RowEditButton` to cut the dead space between the schedule and follow-up lines.)
+
 ## Emoji Question Type
 Add an `EMOJI` question type: a TEXT question under the hood, but whose input is restricted to emoji-only, entered through our own emoji picker for an A+ cross-platform experience.
 

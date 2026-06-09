@@ -71,6 +71,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -323,12 +327,11 @@ fun NudgeDetailScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(onClick = onEditScheduleClick) {
-                                Icon(
-                                    imageVector = Icons.Outlined.CalendarMonth,
-                                    contentDescription = stringResource(R.string.detail_edit_schedule)
-                                )
-                            }
+                            RowEditButton(
+                                imageVector = Icons.Outlined.CalendarMonth,
+                                contentDescription = stringResource(R.string.detail_edit_schedule),
+                                onClick = onEditScheduleClick
+                            )
                         }
                     }
 
@@ -346,12 +349,11 @@ fun NudgeDetailScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(onClick = onEditFollowUpsClick) {
-                                Icon(
-                                    imageVector = Icons.Outlined.QuestionAnswer,
-                                    contentDescription = stringResource(R.string.detail_edit_followups)
-                                )
-                            }
+                            RowEditButton(
+                                imageVector = Icons.Outlined.QuestionAnswer,
+                                contentDescription = stringResource(R.string.detail_edit_followups),
+                                onClick = onEditFollowUpsClick
+                            )
                         }
                     }
                 }
@@ -625,6 +627,32 @@ private fun visualizationLabel(visualization: VisualizationData): String = when 
     is VisualizationData.BarChart -> stringResource(R.string.chart_type_bar_chart)
     is VisualizationData.ColumnChart -> stringResource(R.string.chart_type_column_chart)
     is VisualizationData.PackedBubble -> stringResource(R.string.chart_type_packed_bubble)
+}
+
+/** Padding around the 24dp icon in [RowEditButton], giving a ~40dp touch target (24 + 2×8). */
+private val ROW_EDIT_BUTTON_PADDING = 8.dp
+
+/**
+ * A compact edit affordance for the detail-screen header rows. A default [IconButton] forces a 48dp
+ * row, which left the single-line schedule and follow-up rows floating in dead vertical space; this
+ * keeps the row short (a ~40dp touch target) so those lines sit closer together. The icon's
+ * [contentDescription] is the accessible label, and the press exposes a Button role.
+ */
+@Composable
+private fun RowEditButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .clickable(onClick = onClick, role = Role.Button)
+            .padding(ROW_EDIT_BUTTON_PADDING),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(imageVector = imageVector, contentDescription = contentDescription)
+    }
 }
 
 /**
