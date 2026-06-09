@@ -456,7 +456,11 @@ fun NudgeDetailScreen(
             chartPalette = chartPalette,
             windowLabel = uiState.windowLabel,
             systemBarInsets = systemBarInsets,
-            nav = windowNav
+            nav = windowNav,
+            // The full-screen title is the question being charted, not the chart style (the chart
+            // style is already chosen via the chart-type picker). Matches the follow-up charts, which
+            // already title by their question text.
+            title = uiState.mainQuestionText
         )
     }
 }
@@ -620,6 +624,15 @@ private fun visualizationLabel(visualization: VisualizationData): String = when 
     is VisualizationData.PackedBubble -> stringResource(R.string.chart_type_packed_bubble)
 }
 
+/**
+ * The title for a full-screen chart: the text of the question being charted ([questionText]) rather
+ * than the chart-style name — the chart style is already chosen in the chart-type picker. Falls back
+ * to [chartStyleLabel] only when the question has no text (e.g. an emoji-only question), so the bar
+ * is never blank. Both the main chart and follow-up charts title by their own question text.
+ */
+internal fun fullScreenChartTitle(questionText: String?, chartStyleLabel: String): String =
+    questionText?.takeIf { it.isNotBlank() } ?: chartStyleLabel
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun FullScreenChartDialog(
@@ -665,7 +678,7 @@ private fun FullScreenChartDialog(
                 topBar = {
                     TopAppBar(
                         windowInsets = WindowInsets(0, 0, 0, 0),
-                        title = { Text(title ?: visualizationLabel(visualizations[safeIndex])) },
+                        title = { Text(fullScreenChartTitle(title, visualizationLabel(visualizations[safeIndex]))) },
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
                                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.nav_back))
