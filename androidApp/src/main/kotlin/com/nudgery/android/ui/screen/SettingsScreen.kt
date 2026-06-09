@@ -537,6 +537,16 @@ private fun readJsonEntriesFromZip(bytes: ByteArray): List<String> {
 }
 
 /**
+ * The sample emoji for a gender swatch in the emoji-defaults selectors: [personSample] in [gender],
+ * also carrying the currently-selected [skinTone] so the preview composes *both* defaults exactly
+ * the way a picked emoji will (ENGINEERING_DECISIONS.md ED-7: "Gender and skin-tone defaults
+ * compose"). Selecting a skin tone therefore restyles the example people too; previously the gender
+ * swatches ignored skin tone and stayed at the platform-default tone.
+ */
+internal fun genderSwatchEmoji(personSample: String, gender: Gender, skinTone: SkinTone): String =
+    EmojiDefaults.applySkinTone(EmojiDefaults.applyGender(personSample, gender), skinTone)
+
+/**
  * Default skin-tone (ED-6) and gender (ED-7) selectors, shown as swatches of the actual emoji
  * variants — the convention both Android and iOS keyboards use. The Fitzpatrick/gender names are
  * not shown as labels (matching those keyboards) but are exposed as content descriptions for
@@ -598,7 +608,7 @@ private fun EmojiDefaultSelectors(
         ) {
             genders.forEach { (g, nameRes) ->
                 EmojiSwatch(
-                    emoji = EmojiDefaults.applyGender(personSample, g),
+                    emoji = genderSwatchEmoji(personSample, g, skinTone),
                     contentDescription = stringResource(nameRes),
                     selected = gender == g,
                     onSelect = { onGender(g) }
