@@ -349,3 +349,25 @@ day = one Yes day; only-No day = one No day; off → summing preserved; line axi
 `NudgeCreationTest` (persists for YES/NO; default off; ignored for non-YES/NO), `NudgeEditTest`
 (editing toggles it on an existing main question), `NudgeImportTest` + `DataExportTest` +
 `NudgeBackupParserTest` (export/import round-trip; absent ⇒ false).
+
+### ED-18: Recording an answer dismisses that nudge's outstanding alert
+**Status:** Implemented — `RecordAnswerUseCase` calls `AlertPresenter.dismissAlert(nudgeId)` after persisting; Android impl `NotificationManagerAlertPresenter` cancels notification id `nudgeNotificationId(nudgeId)`
+**Context:** A scheduled nudge posts a system notification (the "alert") that is only auto-cancelled
+when tapped (`setAutoCancel(true)`). If the user answers the nudge in-app without opening the alert,
+the alert lingers in the shade; tapping it later re-opens the answer form and invites a duplicate
+("double") answer.
+**Decision:** Recording an answer for a nudge clears that nudge's outstanding alert. Dismissal is
+**nudge-level**, not occurrence-level: there is exactly one posted notification per nudge (id
+`nudgeNotificationId(nudgeId)`, reused across fires via `FLAG_UPDATE_CURRENT`), and the app cannot
+answer for an arbitrary past occurrence, so "any answer for this nudge clears its alert" is
+unambiguous and correct. The rule lives in the domain layer (`RecordAnswerUseCase`) so it holds for
+every answer entry point, present or future; the platform mechanism (cancelling a displayed
+`NotificationManager` notification) is hidden behind the shared `AlertPresenter` interface so
+commonMain stays platform-free. It is a pure presentation side effect: no answer or schedule data
+changes, and the next scheduled fire is unaffected.
+**Consequences:** `RecordAnswerUseCase` gains an `AlertPresenter` dependency. A new commonMain
+`AlertPresenter` interface with an androidMain `NotificationManagerAlertPresenter` implementation,
+bound in `appModule`. The notification id derivation is centralized in `nudgeNotificationId(nudgeId)`
+so the worker (which posts) and the presenter (which dismisses) cannot drift.
+**Tests:** `AnswerRecordingTest` (recording an answer dismisses that nudge's alert via a fake
+`AlertPresenter`, and the dismissed id is the answered nudge's).

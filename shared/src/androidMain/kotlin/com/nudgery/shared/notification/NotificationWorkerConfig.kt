@@ -6,6 +6,13 @@ internal const val NUDGE_CHANNEL_ID = "nudge_prompts"
 internal const val WORKER_KEY_NUDGE_ID = "nudge_id"
 internal const val WORKER_KEY_SCHEDULED_AT = "scheduled_at_ms"
 
+/**
+ * The system notification id for a nudge's alert. There is one slot per nudge (a new fire reuses it),
+ * so this is also the id to cancel when dismissing the alert on answer (ED-18). Kept in one place so
+ * the worker that posts and the presenter that dismisses can never disagree.
+ */
+internal fun nudgeNotificationId(nudgeId: String): Int = nudgeId.hashCode()
+
 // Public — read by androidApp receivers and work-data builders.
 const val EXTRA_NUDGE_ID = "com.nudgery.android.EXTRA_NUDGE_ID"
 const val EXTRA_SCHEDULED_AT = "com.nudgery.android.EXTRA_SCHEDULED_AT"

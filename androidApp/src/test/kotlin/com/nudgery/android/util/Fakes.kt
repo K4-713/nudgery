@@ -24,6 +24,7 @@ import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
 import com.nudgery.shared.repository.ScheduleRepository
 import com.nudgery.shared.repository.TimezoneChangeEventRepository
+import com.nudgery.shared.notification.AlertPresenter
 import com.nudgery.shared.scheduler.NotificationScheduler
 import com.nudgery.android.backup.NudgeBackupParser
 import com.nudgery.android.viewmodel.SettingsViewModel
@@ -211,6 +212,12 @@ class FakeNotificationScheduler : NotificationScheduler {
     fun reset() { scheduled.clear(); cancelled.clear(); rescheduled.clear() }
 }
 
+class FakeAlertPresenter : AlertPresenter {
+    val dismissed = mutableListOf<String>()
+    override fun dismissAlert(nudgeId: String) { dismissed.add(nudgeId) }
+    fun reset() { dismissed.clear() }
+}
+
 /** Bundles all fakes and use-case factories for ViewModel tests. */
 class TestViewModelRepositories {
     val appSettings = FakeAppSettings()
@@ -222,6 +229,7 @@ class TestViewModelRepositories {
     val nudgeEditRepo = FakeNudgeEditRepository()
     val notificationFireRepo = FakeNotificationFireRepository()
     val scheduler = FakeNotificationScheduler()
+    val alertPresenter = FakeAlertPresenter()
 
     fun createNudgeUseCase() =
         CreateNudgeUseCase(nudgeRepo, questionRepo, optionRepo, scheduleRepo, scheduler)
@@ -232,7 +240,7 @@ class TestViewModelRepositories {
     fun setAnswerHiddenUseCase() = SetAnswerHiddenUseCase(answerRepo)
     fun exportAnswersUseCase() = ExportAnswersUseCase(nudgeRepo, questionRepo, optionRepo, answerRepo, scheduleRepo)
     fun getVisualizationDataUseCase() = GetVisualizationDataUseCase(answerRepo, questionRepo, optionRepo)
-    fun recordAnswerUseCase() = RecordAnswerUseCase(answerRepo)
+    fun recordAnswerUseCase() = RecordAnswerUseCase(answerRepo, alertPresenter)
     fun importNudgeUseCase() = ImportNudgeUseCase(
         nudgeRepo, questionRepo, optionRepo, scheduleRepo, answerRepo, scheduler
     )

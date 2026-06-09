@@ -3,12 +3,16 @@
 package com.nudgery.shared.usecase
 
 import com.nudgery.shared.model.Answer
+import com.nudgery.shared.notification.AlertPresenter
 import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.util.generateUuid
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
-class RecordAnswerUseCase(private val answerRepository: AnswerRepository) {
+class RecordAnswerUseCase(
+    private val answerRepository: AnswerRepository,
+    private val alertPresenter: AlertPresenter,
+) {
 
     suspend fun execute(
         nudgeId: String,
@@ -30,6 +34,9 @@ class RecordAnswerUseCase(private val answerRepository: AnswerRepository) {
                 isHidden = false
             )
         )
+        // ED-18: answering a nudge clears its outstanding alert, so opening the lingering
+        // notification later doesn't re-prompt the user to answer the same nudge again.
+        alertPresenter.dismissAlert(nudgeId)
         return answerId
     }
 }

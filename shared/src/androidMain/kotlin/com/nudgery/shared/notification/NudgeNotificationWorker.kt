@@ -90,7 +90,7 @@ class NudgeNotificationWorker(
             .setAutoCancel(true)
             .build()
 
-        NotificationManagerCompat.from(applicationContext).notify(nudgeId.hashCode(), notification)
+        NotificationManagerCompat.from(applicationContext).notify(nudgeNotificationId(nudgeId), notification)
         Log.i(TAG, "Notification shown for nudge: $nudgeId")
     }
 

@@ -15,6 +15,7 @@ import com.nudgery.shared.usecase.ScheduleRequest
 import com.nudgery.shared.usecase.SetAnswerHiddenUseCase
 import com.nudgery.shared.model.Timeframe
 import com.nudgery.shared.model.VisualizationData
+import com.nudgery.shared.util.FakeAlertPresenter
 import com.nudgery.shared.util.FakeNotificationScheduler
 import com.nudgery.shared.util.TestRepositories
 import com.nudgery.shared.util.createTestRepositories
@@ -34,6 +35,7 @@ class AnswerRecordingTest {
     private lateinit var repos: TestRepositories
     private lateinit var createNudge: CreateNudgeUseCase
     private lateinit var recordAnswer: RecordAnswerUseCase
+    private lateinit var alertPresenter: FakeAlertPresenter
     private lateinit var setAnswerHidden: SetAnswerHiddenUseCase
     private lateinit var getVisualizationData: GetVisualizationDataUseCase
 
@@ -44,7 +46,8 @@ class AnswerRecordingTest {
             repos.nudgeRepository, repos.questionRepository, repos.questionOptionRepository,
             repos.scheduleRepository, FakeNotificationScheduler()
         )
-        recordAnswer = RecordAnswerUseCase(repos.answerRepository)
+        alertPresenter = FakeAlertPresenter()
+        recordAnswer = RecordAnswerUseCase(repos.answerRepository, alertPresenter)
         setAnswerHidden = SetAnswerHiddenUseCase(repos.answerRepository)
         getVisualizationData = GetVisualizationDataUseCase(
             repos.answerRepository, repos.questionRepository, repos.questionOptionRepository
@@ -167,6 +170,30 @@ class AnswerRecordingTest {
                 && !name.contains("hidden", ignoreCase = true)
         }
         assertFalse(hasValueUpdateMethod, "AnswerRepository must not expose an answer value update method")
+    }
+
+    @Test
+    fun TDD_recordingAnswerDismissesThatNudgesAlert() = runTest {
+        // ENGINEERING_DECISIONS.md ED-18: recording an answer clears that nudge's outstanding alert,
+        // so opening a lingering notification later doesn't re-prompt the user to answer again.
+        val (nudgeId, questionId) = createYesNoNudge()
+
+        recordAnswer.execute(nudgeId, questionId, "YES")
+
+        assertEquals(listOf(nudgeId), alertPresenter.dismissed)
+    }
+
+    @Test
+    fun TDD_recordingAnswerDismissesOnlyTheAnsweredNudgesAlert() = runTest {
+        // ENGINEERING_DECISIONS.md ED-18: dismissal is nudge-level and targets the answered nudge —
+        // answering one nudge must not clear another nudge's alert.
+        val (firstNudgeId, firstQuestionId) = createYesNoNudge()
+        val (secondNudgeId, _) = createYesNoNudge()
+
+        recordAnswer.execute(firstNudgeId, firstQuestionId, "YES")
+
+        assertEquals(listOf(firstNudgeId), alertPresenter.dismissed)
+        assertFalse(alertPresenter.dismissed.contains(secondNudgeId))
     }
 
     @Test
