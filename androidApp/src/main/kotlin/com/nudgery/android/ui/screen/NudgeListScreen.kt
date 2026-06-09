@@ -2,6 +2,9 @@
 
 package com.nudgery.android.ui.screen
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -49,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -173,6 +177,18 @@ fun NudgeListScreen(
                 ) {
                     itemsIndexed(localOrder, key = { _, n -> n.nudgeId }) { index, nudge ->
                         val isDragging = index == dragDropState.draggingItemIndex
+                        // The lift (scale, tilt, shadow, accent wash) eases in/out on a spring rather
+                        // than snapping, so picking a nudge up feels smooth. Position still follows the
+                        // finger immediately — only the styling is animated.
+                        val liftProgress by animateFloatAsState(
+                            targetValue = if (isDragging) 1f else 0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "nudgeLiftProgress"
+                        )
+                        val cardShape = MaterialTheme.shapes.medium
                         // The lifted card floats under the finger (translate/scale/tilt) while an
                         // accent-tinted outline stays behind it, marking the slot where it would land.
                         // The drag detector lives on the card itself (a stable node keyed by nudgeId)
@@ -184,14 +200,14 @@ fun NudgeListScreen(
                                 .zIndex(if (isDragging) 1f else 0f)
                                 .fillMaxWidth()
                         ) {
-                            if (isDragging) {
+                            if (liftProgress > 0f) {
                                 Box(
                                     modifier = Modifier
                                         .matchParentSize()
                                         .border(
                                             width = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            shape = MaterialTheme.shapes.medium
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = liftProgress),
+                                            shape = cardShape
                                         )
                                 )
                             }
@@ -200,18 +216,21 @@ fun NudgeListScreen(
                                 exactAlarmGranted = exactAlarmGranted,
                                 onClick = { onNudgeClick(nudge.nudgeId) },
                                 onToggleEnabled = { viewModel.toggleEnabled(nudge.nudgeId) },
-                                lifted = isDragging,
+                                liftProgress = liftProgress,
                                 modifier = Modifier
                                     .graphicsLayer {
                                         translationY = if (isDragging) dragDropState.draggingItemOffset else 0f
-                                        val scale = if (isDragging) LIFTED_NUDGE_SCALE else 1f
+                                        val scale = 1f + (LIFTED_NUDGE_SCALE - 1f) * liftProgress
                                         scaleX = scale
                                         scaleY = scale
-                                        rotationZ = if (isDragging) LIFTED_NUDGE_TILT_DEGREES else 0f
+                                        rotationZ = LIFTED_NUDGE_TILT_DEGREES * liftProgress
                                         transformOrigin = TransformOrigin(
                                             LIFTED_NUDGE_TILT_PIVOT_X,
                                             LIFTED_NUDGE_TILT_PIVOT_Y
                                         )
+                                        shadowElevation = LIFTED_NUDGE_ELEVATION.toPx() * liftProgress
+                                        shape = cardShape
+                                        clip = false
                                     }
                                     .pointerInput(nudge.nudgeId) {
                                         detectDragGesturesAfterLongPress(
@@ -278,7 +297,7 @@ private fun NudgeListItem(
     onClick: () -> Unit,
     onToggleEnabled: () -> Unit,
     modifier: Modifier = Modifier,
-    lifted: Boolean = false
+    liftProgress: Float = 0f
 ) {
     val context = LocalContext.current
     var showApproximateDialog by remember { mutableStateOf(false) }
@@ -301,21 +320,18 @@ private fun NudgeListItem(
         )
     }
 
+    // ED-19 lift: a faint accent wash that eases in with [liftProgress] while the card is picked up
+    // for reordering. The raised shadow is applied by the caller's graphicsLayer so it animates too.
+    val containerColor = lerp(
+        CardDefaults.cardColors().containerColor,
+        MaterialTheme.colorScheme.primaryContainer,
+        liftProgress
+    )
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        // ED-19 lift: a faint accent wash + raised shadow while the card is picked up for reordering.
-        colors = if (lifted) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        } else {
-            CardDefaults.cardColors()
-        },
-        elevation = if (lifted) {
-            CardDefaults.cardElevation(defaultElevation = LIFTED_NUDGE_ELEVATION)
-        } else {
-            CardDefaults.cardElevation()
-        }
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
