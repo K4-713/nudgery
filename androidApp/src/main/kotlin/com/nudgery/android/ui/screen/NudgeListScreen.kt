@@ -80,7 +80,7 @@ private val LIFTED_NUDGE_ELEVATION = 12.dp
 
 /** A jaunty clockwise tilt on the lifted card, pivoting 2/5 of the way along its width from the left
  *  (vertically centered). Tweak the angle/pivot to taste. */
-private const val LIFTED_NUDGE_TILT_DEGREES = 13f
+private const val LIFTED_NUDGE_TILT_DEGREES = 11f
 private const val LIFTED_NUDGE_TILT_PIVOT_X = 0.4f
 private const val LIFTED_NUDGE_TILT_PIVOT_Y = 0.5f
 
