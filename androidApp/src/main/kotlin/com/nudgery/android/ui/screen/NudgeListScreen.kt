@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -72,6 +73,12 @@ private val NUDGE_LIST_FAB_CLEARANCE = 88.dp
  *  raised shadow so the card reads as floating above the list. */
 private const val LIFTED_NUDGE_SCALE = 1.03f
 private val LIFTED_NUDGE_ELEVATION = 12.dp
+
+/** A jaunty clockwise tilt on the lifted card, pivoting 2/5 of the way along its width from the left
+ *  (vertically centered). Tweak the angle/pivot to taste. */
+private const val LIFTED_NUDGE_TILT_DEGREES = 13f
+private const val LIFTED_NUDGE_TILT_PIVOT_X = 0.4f
+private const val LIFTED_NUDGE_TILT_PIVOT_Y = 0.5f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -163,34 +170,21 @@ fun NudgeListScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp)
-                        .pointerInput(dragDropState) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { offset ->
-                                    dragDropState.onDragStart(offset)
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    dragDropState.onDrag(dragAmount)
-                                },
-                                onDragEnd = {
-                                    val newOrder = localOrder.map { it.nudgeId }
-                                    dragDropState.onDragInterrupted()
-                                    // Only persist when the order actually changed.
-                                    if (newOrder != currentNudges.map { it.nudgeId }) {
-                                        viewModel.reorder(newOrder)
-                                    }
-                                },
-                                onDragCancel = { dragDropState.onDragInterrupted() }
-                            )
-                        }
                 ) {
                     itemsIndexed(localOrder, key = { _, n -> n.nudgeId }) { index, nudge ->
                         val isDragging = index == dragDropState.draggingItemIndex
-                        if (isDragging) {
-                            // The lifted card floats under the finger while an accent-tinted outline
-                            // stays behind it, marking the slot where it would land if dropped now.
-                            Box(modifier = Modifier.zIndex(1f).fillMaxWidth()) {
+                        // The lifted card floats under the finger (translate/scale/tilt) while an
+                        // accent-tinted outline stays behind it, marking the slot where it would land.
+                        // The drag detector lives on the card itself (a stable node keyed by nudgeId)
+                        // so picking up never depends on a pointer hit-test, and the active gesture
+                        // survives the card's lift restyle.
+                        Box(
+                            modifier = Modifier
+                                .then(if (isDragging) Modifier else Modifier.animateItem())
+                                .zIndex(if (isDragging) 1f else 0f)
+                                .fillMaxWidth()
+                        ) {
+                            if (isDragging) {
                                 Box(
                                     modifier = Modifier
                                         .matchParentSize()
@@ -200,26 +194,48 @@ fun NudgeListScreen(
                                             shape = MaterialTheme.shapes.medium
                                         )
                                 )
-                                NudgeListItem(
-                                    nudge = nudge,
-                                    exactAlarmGranted = exactAlarmGranted,
-                                    onClick = {},
-                                    onToggleEnabled = {},
-                                    lifted = true,
-                                    modifier = Modifier.graphicsLayer {
-                                        translationY = dragDropState.draggingItemOffset
-                                        scaleX = LIFTED_NUDGE_SCALE
-                                        scaleY = LIFTED_NUDGE_SCALE
-                                    }
-                                )
                             }
-                        } else {
                             NudgeListItem(
                                 nudge = nudge,
                                 exactAlarmGranted = exactAlarmGranted,
                                 onClick = { onNudgeClick(nudge.nudgeId) },
                                 onToggleEnabled = { viewModel.toggleEnabled(nudge.nudgeId) },
-                                modifier = Modifier.animateItem()
+                                lifted = isDragging,
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        translationY = if (isDragging) dragDropState.draggingItemOffset else 0f
+                                        val scale = if (isDragging) LIFTED_NUDGE_SCALE else 1f
+                                        scaleX = scale
+                                        scaleY = scale
+                                        rotationZ = if (isDragging) LIFTED_NUDGE_TILT_DEGREES else 0f
+                                        transformOrigin = TransformOrigin(
+                                            LIFTED_NUDGE_TILT_PIVOT_X,
+                                            LIFTED_NUDGE_TILT_PIVOT_Y
+                                        )
+                                    }
+                                    .pointerInput(nudge.nudgeId) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                dragDropState.onDragStart(nudge.nudgeId)
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                if (dragDropState.onDrag(dragAmount)) {
+                                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                val newOrder = localOrder.map { it.nudgeId }
+                                                dragDropState.onDragInterrupted()
+                                                // Only persist when the order actually changed.
+                                                if (newOrder != currentNudges.map { it.nudgeId }) {
+                                                    viewModel.reorder(newOrder)
+                                                }
+                                            },
+                                            onDragCancel = { dragDropState.onDragInterrupted() }
+                                        )
+                                    }
                             )
                         }
                     }

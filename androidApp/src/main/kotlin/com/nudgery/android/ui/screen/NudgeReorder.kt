@@ -60,9 +60,14 @@ internal class NudgeDragDropState(
     private val draggingItemLayoutInfo: LazyListItemInfo?
         get() = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == draggingItemIndex }
 
-    internal fun onDragStart(offset: Offset) {
+    /**
+     * Picks up the item with the given [key]. Keyed by identity (not a pointer coordinate) so it is
+     * immune to the content-padding offset between the list's pointer space and item layout offsets —
+     * the source of an earlier "picks the item below" bug.
+     */
+    internal fun onDragStart(key: Any) {
         state.layoutInfo.visibleItemsInfo
-            .firstOrNull { item -> offset.y.toInt() in item.offset..(item.offset + item.size) }
+            .firstOrNull { it.key == key }
             ?.also {
                 draggingItemIndex = it.index
                 draggingItemInitialOffset = it.offset
