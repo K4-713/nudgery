@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 package com.nudgery.shared.emoji
 
 /** The user's default emoji skin tone (ED-6). [DEFAULT] applies no modifier (platform neutral form). */

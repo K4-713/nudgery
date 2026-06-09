@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 package com.nudgery.shared.notification
 
 internal const val NUDGE_CHANNEL_ID = "nudge_prompts"

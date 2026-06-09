@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 package com.nudgery.android
 
 import com.nudgery.android.util.TestViewModelRepositories

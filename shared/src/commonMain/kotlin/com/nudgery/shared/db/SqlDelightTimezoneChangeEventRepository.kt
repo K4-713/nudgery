@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 package com.nudgery.shared.db
 
 import com.nudgery.shared.model.TimezoneChangeEvent

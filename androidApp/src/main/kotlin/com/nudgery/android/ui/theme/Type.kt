@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 package com.nudgery.android.ui.theme
 
 import androidx.compose.material3.Typography

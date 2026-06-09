@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 import com.nudgery.buildtools.emoji.CldrAnnotationParser
 import com.nudgery.buildtools.emoji.EmojiCatalogGenerator
 import com.nudgery.buildtools.emoji.EmojiTestParser

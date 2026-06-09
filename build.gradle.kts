@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC0-1.0
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.kotlin.android) apply false
