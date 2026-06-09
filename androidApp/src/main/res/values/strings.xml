@@ -180,7 +180,7 @@
     <!-- About screen -->
     <string name="about_title">About Nudgery</string>
     <string name="about_tagline">Ask Yourself</string>
-    <string name="about_description">Nudgery lets you create questions, set a schedule to ask yourself for answers, and track the results over time. Your data stays on your device — no accounts, no ads, no cloud.</string>
+    <string name="about_description">Nudgery lets you create questions, set a schedule to ask yourself for answers, and log the results over time. Your data stays on your device — no accounts, no ads, no cloud.</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_open_source">Nudgery is free and open source software.</string>
     <string name="about_licenses_link">Open-source licenses</string>

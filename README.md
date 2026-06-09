@@ -7,7 +7,7 @@ Nudgery is an Android app that asks you your own questions, on a schedule you ch
 Nudgery contains no ads, and your data stays on your phone (unless you take the time to move it somewhere else on purpose).
 
 ## What Can You Use Nudgery For?
-Nudgery was initially written to help the author track daily migraine status over time, because it is unusually challenging to have good habits when your brain is low-key malfunctioning. The author also thought (while we're here) it would be fun to be able to track whatever the user (you!) thinks would be helpful or interesting to keep track of for a while.
+Nudgery was initially written to help the author log daily migraine status over time, because it is unusually challenging to have good habits when your brain is low-key malfunctioning. The author also thought (while we're here) it would be fun to be able to keep an eye on whatever the user (you!) thinks would be helpful or interesting to keep tabs on for a while.
 
 You can set up a Nudge to have your phone ask you anything, on any schedule. Here are some possibilities to get you started:
 * Did you have a headache today?

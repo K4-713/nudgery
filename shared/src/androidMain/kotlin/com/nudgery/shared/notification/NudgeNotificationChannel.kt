@@ -12,7 +12,7 @@ fun createNudgeNotificationChannel(context: Context) {
         "Nudge Prompts",
         NotificationManager.IMPORTANCE_DEFAULT
     ).apply {
-        description = "Periodic nudges for your tracked questions"
+        description = "Periodic nudges for the questions you're logging"
     }
     val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     manager.createNotificationChannel(channel)

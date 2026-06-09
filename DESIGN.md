@@ -591,7 +591,7 @@ its count through its length, so color is spent on *identity* instead. Each cate
 fixed palette color by its stable position in the full set (`NamedCount.orderFraction`: an option's
 order among all options, spread evenly 0..1; YES and NO at the two ends). Because that position is
 independent of count, rank, and the selected window, a category keeps its color as the timeframe
-moves and the bars re-sort — you can track the same option across windows. (Trade-off: the palettes
+moves and the bars re-sort — you can follow the same option across windows. (Trade-off: the palettes
 are magnitude gradients, so a question with many options yields analogous neighboring hues.)
 
 **Column chart axis labels.** Category labels are drawn smaller than Vico's default and tilted at a

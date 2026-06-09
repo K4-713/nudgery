@@ -13,11 +13,11 @@ Last substantive update: 2026-06-08.
 
 ## Why this matters
 
-Nudgery is positioned as a general-purpose tracker, **not** a health/medical app, and we
+Nudgery is positioned as a general-purpose logger, **not** a health/medical app, and we
 keep that framing for the Play Store and docs. But we should design honestly: **people
-will track health and other highly sensitive things in it** — medication adherence, mood
+will enter health and other highly sensitive data in it** — medication adherence, mood
 and mental-health check-ins, substance use and recovery, reproductive/cycle data, sexual
-activity, and abuse documentation were all foreseeable from day one (health tracking was
+activity, and abuse documentation were all foreseeable from day one (health monitoring was
 the original use case). The product framing does not change the data reality, so our
 security posture should assume sensitive content is present.
 
@@ -39,7 +39,7 @@ cannot tell in advance which user is at risk.
 3. **Patterns & metadata** — `scheduledAt` / `answeredAt` timestamps and schedule config
    leak routine, presence, sleep/wake, travel, and gaps, *even when every answer is
    innocuous.* Inference risk is a first-class asset, not an afterthought.
-4. **Existence of tracking itself** — that the user is logging *something*, and that it is
+4. **Existence of personal data itself** — that the user is logging *something*, and that it is
    hidden. In a monitored/coercive situation, salience is the threat: a notification (even
    a generic one) firing tells an observer there is something here worth looking at.
 
@@ -50,7 +50,7 @@ cannot tell in advance which user is at risk.
 | ID | Adversary | Access | Notes |
 |----|-----------|--------|-------|
 | **A1** | Stranger with a lost/stolen device; repair technician | Physical, device **locked/off**, offline | Analyzes data away from the phone. |
-| **A2** | Known person with physical + **unlocked** access (abusive partner, family) | Knows the PIN / device is unlocked | Highest-likelihood acute harm for a personal tracker. |
+| **A2** | Known person with physical + **unlocked** access (abusive partner, family) | Knows the PIN / device is unlocked | Highest-likelihood acute harm for a personal log. |
 | **A3** | Coercive authority (border, law enforcement) | Can **compel unlock** in many jurisdictions; forensic tools | Image-and-retain is routine for the forensic subset; unlock is the precondition. |
 | **A4** | Malicious app on the device (no root) | Sandbox-limited | OS already blocks cross-app file reads. |
 | **A5** | Rooted device / live on-device extraction / capable forensic on an unlocked phone | Root or code-exec on a live, unlocked device | Can scrape decrypted data from memory or use the app as a decryption oracle. |
@@ -110,7 +110,7 @@ device-bound key.
 | **A4** other app, no root | ✓ (sandbox) | ~ (DiD) | ✓ | — | ✓ |
 | **A5** rooted / live unlocked extraction | ✗ | ✗ | ~ ³ | — | ✗ |
 | **A6** exported backup file leaves device | ✗ | ✗ | ✗ | ✓ | ✗ |
-| **A7** ambient "something is being tracked" | ✗ | ✗ | ✓ ⁴ | — | ~ ⁴ |
+| **A7** ambient "something is being recorded" | ✗ | ✗ | ✓ ⁴ | — | ~ ⁴ |
 
 1. Helps only if the lock is **not** auto-released by a credential the adversary controls.
 2. Resists a compelled **device** unlock, but **not** a compelled **passphrase** if the
@@ -142,7 +142,7 @@ device-bound key.
   presentation or decoy vault is a *further* level — substantially more complex, easy to
   get wrong, and **dangerous if it gives an at-risk user false confidence.** Keep it out of
   any first version.
-- **Bimodal sensitivity.** Most users track low-stakes things; a minority track
+- **Bimodal sensitivity.** Most users log low-stakes things; a minority log
   genuinely dangerous content and can't be distinguished in advance → favor **opt-in**
   controls (C2/C3) that concentrate cost on the users who ask for it.
 
@@ -156,7 +156,7 @@ For protection *proportional to effort and matched to the real threats*:
    sensitive content sitting in email/Drive), opt-in, **no new dependency**.
 2. **C2 (optional passphrase + dormant-when-locked)** — the only control that meaningfully
    addresses A2 (known person, unlocked phone), the worst acute harm for a personal
-   tracker. Bigger build, but the right shape; reuses C3's passphrase/KDF.
+   log. Bigger build, but the right shape; reuses C3's passphrase/KDF.
 3. **C1 (device-bound at-rest encryption)** — modest, narrow value (A1 only, much of which
    the OS already covers). Worth it mainly as defense-in-depth and to truthfully tick
    "encrypted at rest" on the Play Data Safety form. *Currently being reconsidered* — see

@@ -51,7 +51,7 @@ sealed class VisualizationData {
         /**
          * Data-collection start (earliest recorded answer). The week-bucketed views (`WEEK`,
          * `WEEK_GRID`) count their 7-day cells from this date rather than from a calendar Monday, so
-         * the first cell is a full week measured from when tracking began — not a partial week left
+         * the first cell is a full week measured from when logging began — not a partial week left
          * over from a mid-week window edge.
          */
         val weekAnchor: LocalDate,

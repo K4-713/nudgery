@@ -1964,7 +1964,7 @@ private fun FollowUpAnswerRows(
 /**
  * Buckets daily [counts] into one cell per 7-day week for the WEEK / WEEK_GRID heat maps. Weeks are
  * counted from [weekAnchor] (the data-collection start) rather than calendar Mondays, so the first
- * cell is a full week measured from when tracking began instead of a partial week clipped by a
+ * cell is a full week measured from when logging began instead of a partial week clipped by a
  * mid-week window edge. The grid starts at the first whole period that begins inside the window;
  * when data predates the window (e.g. the yearly view's year-ago edge) the ≤6 leading clipped days
  * are dropped rather than shown as a misleadingly low partial cell. A `null` value = no data that
