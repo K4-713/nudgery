@@ -17,6 +17,11 @@ This project will take a Documentation Driven Development approach, in which the
 # Design
 - See DESIGN.md (visual / UX design brief)
 
+# Security Notes
+- See SECURITY_NOTES.md — working threat-model notes for protecting sensitive user data
+  (exploratory, not binding). Decisions graduate from here to ENGINEERING_DECISIONS.md /
+  README.md / DESIGN.md when actually chosen.
+
 # Next Steps
 - See TODO.md
 

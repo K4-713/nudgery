@@ -18,6 +18,19 @@ The binding engineering decisions and their rationale live in `ENGINEERING_DECIS
 - [ ] Android UI: custom emoji picker (grid, categories, search field, recents) in a bottom sheet, with skin-tone/gender defaults applied and hair/direction (ED-8) as pick-time variants; wire into `AnswerFormScreen`, plus the create/edit question wizard.
 - [ ] iOS UI: custom picker reusing the shared list (later).
 
+## Encrypt the Database at Rest
+> Part of a broader sensitive-data threat model — see `SECURITY_NOTES.md`. This section is control **C1** there, and is currently being reconsidered in favor of an optional passphrase + dormant-when-locked "Protected mode" (C2) and encrypted backups (C3).
+
+Encrypt the local SQLDelight database on-device (SQLCipher via the Android driver factory), with the encryption key held in the Android Keystore (TEE/StrongBox-backed) — never stored beside the database. No user login/passphrase: the key is device-bound and unwraps automatically when the app runs.
+
+**Threat model — read before scoping.** This protects only a narrow (but real) set of cases: a device obtained **locked or powered off** and analyzed *off-device*, e.g. lost/stolen phones, a repair shop, casual forensic dumps. In those cases the copied `nudgery.db` is just ciphertext and the key never left the phone's secure hardware.
+
+It does **not** help once the device is unlocked. A key insight is the forensic **BFU vs AFU** distinction:
+- **BFU (Before First Unlock)** — device locked/off, not unlocked since boot. The OS already keeps user data encrypted; our encryption is a second layer for exactly the lost/stolen/repair case above.
+- **AFU (After First Unlock)** / unlocked-in-hand — OS keys are in memory, *and* our auto-unwrapping key is available to anything running on the unlocked device. So this does nothing against a borrowed/stolen-while-unlocked phone or a **compelled unlock** (e.g. an aggressive border stop). Defending those would require a user-authentication gate (app-lock), which is deliberately out of scope here.
+
+Net: worth doing for the locked-device / offline-analysis case; not a defense against an unlocked device. When this lands, record it as an ENGINEERING_DECISIONS entry (binding internal decision) with this rationale, plus instrumented `androidTest` coverage for the encrypted round-trip and the one-time plaintext→encrypted migration.
+
 ## Play Store Listing Materials
 Prepare before submitting:
 - Export a 512×512 PNG icon for the Play Store store listing (see `art/play_store_icon.png`)
