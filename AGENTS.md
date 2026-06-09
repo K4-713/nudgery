@@ -111,12 +111,12 @@ Prior to tagging a new release, ensure that we are adhering to our own rules. Ma
 * Confirm every decision in ENGINEERING_DECISIONS.md has at least one TDD_ test enforcing it; write any that are missing. (Decisions still marked "implementation pending" are exempt until their feature lands.)
 * Verify the licensing split is intact. The project is dual-licensed: Nudgery's own
   source code and non-art assets are CC0 1.0 (public domain), while the original
-  hand-drawn artwork is CC BY-NC-SA 4.0. Check that:
-  * `LICENSE` (CC0 + scope note) and `art/LICENSE` (CC BY-NC-SA 4.0 text) both exist and the
+  hand-drawn artwork is CC BY-SA 4.0. Check that:
+  * `LICENSE` (CC0 + scope note) and `art/LICENSE` (CC BY-SA 4.0 text) both exist and the
     scope note still lists every artwork file and bundled third-party component accurately.
   * The hand-drawn artwork (app icon, Play Store feature banner, alert/notification icon) and
     its derived renderings are NOT marked CC0. Source SVGs live in `art/`; derived XML
-    drawables under `res/` should carry an `SPDX-License-Identifier: CC-BY-NC-SA-4.0` comment.
+    drawables under `res/` should carry an `SPDX-License-Identifier: CC-BY-SA-4.0` comment.
   * Bundled third-party assets (Atkinson Hyperlegible Next → OFL-1.1, Unicode emoji data →
     Unicode 3.0) remain credited in CREDITS.md and the in-app licenses screen.
 * Remove completely finished sections from TODO.md. Leave only sections that still have unfinished pieces.

@@ -32,7 +32,7 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.87705101"
-     inkscape:cx="-179.57906"
+     inkscape:cx="-570.66236"
      inkscape:cy="128.84085"
      inkscape:window-width="1666"
      inkscape:window-height="899"
@@ -200,7 +200,7 @@
         </dc:creator>
         <dc:rights>
           <cc:Agent>
-            <dc:title>© 2026 Katie Horn — licensed under CC BY-NC-SA 4.0</dc:title>
+            <dc:title>© 2026 Katie Horn — licensed under CC BY-SA 4.0</dc:title>
           </cc:Agent>
         </dc:rights>
         <dc:publisher>
@@ -209,10 +209,10 @@
           </cc:Agent>
         </dc:publisher>
         <cc:license
-           rdf:resource="http://creativecommons.org/licenses/by-nc-sa/4.0/" />
+           rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
       </cc:Work>
       <cc:License
-         rdf:about="http://creativecommons.org/licenses/by-nc-sa/4.0/">
+         rdf:about="http://creativecommons.org/licenses/by-sa/4.0/">
         <cc:permits
            rdf:resource="http://creativecommons.org/ns#Reproduction" />
         <cc:permits
@@ -221,8 +221,6 @@
            rdf:resource="http://creativecommons.org/ns#Notice" />
         <cc:requires
            rdf:resource="http://creativecommons.org/ns#Attribution" />
-        <cc:prohibits
-           rdf:resource="http://creativecommons.org/ns#CommercialUse" />
         <cc:permits
            rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
         <cc:requires

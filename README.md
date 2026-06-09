@@ -124,6 +124,6 @@ There are simply too many options to draw if the whole current universe of your 
 
 # License
 Code written for this project is effectively released into the public domain under a Creative Commons CC0 license.
-Original artwork for this project (app icon, banner, alert icon, etc) is released under a Creative Commons CC-BY-NC-SA license, generally meaning the custom artwork can be used or remixed with attribution, but only for non-commercial purposes, and you must use the same license if you make a derivitive work of your own.
+Original artwork for this project (app icon, banner, alert icon, etc) is released under a Creative Commons CC-BY-SA license, generally meaning the custom artwork can be used or remixed with attribution, and you must use the same license if you make a derivitive work of your own.
 
 The full dedication is in [LICENSE](LICENSE).
