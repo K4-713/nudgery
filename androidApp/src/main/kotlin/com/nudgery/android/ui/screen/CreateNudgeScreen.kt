@@ -36,6 +36,8 @@ import com.nudgery.android.R
 import com.nudgery.android.viewmodel.CreateNudgeViewModel
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
+import com.nudgery.android.viewmodel.areFollowUpsValid
+import com.nudgery.android.viewmodel.isQuestionSectionValid
 import com.nudgery.shared.usecase.CreateNudgeResult
 import org.koin.androidx.compose.koinViewModel
 
@@ -111,10 +113,20 @@ fun CreateNudgeScreen(
                 }
             }
 
+            // ED-22: the forward action is disabled while the current step's required fields are
+            // blank; Back/Cancel stay available. An untouched follow-up stub doesn't block (ED-21
+            // discards it on navigation).
+            val canContinue = when (steps[safeStep]) {
+                WizardStep.QUESTION -> isQuestionSectionValid(formState.nudgeName, formState.mainQuestion.text)
+                WizardStep.FOLLOW_UPS -> areFollowUpsValid(formState.followUpQuestions)
+                WizardStep.SCHEDULE -> true
+            }
+
             WizardNavBar(
                 currentStep = safeStep,
                 totalSteps = totalSteps,
                 isSubmitting = formState.isSubmitting,
+                canContinue = canContinue,
                 onCancel = onDismiss,
                 // Prune on navigation so an untouched follow-up stub added on the follow-up step
                 // doesn't linger when the user moves on without editing it (idempotent elsewhere).
@@ -131,6 +143,7 @@ internal fun WizardNavBar(
     currentStep: Int,
     totalSteps: Int,
     isSubmitting: Boolean,
+    canContinue: Boolean,
     onCancel: () -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
@@ -153,11 +166,11 @@ internal fun WizardNavBar(
         }
 
         if (currentStep < totalSteps - 1) {
-            Button(onClick = onNext) {
+            Button(onClick = onNext, enabled = canContinue) {
                 Text(stringResource(R.string.wizard_next))
             }
         } else {
-            Button(onClick = onSave, enabled = !isSubmitting) {
+            Button(onClick = onSave, enabled = canContinue && !isSubmitting) {
                 Text(stringResource(R.string.wizard_save))
             }
         }

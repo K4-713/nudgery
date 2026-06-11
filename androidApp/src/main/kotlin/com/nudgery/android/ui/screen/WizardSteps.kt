@@ -67,17 +67,19 @@ fun QuestionStep(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.step_question_title), style = MaterialTheme.typography.titleMedium)
 
-        OutlinedTextField(
+        RequiredOutlinedTextField(
             value = nudgeName,
             onValueChange = onNameChange,
-            label = { Text(stringResource(R.string.field_nudge_name)) },
+            label = stringResource(R.string.field_nudge_name),
+            errorText = stringResource(R.string.error_nudge_name_required),
             modifier = Modifier.fillMaxWidth()
         )
 
-        OutlinedTextField(
+        RequiredOutlinedTextField(
             value = question.text,
             onValueChange = { onQuestionChange(question.copy(text = it)) },
-            label = { Text(stringResource(R.string.field_question_text)) },
+            label = stringResource(R.string.field_question_text),
+            errorText = stringResource(R.string.error_question_text_required),
             placeholder = {
                 val hints = stringArrayResource(R.array.question_text_hints)
                 // Pick one example once and keep it. Not keyed on `hints`: stringArrayResource
@@ -341,10 +343,11 @@ private fun FollowUpEditor(
             }
         }
 
-        OutlinedTextField(
+        RequiredOutlinedTextField(
             value = followUp.text,
             onValueChange = { onUpdate(followUp.copy(text = it)) },
-            label = { Text(stringResource(R.string.field_question_text)) },
+            label = stringResource(R.string.field_question_text),
+            errorText = stringResource(R.string.error_question_text_required),
             modifier = Modifier.fillMaxWidth()
         )
 

@@ -427,3 +427,25 @@ type, trigger, options) is preserved.
 **Tests:** `CreateNudgeViewModelTest` (untouched stub pruned; edited follow-up survives; submit
 drops an untouched stub) and `EditNudgeViewModelTest` (untouched added stub not persisted on save;
 an existing follow-up is untouched by the prune).
+
+### ED-22: Nudge name and question text are required; blank blocks submission, error shows only after real input
+**Status:** Implemented — pure `FormValidation` helpers (`isRequiredTextProvided`,
+`isQuestionSectionValid`, `areFollowUpsValid`); `RequiredOutlinedTextField` (governs error display);
+the create wizard's Next/Save (`WizardNavBar.canContinue`) and the edit screen's Save are disabled
+per step/section.
+**Context:** Nothing required the nudge name or a question's text to be non-empty — a nudge could be
+created or saved with a blank main question (its notification would then fire with no question), and
+after the ED-21 prune a follow-up configured with a trigger but no text could still be saved. Three
+`error_*` strings existed in `strings.xml` but were never wired to anything.
+**Decision:** The nudge name and every question's text (main and follow-up) are required, validated
+**trimmed** (ED-16) so a whitespace-only entry counts as blank. While a visible required field is
+blank, the step's forward action — the wizard's *Next*/*Save Nudge*, or the edit screen's *Save* —
+is **disabled**; *Back* and *Cancel* stay available. The inline field error appears only once a
+field has held non-whitespace content and is then blank, so a never-filled field never shows an
+error pre-emptively (the disabled action is the only signal until the user types something real);
+a field that loads pre-filled — an existing question, or the default "Nudge #N" name — shows its
+error the moment it is blanked out. An untouched follow-up stub does not block (ED-21 discards it);
+only a follow-up the user edited and left text-less does.
+**Tests:** `FormValidationTest` (blank/whitespace name or question text invalid; both required for
+the question section; an untouched follow-up stub does not block while a text-less edited follow-up
+does).

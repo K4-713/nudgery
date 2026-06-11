@@ -41,6 +41,8 @@ import com.nudgery.android.ui.theme.GhostText
 import com.nudgery.android.viewmodel.EditNudgeViewModel
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
+import com.nudgery.android.viewmodel.areFollowUpsValid
+import com.nudgery.android.viewmodel.isQuestionSectionValid
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.usecase.UpdateNudgeResult
 import org.koin.androidx.compose.koinViewModel
@@ -133,6 +135,14 @@ fun EditNudgeScreen(
                 }
             }
 
+            // ED-22: Save is disabled while the visible section's required fields are blank; Cancel
+            // stays available. Schedule has no required text, so it never blocks.
+            val canSave = when (initialStep) {
+                0 -> isQuestionSectionValid(formState.name, formState.mainQuestionText)
+                1 -> areFollowUpsValid(formState.followUps.map { it.formState })
+                else -> true
+            }
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
@@ -144,7 +154,7 @@ fun EditNudgeScreen(
                 }
                 Button(
                     onClick = { viewModel.submit() },
-                    enabled = !formState.isSubmitting,
+                    enabled = canSave && !formState.isSubmitting,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(stringResource(R.string.action_save))
@@ -173,17 +183,19 @@ private fun EditQuestionStep(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.step_question_title), style = MaterialTheme.typography.titleMedium)
 
-        OutlinedTextField(
+        RequiredOutlinedTextField(
             value = name,
             onValueChange = onNameChange,
-            label = { Text(stringResource(R.string.field_nudge_name)) },
+            label = stringResource(R.string.field_nudge_name),
+            errorText = stringResource(R.string.error_nudge_name_required),
             modifier = Modifier.fillMaxWidth()
         )
 
-        OutlinedTextField(
+        RequiredOutlinedTextField(
             value = questionText,
             onValueChange = onQuestionTextChange,
-            label = { Text(stringResource(R.string.field_question_text)) },
+            label = stringResource(R.string.field_question_text),
+            errorText = stringResource(R.string.error_question_text_required),
             minLines = 2,
             modifier = Modifier.fillMaxWidth()
         )
