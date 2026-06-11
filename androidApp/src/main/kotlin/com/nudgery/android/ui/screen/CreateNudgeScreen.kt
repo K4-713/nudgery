@@ -116,8 +116,10 @@ fun CreateNudgeScreen(
                 totalSteps = totalSteps,
                 isSubmitting = formState.isSubmitting,
                 onCancel = onDismiss,
-                onBack = { currentStep = safeStep - 1 },
-                onNext = { currentStep = safeStep + 1 },
+                // Prune on navigation so an untouched follow-up stub added on the follow-up step
+                // doesn't linger when the user moves on without editing it (idempotent elsewhere).
+                onBack = { viewModel.pruneUntouchedFollowUps(); currentStep = safeStep - 1 },
+                onNext = { viewModel.pruneUntouchedFollowUps(); currentStep = safeStep + 1 },
                 onSave = { viewModel.submit() }
             )
         }

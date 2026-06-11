@@ -106,6 +106,20 @@ class EditNudgeViewModel(
         }
     }
 
+    /**
+     * ED-21: drop a newly-added follow-up the user never edited — a pristine stub with no backing
+     * question — so an abandoned "Add follow-up question" tap isn't saved as a blank follow-up.
+     * Requires `questionId == null`, so an existing, stored follow-up is never removed here (that
+     * stays the explicit trash control). Run before every submit path.
+     */
+    fun pruneUntouchedFollowUps() {
+        _formState.update { state ->
+            state.copy(followUps = state.followUps.filterNot {
+                it.questionId == null && it.formState == QuestionFormState()
+            })
+        }
+    }
+
     fun setMainQuestionText(text: String) {
         _formState.update { it.copy(mainQuestionText = text) }
     }
@@ -180,6 +194,7 @@ class EditNudgeViewModel(
     }
 
     private fun performSubmit(splitEdit: Boolean) {
+        pruneUntouchedFollowUps()
         val state = _formState.value
         _formState.update { it.copy(isSubmitting = true, result = null) }
         viewModelScope.launch {

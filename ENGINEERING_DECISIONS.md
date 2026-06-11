@@ -407,3 +407,23 @@ unit; follow-ups inherit the main answer's time, never their own wall-clock time
 response intact under the table's per-`scheduledAt` grouping.
 **Tests:** `AnswerFormViewModelTest` (an Answer-Now main + follow-up are recorded with identical
 `scheduledAt`; the existing notification-time and current-time-for-single-answer tests still hold).
+
+### ED-21: An untouched follow-up stub is discarded, never kept or saved
+**Status:** Implemented — `CreateNudgeViewModel.pruneUntouchedFollowUps` (called on wizard Back/Next
+and at the top of `submit`) and `EditNudgeViewModel.pruneUntouchedFollowUps` (called in
+`performSubmit`, covering the in-place and split paths).
+**Context:** "Add follow-up question" commits a blank default follow-up to the form immediately so
+it can be edited inline. In the create wizard the steps are a single index, and the follow-up step
+only shows its empty state when the list is empty — so after adding a stub and navigating away
+(Back/Next) and back, the user re-entered the *editor* with no obvious way to clear an abandoned
+stub, and on save the untouched stub was persisted as a blank follow-up question. The edit screen
+shares the same `followUpReplacements` save mapping, so it produced the same blank-save outcome.
+**Decision:** A follow-up still equal to a pristine default `QuestionFormState()` is discarded
+rather than kept or saved. In the edit flow the rule additionally requires `questionId == null`, so
+it only ever drops a newly-added stub and never an existing, stored follow-up. Pruning runs when
+leaving the follow-up step (create wizard) and before every submit (create and edit). Explicit
+removal of edited follow-ups remains the per-item trash control; anything the user changed (text,
+type, trigger, options) is preserved.
+**Tests:** `CreateNudgeViewModelTest` (untouched stub pruned; edited follow-up survives; submit
+drops an untouched stub) and `EditNudgeViewModelTest` (untouched added stub not persisted on save;
+an existing follow-up is untouched by the prune).

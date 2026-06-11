@@ -203,6 +203,40 @@ class EditNudgeViewModelTest {
     }
 
     @Test
+    fun TDD_untouchedAddedFollowUpNotSavedOnEdit() = runTest {
+        // ED-21: a follow-up added in the edit screen but never edited is discarded on save,
+        // matching the create wizard — not persisted as a blank follow-up.
+        val nudgeId = createNudge("Did you exercise?")
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.addFollowUp()
+        assertEquals("Precondition: a pristine stub was added", 1, viewModel.formState.value.followUps.size)
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertTrue("Save should succeed", viewModel.formState.value.result is UpdateNudgeResult.Success)
+        val followUps = repos.questionRepo.getByNudgeId(nudgeId).filter { !it.isMainQuestion }
+        assertTrue("An untouched added stub must not be persisted", followUps.isEmpty())
+    }
+
+    @Test
+    fun TDD_existingFollowUpSurvivesPruneOnEdit() = runTest {
+        // ED-21: the prune only drops new pristine stubs (questionId == null); an existing stored
+        // follow-up is preserved through a save even when otherwise unchanged.
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+        assertEquals("Precondition: one existing follow-up loaded", 1, viewModel.formState.value.followUps.size)
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val followUps = repos.questionRepo.getByNudgeId(nudgeId).filter { !it.isMainQuestion }
+        assertEquals("Existing follow-up must survive the prune", 1, followUps.size)
+    }
+
+    @Test
     fun TDD_addOptionAppearsInFormState() = runTest {
         // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
         val nudgeId = createNudge("Feeling?", withOptions = listOf("Good", "Bad"))

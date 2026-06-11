@@ -72,7 +72,22 @@ class CreateNudgeViewModel(
         }
     }
 
+    /**
+     * Drop any follow-up the user added but never edited — one still equal to a pristine default
+     * stub. Tapping "Add follow-up question" commits a blank stub to the form immediately, so a user
+     * who adds one and then changes nothing (then taps Back or Next) would otherwise be left with a
+     * phantom follow-up that re-opens the editor instead of the step's empty state, and that would
+     * be submitted as a blank follow-up. Called when leaving the follow-up step, and defensively
+     * before submit.
+     */
+    fun pruneUntouchedFollowUps() {
+        _formState.update { state ->
+            state.copy(followUpQuestions = state.followUpQuestions.filterNot { it == QuestionFormState() })
+        }
+    }
+
     fun submit() {
+        pruneUntouchedFollowUps()
         val state = _formState.value
         if (state.isSubmitting) return
         _formState.update { it.copy(isSubmitting = true, result = null) }

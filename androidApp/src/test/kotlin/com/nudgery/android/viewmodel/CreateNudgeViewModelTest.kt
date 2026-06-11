@@ -138,6 +138,47 @@ class CreateNudgeViewModelTest {
     }
 
     @Test
+    fun TDD_untouchedFollowUpStubIsPrunedOnNavigation() = runTest {
+        // ENGINEERING_DECISIONS.md ED-21: adding a follow-up but changing nothing should not leave a
+        // phantom follow-up. The wizard commits a pristine stub on "Add follow-up question";
+        // navigating away (or submitting) prunes it.
+        viewModel.setMainQuestion(QuestionFormState(text = "Did you exercise?", type = QuestionType.YES_NO))
+        viewModel.addFollowUpQuestion(QuestionFormState())
+        assertEquals(1, viewModel.formState.value.followUpQuestions.size)
+
+        viewModel.pruneUntouchedFollowUps()
+
+        assertTrue("An untouched follow-up stub should be discarded",
+            viewModel.formState.value.followUpQuestions.isEmpty())
+    }
+
+    @Test
+    fun TDD_editedFollowUpSurvivesPruning() = runTest {
+        // A follow-up the user actually edited (any change from the default) must be kept.
+        viewModel.addFollowUpQuestion(QuestionFormState(text = "Why?", type = QuestionType.TEXT))
+
+        viewModel.pruneUntouchedFollowUps()
+
+        assertEquals("An edited follow-up must not be pruned",
+            1, viewModel.formState.value.followUpQuestions.size)
+    }
+
+    @Test
+    fun TDD_submitDropsUntouchedFollowUpStub() = runTest {
+        // Defensive: an untouched stub must never be persisted as a blank follow-up question.
+        viewModel.setMainQuestion(QuestionFormState(text = "Did you exercise?", type = QuestionType.YES_NO))
+        viewModel.addFollowUpQuestion(QuestionFormState())
+        viewModel.setSchedule(dailyScheduleForm())
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        val nudgeId = (viewModel.formState.value.result as CreateNudgeResult.Success).nudgeId
+        val questions = repos.questionRepo.getByNudgeId(nudgeId)
+        assertEquals("Only the main question should be persisted", 1, questions.size)
+    }
+
+    @Test
     fun TDD_disabledNudgeDoesNotScheduleNotifications() = runTest {
         // README: "Enabled Nudges will send you notifications" — disabled on creation must not schedule
         viewModel.setEnabled(false)
