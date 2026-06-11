@@ -311,10 +311,19 @@ fun FollowUpStep(
     followUps: List<QuestionFormState>,
     onAdd: () -> Unit,
     onUpdate: (Int, QuestionFormState) -> Unit,
-    onRemove: (Int) -> Unit
+    onRemove: (Int) -> Unit,
+    // Shown only where follow-ups are first introduced (the create wizard), not in edit.
+    showIntro: Boolean = false
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.step_followups_title), style = MaterialTheme.typography.titleMedium)
+        if (showIntro) {
+            Text(
+                text = stringResource(R.string.step_followups_intro),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         followUps.forEachIndexed { index, followUp ->
             HorizontalDivider()

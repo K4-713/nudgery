@@ -508,7 +508,7 @@ Bottom of screen: Back and Next buttons. Final step has a Save button in place o
 
 ### Step 2 — Follow-ups
 
-Empty state with an "Add follow-up question" button. User can ignore this entirely and tap Next to proceed without follow-ups.
+Empty state with an "Add follow-up question" button. User can ignore this entirely and tap Next to proceed without follow-ups. A short intro line under the step title explains what a follow-up is and that it's optional — shown only here in the **create wizard** (where follow-ups are first introduced), not on the edit follow-ups screen.
 
 Each follow-up question defines:
 - A **trigger condition** — controls rendered by main question type:

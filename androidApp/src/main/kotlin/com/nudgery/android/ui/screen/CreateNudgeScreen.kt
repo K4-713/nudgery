@@ -102,7 +102,8 @@ fun CreateNudgeScreen(
                         followUps = formState.followUpQuestions,
                         onAdd = { viewModel.addFollowUpQuestion(QuestionFormState()) },
                         onUpdate = { index, q -> viewModel.updateFollowUpQuestion(index, q) },
-                        onRemove = { viewModel.removeFollowUpQuestion(it) }
+                        onRemove = { viewModel.removeFollowUpQuestion(it) },
+                        showIntro = true
                     )
                     WizardStep.SCHEDULE -> ScheduleStep(
                         schedule = formState.schedule,
