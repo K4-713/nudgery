@@ -119,4 +119,16 @@ Prior to tagging a new release, ensure that we are adhering to our own rules. Ma
     drawables under `res/` should carry an `SPDX-License-Identifier: CC-BY-SA-4.0` comment.
   * Bundled third-party assets (Atkinson Hyperlegible Next → OFL-1.1, Unicode emoji data →
     Unicode 3.0) remain credited in CREDITS.md and the in-app licenses screen.
+* Gather the release notes. Harvest the commits since the previous release with
+  `git log <previous-tag>..HEAD` (e.g. `git log v0.7.5..HEAD`) and curate them into a new
+  `CHANGELOG.md` entry for the version being tagged:
+  * Follow Keep a Changelog (Added / Changed / Fixed). Commit messages are the raw material, not the
+    final wording — rewrite for clarity, merge a feature's many commits into one bullet, and fold
+    internal-only churn (prep refactors, doc/test upkeep) together or omit it.
+  * Move anything under `[Unreleased]` into the new version's entry, then leave a fresh empty
+    `[Unreleased]` section at the top.
+  * Distill the **user-affecting** subset into the Play Store "What's new" text: a few short, friendly
+    bullets a user would actually notice, in the app owner's voice (this is user-facing prose — draft
+    it for the owner to finalize, don't impose wording). Internal/licensing/refactor items usually
+    don't belong in "What's new".
 * Remove completely finished sections from TODO.md. Leave only sections that still have unfinished pieces.

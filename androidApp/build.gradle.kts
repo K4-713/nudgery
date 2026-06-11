@@ -74,6 +74,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Upload native debug symbols (from transitive dependencies — we ship no own C/C++) with
+            // the bundle so Play Console can symbolicate native crash/ANR traces. The symbol file goes
+            // to Play only; it is stripped from the delivered APK, so there is no user-facing size cost.
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 
