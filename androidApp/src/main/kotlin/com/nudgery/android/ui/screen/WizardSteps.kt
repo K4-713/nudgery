@@ -130,7 +130,9 @@ fun QuestionStep(
     }
 }
 
-/** ED-17: the "One Yes Per Day" toggle shown for YES/NO questions in the create/edit wizard. */
+/** ED-17: the "One Yes Per Day" toggle shown for YES/NO questions in the create/edit wizard. The
+ *  explanation lives behind a reusable [InfoButton] rather than as always-on body text, keeping the
+ *  form uncluttered while leaving the detail one tap away. */
 @Composable
 fun OneYesPerDayToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
@@ -138,12 +140,14 @@ fun OneYesPerDayToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
             Text(stringResource(R.string.answer_one_yes_per_day), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = stringResource(R.string.answer_one_yes_per_day_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            InfoButton(
+                title = stringResource(R.string.answer_one_yes_per_day),
+                body = stringResource(R.string.answer_one_yes_per_day_desc)
             )
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)

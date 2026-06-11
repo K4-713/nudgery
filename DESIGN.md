@@ -288,6 +288,22 @@ Also verify the single `<path>` element has both:
 
 Material Symbols Rounded. Outlined by default, filled for active/selected states. This communicates selection without relying on color alone, supporting accessibility.
 
+## Contextual Help (Info Buttons)
+
+A reusable **info button** — a small outlined "ⓘ" icon — sits next to a control whose explanation
+would otherwise clutter the form. Tapping it opens a standard **`AlertDialog`** (title + explanatory
+text + a *Dismiss* button), keeping the help one tap away while the form itself stays clean (per the
+"data screens stay clean" philosophy).
+
+This deliberately uses the app's existing dialog pattern rather than a tooltip: predictable on every
+screen size, robust for long text, and accessible without the focus/dismiss fragility tooltips can
+introduce. The icon tints to `onSurfaceVariant` and carries a "More about &lt;topic&gt;" content
+description for screen readers; the dialog's open state survives configuration changes.
+
+**First use:** the **One Yes Per Day** toggle in the create/edit wizard (ED-17). Its explanation
+moved off the form (it was previously always-visible body text under the label) into the info
+dialog, so the row is now just the label, the info button, and the switch.
+
 ## Selection Chips
 
 All selectable chip groups throughout the app (schedule type, day of week, answer type, trigger operators, timeframe picker) use a custom `NudgeryToggleChip` component rather than M3 `FilterChip` defaults. M3's default selected state maps to `secondaryContainer`, which in this palette is the same tone as `surface`, making selected and unselected states nearly indistinguishable. The custom chip corrects this with explicit per-state colors.

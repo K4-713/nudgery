@@ -51,8 +51,8 @@
     <string name="answer_type_option_single">Choose one</string>
     <string name="answer_type_option_multi">Choose multiple</string>
     <string name="answer_type_text">Free text</string>
-    <string name="answer_one_yes_per_day">One Yes Per Day</string>
-    <string name="answer_one_yes_per_day_desc">Charts count each calendar day at most once: a single Yes if you answered Yes at all that day, otherwise No. Off, every Yes is counted. Raw data is unaffected.</string>
+    <string name="answer_one_yes_per_day">Limit to one \'Yes\' per day</string>
+    <string name="answer_one_yes_per_day_desc">When enabled, charts count each calendar day only once. A single Yes if you answered Yes at all that day, otherwise the day counts as a No.\nWhen disabled, every Yes is counted.\n\nRaw data is unaffected by this setting.</string>
     <string name="field_scale_min">Minimum</string>
     <string name="field_scale_max">Maximum</string>
     <string name="error_scale_range_invalid">Minimum must be less than maximum</string>
@@ -202,6 +202,8 @@
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
     <string name="action_dismiss">Dismiss</string>
+    <!-- Reusable info button: accessibility label, with the topic it explains (e.g. "More about One Yes Per Day"). -->
+    <string name="info_button_desc">More about %1$s</string>
 
     <!-- Exact alarm permission dialogs -->
     <string name="permission_exact_alarm_rationale_title">Schedule notifications on time?</string>
