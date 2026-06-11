@@ -188,6 +188,10 @@
     <string name="import_collision_replace">Replace</string>
     <string name="import_collision_copy">Import as Copy</string>
     <string name="import_collision_skip">Skip</string>
+    <string name="import_fix_title">This backup needs a quick fix</string>
+    <string name="import_fix_body">\"%1$s\" has a setup problem — for example, a missing answer option or follow-up trigger. You can import it now and fix it in the editor, or cancel.</string>
+    <string name="import_fix_action">Import &amp; Fix</string>
+    <string name="import_fix_cancel">Cancel</string>
 
     <!-- About screen -->
     <string name="about_title">About Nudgery</string>

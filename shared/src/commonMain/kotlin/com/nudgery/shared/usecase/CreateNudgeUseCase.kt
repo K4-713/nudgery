@@ -15,8 +15,6 @@ import com.nudgery.shared.scheduler.NotificationScheduler
 import com.nudgery.shared.util.generateUuid
 import kotlinx.datetime.Clock
 
-private const val MAX_OPTIONS_PER_QUESTION = 16
-
 class CreateNudgeUseCase(
     private val nudgeRepository: NudgeRepository,
     private val questionRepository: QuestionRepository,
@@ -31,13 +29,10 @@ class CreateNudgeUseCase(
             return CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps
         }
 
-        for (question in listOf(request.mainQuestion) + request.followUpQuestions) {
-            if (question.type.isOptionType && question.options.size > MAX_OPTIONS_PER_QUESTION) {
-                return CreateNudgeResult.Failure.TooManyOptions(question.text)
-            }
-            if (question.type == QuestionType.SCALE && question.scaleMin >= question.scaleMax) {
-                return CreateNudgeResult.Failure.InvalidScaleRange
-            }
+        // ED-26: validate options, scale ranges, and follow-up triggers at the save boundary so bad
+        // data can't reach storage even though the form already prevents it (defense in depth).
+        validateNudgeQuestions(request.mainQuestion, request.followUpQuestions)?.let {
+            return it.toCreateFailure()
         }
 
         val now = Clock.System.now()
@@ -122,4 +117,13 @@ class CreateNudgeUseCase(
         }
         return optionIds
     }
+}
+
+private fun QuestionValidationProblem.toCreateFailure(): CreateNudgeResult.Failure = when (this) {
+    is QuestionValidationProblem.TooManyOptions -> CreateNudgeResult.Failure.TooManyOptions(questionText)
+    is QuestionValidationProblem.NotEnoughOptions -> CreateNudgeResult.Failure.NotEnoughOptions(questionText)
+    is QuestionValidationProblem.BlankOption -> CreateNudgeResult.Failure.BlankOption(questionText)
+    // The existing InvalidScaleRange failure is a singleton without text; the offending text is in logs.
+    is QuestionValidationProblem.InvalidScaleRange -> CreateNudgeResult.Failure.InvalidScaleRange
+    is QuestionValidationProblem.MissingFollowUpTrigger -> CreateNudgeResult.Failure.MissingFollowUpTrigger(questionText)
 }

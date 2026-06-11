@@ -46,6 +46,10 @@ sealed class CreateNudgeResult {
         data object FreeformMainCannotHaveFollowUps : Failure()
         data class TooManyOptions(val questionText: String) : Failure()
         data object InvalidScaleRange : Failure()
+        // ED-26 backstops (also enforced by the form, ED-22..25):
+        data class NotEnoughOptions(val questionText: String) : Failure()
+        data class BlankOption(val questionText: String) : Failure()
+        data class MissingFollowUpTrigger(val questionText: String) : Failure()
     }
 }
 
@@ -75,6 +79,8 @@ data class UpdateNudgeRequest(
 sealed class UpdateNudgeResult {
     data class Success(val nudgeId: String) : UpdateNudgeResult()
     data object NudgeNotFound : UpdateNudgeResult()
+    /** ED-26: a follow-up replacement failed validation (config or trigger); nothing was changed. */
+    data class InvalidQuestion(val problem: QuestionValidationProblem) : UpdateNudgeResult()
 }
 
 // --- Storage normalization (ENGINEERING_DECISIONS.md ED-16) ---

@@ -6,6 +6,7 @@ import com.nudgery.android.util.TestViewModelRepositories
 import com.nudgery.shared.emoji.Gender
 import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.shared.model.Nudge
+import com.nudgery.shared.usecase.QuestionValidationProblem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -48,6 +49,19 @@ class SettingsViewModelTest {
           "nudge": { "name": "$name", "isEnabled": true },
           "schedule": { "type": "DAILY", "timeOfDay": "09:00", "activeDaysOfWeek": ["MONDAY"] },
           "questions": [{ "orderIndex": 0, "text": "Test question?", "type": "YES_NO" }],
+          "answers": []
+        }
+    """.trimIndent()
+
+    /** A backup whose follow-up (orderIndex 1) has no trigger condition — invalid per ED-26. */
+    private fun invalidBackupJson(name: String) = """
+        {
+          "nudge": { "name": "$name", "isEnabled": true },
+          "schedule": { "type": "DAILY", "timeOfDay": "09:00", "activeDaysOfWeek": ["MONDAY"] },
+          "questions": [
+            { "orderIndex": 0, "text": "Did it happen?", "type": "YES_NO" },
+            { "orderIndex": 1, "text": "Why?", "type": "TEXT" }
+          ],
           "answers": []
         }
     """.trimIndent()
@@ -96,6 +110,52 @@ class SettingsViewModelTest {
         assertTrue("Expected BulkSuccess but got $status", status is ImportStatus.BulkSuccess)
         assertEquals(1, (status as ImportStatus.BulkSuccess).imported)
         assertTrue(nudgeNames().contains("Brand New Nudge"))
+    }
+
+    @Test
+    fun TDD_import_singleInvalidBackup_promptsNeedsFix() = runTest {
+        // ED-26: a single backup with a setup problem (here a follow-up with no trigger) pauses for
+        // the user to cancel or fix, rather than importing silently.
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+
+        viewModel.importNudgeFromBackup(invalidBackupJson("Broken"))
+        advanceUntilIdle()
+
+        val status = viewModel.uiState.value.importStatus
+        assertTrue("Expected NeedsFix but got $status", status is ImportStatus.NeedsFix)
+        assertTrue((status as ImportStatus.NeedsFix).problem is QuestionValidationProblem.MissingFollowUpTrigger)
+        assertTrue("Nothing imported yet", nudgeNames().isEmpty())
+    }
+
+    @Test
+    fun TDD_fixInvalidImport_importsThenSignalsEditorNavigation() = runTest {
+        // Fix imports the nudge as-is (answers and all) and signals the editor to open at the step
+        // where the problem can be corrected — the follow-ups step for a missing trigger.
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        viewModel.importNudgeFromBackup(invalidBackupJson("Imported"))
+        advanceUntilIdle()
+
+        viewModel.fixInvalidImport()
+        advanceUntilIdle()
+
+        assertTrue("Nudge should be imported as-is", nudgeNames().contains("Imported"))
+        val nav = viewModel.fixNavigation.value
+        assertNotNull("A fix navigation should be emitted", nav)
+        assertEquals("A missing trigger routes to the follow-ups step", 1, nav!!.editStep)
+    }
+
+    @Test
+    fun TDD_cancelInvalidImport_importsNothing() = runTest {
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        viewModel.importNudgeFromBackup(invalidBackupJson("Nope"))
+        advanceUntilIdle()
+
+        viewModel.cancelInvalidImport()
+        advanceUntilIdle()
+
+        assertTrue("Nothing should be imported", nudgeNames().isEmpty())
+        assertTrue(viewModel.uiState.value.importStatus is ImportStatus.Idle)
+        assertNull(viewModel.fixNavigation.value)
     }
 
     @Test

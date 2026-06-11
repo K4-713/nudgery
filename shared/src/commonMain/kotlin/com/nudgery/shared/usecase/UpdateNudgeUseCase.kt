@@ -38,6 +38,18 @@ class UpdateNudgeUseCase(
         val existingSchedule = scheduleRepository.getByNudgeId(request.nudgeId)
         val now = Clock.System.now()
 
+        // ED-26: backstop the follow-up replacements (each a full request) — their own config and
+        // their trigger against the main question's type — before any change is written. The main
+        // question's options are edited as deltas (not a full request), and that path is guarded by
+        // the edit form (ED-23); there is no non-form route into update.
+        mainQuestion?.let { main ->
+            request.followUpReplacements?.forEach { replacement ->
+                (replacement.request.configProblem() ?: triggerProblem(main.type, replacement.request))?.let {
+                    return UpdateNudgeResult.InvalidQuestion(it)
+                }
+            }
+        }
+
         val hasTextChanges = (request.mainQuestionText != null && request.mainQuestionText != mainQuestion?.text)
             || request.optionUpdates.isNotEmpty()
             || request.removedOptionIds.isNotEmpty()

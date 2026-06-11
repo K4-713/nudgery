@@ -304,6 +304,43 @@ class QuestionSetupTest {
     }
 
     @Test
+    fun TDD_optionQuestion_tooFewOptionsIsRejected() = runTest {
+        // ED-26: an option-type question needs at least two options.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Pick one?", QuestionType.OPTION_SINGLE, options = listOf("only one")),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.NotEnoughOptions>(result)
+    }
+
+    @Test
+    fun TDD_optionQuestion_blankOptionIsRejected() = runTest {
+        // ED-26: a blank option (here, whitespace that normalizes to empty) is rejected.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Pick one?", QuestionType.OPTION_SINGLE, options = listOf("A", "   ")),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.BlankOption>(result)
+    }
+
+    @Test
+    fun TDD_followUp_withoutTriggerIsRejected() = runTest {
+        // ED-26: a follow-up with no trigger condition can't fire, so it's rejected at the boundary.
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Mood okay?", QuestionType.YES_NO),
+                followUpQuestions = listOf(QuestionRequest("Why not?", QuestionType.TEXT)),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure.MissingFollowUpTrigger>(result)
+    }
+
+    @Test
     fun TDD_scaleQuestion_defaultsAreZeroToTen() = runTest {
         // Existing SCALE questions migrated from the old NUMBER type default to 0–10
         val result = createNudge.execute(

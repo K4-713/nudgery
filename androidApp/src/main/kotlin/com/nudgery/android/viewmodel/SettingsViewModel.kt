@@ -20,6 +20,9 @@ import com.nudgery.shared.usecase.DeleteNudgeUseCase
 import com.nudgery.shared.usecase.ExportAnswersUseCase
 import com.nudgery.shared.usecase.ImportNudgeRequest
 import com.nudgery.shared.usecase.ImportNudgeUseCase
+import com.nudgery.shared.usecase.QuestionValidationProblem
+import com.nudgery.shared.usecase.mainConfigProblem
+import com.nudgery.shared.usecase.questionProblem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,15 +35,28 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "SettingsViewModel"
 
+// Editor steps a fix can land on (EditNudgeScreen.initialStep): the question step holds the main
+// question's options/scale; the follow-ups step holds follow-up options and triggers.
+private const val EDIT_STEP_QUESTION = 0
+private const val EDIT_STEP_FOLLOWUPS = 1
+
 sealed class ImportStatus {
     data object Idle : ImportStatus()
     data object InProgress : ImportStatus()
     /** Import paused on a name collision, awaiting the user's choice. */
     data class Collision(val incomingName: String, val hasMore: Boolean) : ImportStatus()
+    /**
+     * A single backup has a validation problem (ED-26). The user can cancel, or fix it — which
+     * imports the nudge as-is (preserving its answers) and opens it in the editor to correct.
+     */
+    data class NeedsFix(val incomingName: String, val problem: QuestionValidationProblem) : ImportStatus()
     /** Terminal summary for any import (single or batch). */
     data class BulkSuccess(val imported: Int, val skipped: Int, val failed: Int) : ImportStatus()
     data class Failure(val message: String) : ImportStatus()
 }
+
+/** One-shot signal: open the just-imported nudge in the editor at [editStep] to fix a problem. */
+data class FixNavigation(val nudgeId: String, val editStep: Int)
 
 /** How the user chose to resolve an import name collision. */
 enum class CollisionResolution { REPLACE, COPY, SKIP }
@@ -76,6 +92,13 @@ class SettingsViewModel(
 
     // In-flight import; null when no import is running. Mutated only on the main dispatcher.
     private var importSession: ImportSession? = null
+
+    // A single invalid backup awaiting the user's Cancel/Fix decision (ImportStatus.NeedsFix).
+    private var pendingFixRequest: ImportNudgeRequest? = null
+
+    // One-shot navigation to the editor after a "Fix"; the screen consumes it and clears it.
+    private val _fixNavigation = MutableStateFlow<FixNavigation?>(null)
+    val fixNavigation: StateFlow<FixNavigation?> = _fixNavigation.asStateFlow()
 
     // The emoji settings are grouped so the outer combine stays within its typed arity.
     private val emojiSettings: Flow<Triple<SkinTone, Gender, Float>> = combine(
@@ -153,9 +176,59 @@ class SettingsViewModel(
                 }
                 return@launch
             }
+            // ED-26 fix flow: a single invalid backup pauses for Cancel/Fix. In a batch, invalid
+            // nudges are skipped and counted — app-exported batches are always valid, so this only
+            // affects hand-corrupted multi-backups, where stopping the whole batch would be worse.
+            if (jsonContents.size == 1) {
+                val request = requests.first()
+                request.questionProblem()?.let { problem ->
+                    pendingFixRequest = request
+                    _importStatus.update { ImportStatus.NeedsFix(request.name, problem) }
+                    return@launch
+                }
+            } else {
+                val invalid = requests.filter { it.questionProblem() != null }
+                invalid.forEach { Log.w(TAG, "Skipping invalid backup '${it.name}': ${it.questionProblem()}") }
+                requests.removeAll(invalid.toSet())
+                failed += invalid.size
+                if (requests.isEmpty()) {
+                    _importStatus.update { ImportStatus.BulkSuccess(imported = 0, skipped = 0, failed = failed) }
+                    return@launch
+                }
+            }
+
             importSession = ImportSession(remaining = requests, takenNames = takenNames, failed = failed)
             processNextImport()
         }
+    }
+
+    /** Cancel a pending invalid import (ImportStatus.NeedsFix) — nothing is imported. */
+    fun cancelInvalidImport() {
+        pendingFixRequest = null
+        _importStatus.update { ImportStatus.Idle }
+    }
+
+    /**
+     * Import the pending invalid backup as-is — preserving its answers — and signal the screen to
+     * open it in the editor at the step where the problem can be fixed. Abandoning the edit keeps the
+     * imported nudge (and its answers), which is often the whole reason for importing it.
+     */
+    fun fixInvalidImport() {
+        val request = pendingFixRequest ?: return
+        pendingFixRequest = null
+        _importStatus.update { ImportStatus.InProgress }
+        viewModelScope.launch {
+            val nudgeId = importNudge.execute(request)
+            val step = if (request.mainConfigProblem() != null) EDIT_STEP_QUESTION else EDIT_STEP_FOLLOWUPS
+            _importStatus.update { ImportStatus.Idle }
+            _fixNavigation.update { FixNavigation(nudgeId, step) }
+            Log.i(TAG, "Imported '${request.name}' for in-editor fix at step $step")
+        }
+    }
+
+    /** Consumes the one-shot fix-navigation signal after the screen has acted on it. */
+    fun clearFixNavigation() {
+        _fixNavigation.update { null }
     }
 
     /** Resolves the currently-shown collision, optionally applying the same choice to the rest. */

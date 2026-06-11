@@ -125,7 +125,10 @@ class CreateNudgeViewModelTest {
     fun TDD_submitWithFollowUpPersistsFollowUpQuestion() = runTest {
         // README: "you will be able to add follow-up questions for specific answers"
         viewModel.setMainQuestion(QuestionFormState(text = "Did you exercise?", type = QuestionType.YES_NO))
-        viewModel.addFollowUpQuestion(QuestionFormState(text = "What did you do?", type = QuestionType.TEXT))
+        // The follow-up needs a trigger (ED-26): fire it when the main answer is "YES".
+        viewModel.addFollowUpQuestion(
+            QuestionFormState(text = "What did you do?", type = QuestionType.TEXT, triggerAnswerValue = "YES")
+        )
         viewModel.setSchedule(dailyScheduleForm())
 
         viewModel.submit()

@@ -510,3 +510,48 @@ fields default to a valid 0–10 and reject non-numeric input, so the error can 
 active misconfiguration, never from a pristine state.
 **Tests:** `FormValidationTest` (`isScaleRangeValid` ascending/equal/inverted; a scale question
 section blocks on an inverted range and passes on the default range).
+
+### ED-26: Use-case backstop — questions are validated at the save boundary, not only in the form
+**Status:** Implemented (create + update follow-ups) — shared `QuestionValidation`
+(`validateNudgeQuestions`, `configProblem`, `triggerProblem`, `QuestionValidationProblem`). Wired
+into `CreateNudgeUseCase` (extends `CreateNudgeResult.Failure` with `NotEnoughOptions`, `BlankOption`,
+`MissingFollowUpTrigger`) and `UpdateNudgeUseCase` (new `UpdateNudgeResult.InvalidQuestion`).
+**Context:** ED-22..25 enforce question validity in the create/edit *forms*, but the forms are not
+the only path to storage — `ImportNudgeUseCase` has its own persistence path and could write a
+malformed nudge (option question with <2 or blank options, a triggerless follow-up) from a corrupted
+or hand-edited backup. The validity rules belonged at the save boundary too.
+**Decision:** A single `commonMain` validator is the data-side counterpart of the UI's
+`FormValidation`: option-type questions need 2..`MAX_OPTIONS_PER_QUESTION` non-blank options; scale
+needs `min < max`; a follow-up needs a valid trigger for the main type. `CreateNudgeUseCase`
+validates the full request and refuses with a typed failure (these failures are logged, not surfaced
+— the form already prevents them, so this is defense in depth). `UpdateNudgeUseCase` validates its
+follow-up *replacements* (full requests); the main question's options are edited as deltas and that
+path is covered by the edit form, with no non-form route into update. The import path adopts the
+same validator as its own decision (see import-fix flow).
+**Tests:** `QuestionValidationTest` (each problem in isolation; `validateNudgeQuestions` returns the
+first); `QuestionSetupTest` (create returns `NotEnoughOptions` / `BlankOption` /
+`MissingFollowUpTrigger`; the pre-existing `TooManyOptions` / `InvalidScaleRange` tests still hold).
+
+### ED-27: An invalid backup import fails loudly with a fix-in-editor path, not a silent reject
+**Status:** Implemented — shared advisory validation (`ImportNudgeRequest.questionProblem` /
+`mainConfigProblem`); `SettingsViewModel` `ImportStatus.NeedsFix`, `fixInvalidImport` /
+`cancelInvalidImport`, and a one-shot `FixNavigation`; `SettingsScreen` dialog navigating to
+`EditNudgeScreen`.
+**Context:** ED-26 backstops create/update by *rejecting* malformed questions. Import can't simply
+reject: a backup also carries the nudge's recorded answers, and the editor loads a nudge by id from
+the DB, so to land the user in an editor "with everything filled in" **and** keep the answers the
+nudge must be persisted. Throwing the import away would discard exactly the data the user wants back.
+**Decision:** A single backup with a question-validation problem (ED-26 rules) is neither imported
+silently nor hard-rejected. The user gets a loud dialog: **Cancel** (nothing imported) or **Fix**.
+Fix imports the nudge **as-is, preserving its answers**, and opens it in the editor at the step where
+the problem can be corrected — the question step for the main question's options/scale, the
+follow-ups step for follow-up options/triggers — where the form validation (ED-22..25) gates the
+save. **Abandoning the editor keeps** the imported nudge and its answers (protecting the imported
+data; the form re-flags the problem on every later edit). Batch imports (e.g. an all-nudges ZIP,
+which the app only ever exports valid) **skip and count** invalid nudges rather than pausing per
+item.
+**Limitation:** the main question's scale range is not editable on the question step, so a backup
+with a corrupted main scale routes there but can't be corrected in place (delete + re-import is the
+fallback). This requires hand-editing a backup and is rare.
+**Tests:** `SettingsViewModelTest` (a single invalid backup prompts `NeedsFix`; Fix imports it and
+emits navigation to the follow-ups step; Cancel imports nothing).

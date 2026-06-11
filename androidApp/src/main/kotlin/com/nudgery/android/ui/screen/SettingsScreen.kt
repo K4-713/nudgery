@@ -97,6 +97,7 @@ import java.util.zip.ZipOutputStream
 fun SettingsScreen(
     onBack: () -> Unit,
     onAboutClick: () -> Unit,
+    onNavigateToEdit: (nudgeId: String, step: Int) -> Unit = { _, _ -> },
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -169,6 +170,14 @@ fun SettingsScreen(
         viewModel.clearBackupAll()
     }
 
+    // After a "Fix", the just-imported nudge opens in the editor at the problem step.
+    val fixNavigation by viewModel.fixNavigation.collectAsState()
+    LaunchedEffect(fixNavigation) {
+        val nav = fixNavigation ?: return@LaunchedEffect
+        viewModel.clearFixNavigation()
+        onNavigateToEdit(nav.nudgeId, nav.editStep)
+    }
+
     if (importStatus is ImportStatus.Collision) {
         ImportCollisionDialog(
             incomingName = importStatus.incomingName,
@@ -176,6 +185,24 @@ fun SettingsScreen(
             onResolve = { resolution, repeatForAll -> viewModel.resolveCollision(resolution, repeatForAll) },
             // Dismissing (back / tap-outside) skips just this one and continues the batch.
             onDismiss = { viewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false) }
+        )
+    }
+
+    if (importStatus is ImportStatus.NeedsFix) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelInvalidImport() },
+            title = { Text(stringResource(R.string.import_fix_title)) },
+            text = { Text(stringResource(R.string.import_fix_body, importStatus.incomingName)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.fixInvalidImport() }) {
+                    Text(stringResource(R.string.import_fix_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelInvalidImport() }) {
+                    Text(stringResource(R.string.import_fix_cancel))
+                }
+            }
         )
     }
 

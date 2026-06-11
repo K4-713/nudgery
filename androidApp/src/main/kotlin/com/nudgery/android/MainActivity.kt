@@ -180,7 +180,11 @@ class MainActivity : ComponentActivity() {
                     composable(NudgeryScreen.Settings.route) {
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
-                            onAboutClick = { navController.navigate(NudgeryScreen.About.route) }
+                            onAboutClick = { navController.navigate(NudgeryScreen.About.route) },
+                            // After importing a backup that needs fixing, open it in the editor.
+                            onNavigateToEdit = { nudgeId, step ->
+                                navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId, initialStep = step))
+                            }
                         )
                     }
 

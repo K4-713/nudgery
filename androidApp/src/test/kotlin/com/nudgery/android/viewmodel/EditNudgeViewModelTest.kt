@@ -237,6 +237,31 @@ class EditNudgeViewModelTest {
     }
 
     @Test
+    fun TDD_followUpWithoutTriggerIsRejectedOnSave() = runTest {
+        // ED-26 backstop: editing in a follow-up with text but no trigger is refused at the use-case
+        // (the form prevents this; this verifies the safety net), and nothing is persisted.
+        val nudgeId = createNudge("Did you exercise?")
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.addFollowUp()
+        viewModel.updateFollowUp(0, viewModel.formState.value.followUps[0].formState.copy(
+            text = "What did you do?",
+            type = com.nudgery.shared.model.QuestionType.TEXT
+            // no triggerAnswerValue — invalid for a Yes/No main
+        ))
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertTrue(
+            "Save must be refused with InvalidQuestion",
+            viewModel.formState.value.result is UpdateNudgeResult.InvalidQuestion
+        )
+        val followUps = repos.questionRepo.getByNudgeId(nudgeId).filter { !it.isMainQuestion }
+        assertTrue("Nothing should be persisted", followUps.isEmpty())
+    }
+
+    @Test
     fun TDD_addOptionAppearsInFormState() = runTest {
         // DESIGN.md "Create / Edit Nudge Wizard": "Option builder (add/remove/reorder up to 16 options)"
         val nudgeId = createNudge("Feeling?", withOptions = listOf("Good", "Bad"))
