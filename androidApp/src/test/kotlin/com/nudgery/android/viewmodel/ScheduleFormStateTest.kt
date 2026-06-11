@@ -83,6 +83,17 @@ class ScheduleFormStateTest {
     }
 
     @Test
+    fun TDD_scheduleDescription_noDays_labelsClearly() {
+        // Zero active days is allowed (the nudge never fires); the description must say so explicitly
+        // rather than render an empty label after a trailing comma.
+        val daily = noonDaily.copy(activeDaysOfWeek = emptySet()).toDescription()
+        val hourly = noonDaily.copy(type = ScheduleType.HOURLY, activeDaysOfWeek = emptySet()).toDescription()
+        assert("no days enabled" in daily) { "Expected 'no days enabled' in: $daily" }
+        assert(!daily.trimEnd().endsWith(",")) { "Description should not end with a dangling comma: $daily" }
+        assert("no days enabled" in hourly) { "Expected 'no days enabled' in: $hourly" }
+    }
+
+    @Test
     fun TDD_scheduleDescription_customDays_usesShortAbbreviations() {
         // docs: custom day sets use M, Tu, W, Th, F, Sa, Su abbreviations
         val days = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)

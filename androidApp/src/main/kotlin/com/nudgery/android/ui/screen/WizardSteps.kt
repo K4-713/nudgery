@@ -45,7 +45,10 @@ import com.nudgery.android.R
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import com.nudgery.android.ui.theme.GhostText
+import com.nudgery.android.viewmodel.MIN_OPTIONS_PER_QUESTION
 import com.nudgery.android.viewmodel.QuestionFormState
+import com.nudgery.android.viewmodel.isFollowUpTriggerValid
+import com.nudgery.android.viewmodel.isScaleRangeValid
 import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.android.viewmodel.toAbbreviation
 import com.nudgery.shared.model.QuestionType
@@ -163,25 +166,40 @@ private fun ScaleRangeEditor(
     onScaleMinChange: (Int) -> Unit,
     onScaleMaxChange: (Int) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        OutlinedTextField(
-            value = scaleMin.toString(),
-            onValueChange = { raw ->
-                raw.toIntOrNull()?.let { onScaleMinChange(it) }
-            },
-            label = { Text(stringResource(R.string.field_scale_min)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f)
-        )
-        OutlinedTextField(
-            value = scaleMax.toString(),
-            onValueChange = { raw ->
-                raw.toIntOrNull()?.let { onScaleMaxChange(it) }
-            },
-            label = { Text(stringResource(R.string.field_scale_max)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f)
-        )
+    // ED-25: a scale needs min < max. The fields default to a valid 0–10 and can't be left empty
+    // (non-numeric input is ignored), so this error only ever appears when the user actively inverts
+    // or collapses the range — no "don't scold an empty field" timing is needed here.
+    val rangeInvalid = !isScaleRangeValid(scaleMin, scaleMax)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            OutlinedTextField(
+                value = scaleMin.toString(),
+                onValueChange = { raw ->
+                    raw.toIntOrNull()?.let { onScaleMinChange(it) }
+                },
+                label = { Text(stringResource(R.string.field_scale_min)) },
+                isError = rangeInvalid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = scaleMax.toString(),
+                onValueChange = { raw ->
+                    raw.toIntOrNull()?.let { onScaleMaxChange(it) }
+                },
+                label = { Text(stringResource(R.string.field_scale_max)) },
+                isError = rangeInvalid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
+            )
+        }
+        if (rangeInvalid) {
+            Text(
+                text = stringResource(R.string.error_scale_range_invalid),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }
 
@@ -232,11 +250,12 @@ private fun OptionListEditor(
         )
         options.forEachIndexed { index, option ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
+                RequiredOutlinedTextField(
                     value = option,
                     onValueChange = { updated ->
                         onOptionsChange(options.toMutableList().also { it[index] = updated })
                     },
+                    errorText = stringResource(R.string.error_option_text_required),
                     placeholder = { GhostText(stringResource(R.string.option_hint)) },
                     modifier = Modifier.weight(1f)
                 )
@@ -266,6 +285,15 @@ private fun OptionListEditor(
                     Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.option_remove))
                 }
             }
+        }
+        // ED-23: nudge them toward a second option once they've started, but don't scold the empty
+        // state before they've added anything (per ED-22's restraint).
+        if (options.isNotEmpty() && options.size < MIN_OPTIONS_PER_QUESTION) {
+            Text(
+                text = stringResource(R.string.error_min_two_options),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
         if (options.size < 16) {
             TextButton(onClick = { onOptionsChange(options + "") }) {
@@ -340,6 +368,20 @@ private fun FollowUpEditor(
                 QuestionType.OPTION_SINGLE -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = false)
                 QuestionType.OPTION_MULTI -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = true)
                 else -> {}
+            }
+            // ED-24: once the user has started defining this follow-up, prompt them to pick a trigger
+            // if they haven't — but stay quiet for an untouched stub (ED-21 discards it) and when the
+            // option main has no options yet (the OptionTrigger already says to add options first).
+            val triggerSelectable = !(mainQuestion.type.isOptionType && mainQuestion.options.isEmpty())
+            if (triggerSelectable &&
+                followUp != QuestionFormState() &&
+                !isFollowUpTriggerValid(mainQuestion.type, followUp)
+            ) {
+                Text(
+                    text = stringResource(R.string.error_followup_trigger_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
 

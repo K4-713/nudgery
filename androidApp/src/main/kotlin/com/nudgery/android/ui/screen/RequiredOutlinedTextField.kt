@@ -29,9 +29,9 @@ import androidx.compose.ui.Modifier
 fun RequiredOutlinedTextField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
     errorText: String,
     modifier: Modifier = Modifier,
+    label: String? = null,
     placeholder: @Composable (() -> Unit)? = null,
     minLines: Int = 1
 ) {
@@ -42,7 +42,7 @@ fun RequiredOutlinedTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = label?.let { { Text(it) } },
         placeholder = placeholder,
         isError = isError,
         supportingText = if (isError) {

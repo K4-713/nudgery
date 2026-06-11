@@ -46,7 +46,7 @@
         <item>e.g. Did you dream last night?</item>
         <item>e.g. When was the last time you ate a vegetable?</item>
         <item>e.g. Was it an extra coffee day?</item>
-        <item>e.g. Hey, how's it going over there?</item>
+        <item>e.g. Hey, how\'s it going over there?</item>
     </string-array>
     <string name="field_answer_type">Answer type</string>
     <string name="answer_type_yes_no">Yes / No</string>
@@ -79,6 +79,7 @@
     <string name="followup_add">Add follow-up question</string>
     <string name="followup_remove">Remove follow-up</string>
     <string name="followup_trigger_label">Show this follow-up when the answer is…</string>
+    <string name="error_followup_trigger_required">Choose when this follow-up should appear</string>
     <string name="trigger_op_eq">Equal to</string>
     <string name="trigger_op_gt">Greater than</string>
     <string name="trigger_op_gte">At least</string>

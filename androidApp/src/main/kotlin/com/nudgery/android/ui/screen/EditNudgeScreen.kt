@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import com.nudgery.android.ui.theme.GhostText
 import com.nudgery.android.viewmodel.EditNudgeViewModel
+import com.nudgery.android.viewmodel.MIN_OPTIONS_PER_QUESTION
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.android.viewmodel.areFollowUpsValid
@@ -109,6 +110,7 @@ fun EditNudgeScreen(
                         onOptionRemove = { index -> viewModel.removeOption(index) },
                         onOptionAdd = { viewModel.addOption() },
                         canAddOption = formState.options.size < 16,
+                        isOptionType = formState.mainQuestionType.isOptionType,
                         isYesNo = formState.mainQuestionType == QuestionType.YES_NO,
                         collapsePerDay = formState.mainQuestionCollapsePerDay,
                         onCollapsePerDayChange = { viewModel.setMainQuestionCollapsePerDay(it) }
@@ -138,8 +140,17 @@ fun EditNudgeScreen(
             // ED-22: Save is disabled while the visible section's required fields are blank; Cancel
             // stays available. Schedule has no required text, so it never blocks.
             val canSave = when (initialStep) {
-                0 -> isQuestionSectionValid(formState.name, formState.mainQuestionText)
-                1 -> areFollowUpsValid(formState.followUps.map { it.formState })
+                0 -> isQuestionSectionValid(
+                    nudgeName = formState.name,
+                    question = QuestionFormState(
+                        text = formState.mainQuestionText,
+                        type = formState.mainQuestionType,
+                        options = formState.options.map { it.text },
+                        scaleMin = formState.mainQuestionScaleMin,
+                        scaleMax = formState.mainQuestionScaleMax
+                    )
+                )
+                1 -> areFollowUpsValid(formState.mainQuestionType, formState.followUps.map { it.formState })
                 else -> true
             }
 
@@ -176,6 +187,7 @@ private fun EditQuestionStep(
     onOptionRemove: (Int) -> Unit,
     onOptionAdd: () -> Unit,
     canAddOption: Boolean,
+    isOptionType: Boolean,
     isYesNo: Boolean,
     collapsePerDay: Boolean,
     onCollapsePerDayChange: (Boolean) -> Unit
@@ -200,7 +212,10 @@ private fun EditQuestionStep(
             modifier = Modifier.fillMaxWidth()
         )
 
-        if (options.isNotEmpty()) {
+        // Gated on the question being an option type, not on having options: the base type can't be
+        // edited (README), so an option question's editor must stay visible even if the user deletes
+        // every option, otherwise they'd be trapped with Save disabled and no way to add them back.
+        if (isOptionType) {
             Text(
                 text = stringResource(R.string.field_options),
                 style = MaterialTheme.typography.labelMedium,
@@ -208,9 +223,10 @@ private fun EditQuestionStep(
             )
             options.forEachIndexed { index, option ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
+                    RequiredOutlinedTextField(
                         value = option,
                         onValueChange = { onOptionChange(index, it) },
+                        errorText = stringResource(R.string.error_option_text_required),
                         placeholder = { GhostText(stringResource(R.string.option_hint)) },
                         modifier = Modifier.weight(1f)
                     )
@@ -231,11 +247,19 @@ private fun EditQuestionStep(
                     }
                 }
             }
-        }
-
-        if (options.isNotEmpty() && canAddOption) {
-            TextButton(onClick = onOptionAdd) {
-                Text(stringResource(R.string.option_add))
+            // ED-23: same restraint as the create wizard — nudge toward a second option once they've
+            // started, but don't scold an empty list.
+            if (options.isNotEmpty() && options.size < MIN_OPTIONS_PER_QUESTION) {
+                Text(
+                    text = stringResource(R.string.error_min_two_options),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            if (canAddOption) {
+                TextButton(onClick = onOptionAdd) {
+                    Text(stringResource(R.string.option_add))
+                }
             }
         }
 

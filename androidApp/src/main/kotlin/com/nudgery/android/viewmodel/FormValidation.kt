@@ -2,10 +2,19 @@
 
 package com.nudgery.android.viewmodel
 
+import com.nudgery.shared.model.QuestionType
+
 /**
- * Pure validation rules for the create/edit nudge forms (ED-22). Kept free of Compose/Android so
- * they can be unit-tested directly and shared by both the create wizard and the edit screens.
+ * Pure validation rules for the create/edit nudge forms (ED-22, ED-23). Kept free of
+ * Compose/Android so they can be unit-tested directly and shared by both the create wizard and the
+ * edit screens.
  */
+
+/**
+ * An option-type question needs at least this many options to be meaningful — you cannot "choose
+ * one" (or choose several) from fewer than two. (ED-23.)
+ */
+const val MIN_OPTIONS_PER_QUESTION = 2
 
 /**
  * A required free-text field is satisfied only by non-whitespace content. Checked **trimmed**, in
@@ -14,17 +23,60 @@ package com.nudgery.android.viewmodel
 fun isRequiredTextProvided(text: String): Boolean = text.trim().isNotEmpty()
 
 /**
- * The "Question" inputs (create wizard step 1 and the edit question screen) are valid only when both
- * the nudge name and the main question text carry real content.
+ * Options are valid when there are at least [MIN_OPTIONS_PER_QUESTION] of them and none is blank
+ * (trimmed). (ED-23.)
  */
-fun isQuestionSectionValid(nudgeName: String, questionText: String): Boolean =
-    isRequiredTextProvided(nudgeName) && isRequiredTextProvided(questionText)
+fun areOptionsValid(options: List<String>): Boolean =
+    options.size >= MIN_OPTIONS_PER_QUESTION && options.all { isRequiredTextProvided(it) }
+
+/**
+ * A single question's own configuration is valid when it has real text and, for option types, a
+ * valid set of options, and, for a scale, an ascending range (ED-25).
+ */
+fun isQuestionConfigValid(question: QuestionFormState): Boolean =
+    isRequiredTextProvided(question.text) &&
+        (!question.type.isOptionType || areOptionsValid(question.options)) &&
+        (question.type != QuestionType.SCALE || isScaleRangeValid(question.scaleMin, question.scaleMax))
+
+/** A scale's range is valid only when its minimum is strictly below its maximum (ED-25). Mirrors
+ *  the use-case's existing `InvalidScaleRange` backstop. */
+fun isScaleRangeValid(scaleMin: Int, scaleMax: Int): Boolean = scaleMin < scaleMax
+
+/**
+ * The "Question" inputs (create wizard step 1 and the edit question screen) are valid only when the
+ * nudge name carries real content and the main question's own configuration is valid.
+ */
+fun isQuestionSectionValid(nudgeName: String, question: QuestionFormState): Boolean =
+    isRequiredTextProvided(nudgeName) && isQuestionConfigValid(question)
+
+/**
+ * A follow-up's trigger condition — "show this follow-up when the answer is …" — must be specified;
+ * it cannot be defaulted, since it's the whole meaning of the follow-up (ED-24). What's required
+ * depends on the **main** question's type, which is what the user is answering:
+ * - Yes/No or option main: a specific answer must be chosen (`triggerAnswerValue` set).
+ * - Number/Scale main: both a comparison operator and a numeric threshold are required.
+ * - Free-form main (text/emoji) can't have follow-ups at all, so there's nothing to require.
+ */
+fun isFollowUpTriggerValid(mainType: QuestionType, followUp: QuestionFormState): Boolean =
+    when (mainType) {
+        QuestionType.YES_NO,
+        QuestionType.OPTION_SINGLE,
+        QuestionType.OPTION_MULTI -> followUp.triggerAnswerValue != null
+        QuestionType.NUMBER,
+        QuestionType.SCALE ->
+            followUp.triggerOperator != null && followUp.triggerAnswerValue?.toDoubleOrNull() != null
+        QuestionType.TEXT, QuestionType.EMOJI -> true
+    }
 
 /**
  * Follow-ups are valid when every one is either an untouched stub — equal to a pristine
- * [QuestionFormState], which ED-21 discards on navigation/submit so it must not block — or carries
- * real question text. A follow-up the user configured (e.g. set a trigger) but left without text
- * blocks submission.
+ * [QuestionFormState], which ED-21 discards on navigation/submit so it must not block — or has a
+ * valid configuration (real text, valid options if it is an option type) **and** a specified
+ * trigger condition for the given [mainType] (ED-24). A follow-up the user configured but left
+ * without text, without enough options, or without a trigger blocks submission.
  */
-fun areFollowUpsValid(followUps: List<QuestionFormState>): Boolean =
-    followUps.all { it == QuestionFormState() || isRequiredTextProvided(it.text) }
+fun areFollowUpsValid(mainType: QuestionType, followUps: List<QuestionFormState>): Boolean =
+    followUps.all {
+        it == QuestionFormState() ||
+            (isQuestionConfigValid(it) && isFollowUpTriggerValid(mainType, it))
+    }

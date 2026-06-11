@@ -49,16 +49,21 @@ data class ScheduleFormState(
             buildHourlyWindow(timeOfDay.hour, hourlyEndHour).toSet() else null
     )
 
+    /**
+     * Label for the day-of-week set used by DAILY and HOURLY descriptions. Deselecting every day is
+     * an allowed (if unusual) state — the nudge simply never fires — so it gets an explicit label
+     * rather than rendering as an empty string after a trailing comma.
+     */
+    private fun activeDaysLabel(): String = when {
+        activeDaysOfWeek.isEmpty() -> "no days enabled"
+        activeDaysOfWeek == ALL_DAYS -> "Every Day"
+        activeDaysOfWeek == WEEKDAYS -> "Weekdays"
+        activeDaysOfWeek == WEEKENDS -> "Weekends"
+        else -> activeDaysOfWeek.sortedBy { it.ordinal }.joinToString(", ") { it.toAbbreviation() }
+    }
+
     fun toDescription(): String = when (type) {
-        ScheduleType.DAILY -> {
-            val daysLabel = when (activeDaysOfWeek) {
-                ALL_DAYS -> "Every Day"
-                WEEKDAYS -> "Weekdays"
-                WEEKENDS -> "Weekends"
-                else -> activeDaysOfWeek.sortedBy { it.ordinal }.joinToString(", ") { it.toAbbreviation() }
-            }
-            "Daily at ${timeOfDay.toDisplayString()}, $daysLabel"
-        }
+        ScheduleType.DAILY -> "Daily at ${timeOfDay.toDisplayString()}, ${activeDaysLabel()}"
         ScheduleType.WEEKLY -> {
             val day = activeDaysOfWeek.firstOrNull()
                 ?.name?.lowercase()?.replaceFirstChar { c -> c.uppercase() } ?: ""
@@ -66,14 +71,8 @@ data class ScheduleFormState(
         }
         ScheduleType.MONTHLY -> "Monthly on day $dayOfMonth at ${timeOfDay.toDisplayString()}"
         ScheduleType.HOURLY -> {
-            val daysLabel = when (activeDaysOfWeek) {
-                ALL_DAYS -> "Every Day"
-                WEEKDAYS -> "Weekdays"
-                WEEKENDS -> "Weekends"
-                else -> activeDaysOfWeek.sortedBy { it.ordinal }.joinToString(", ") { it.toAbbreviation() }
-            }
             val lastTime = LocalTime(hourlyEndHour, timeOfDay.minute)
-            "Hourly, ${timeOfDay.toDisplayString()}–${lastTime.toDisplayString()}, $daysLabel"
+            "Hourly, ${timeOfDay.toDisplayString()}–${lastTime.toDisplayString()}, ${activeDaysLabel()}"
         }
     }
 

@@ -449,3 +449,64 @@ only a follow-up the user edited and left text-less does.
 **Tests:** `FormValidationTest` (blank/whitespace name or question text invalid; both required for
 the question section; an untouched follow-up stub does not block while a text-less edited follow-up
 does).
+
+### ED-23: Option-type questions require at least two non-blank options
+**Status:** Implemented (form-level) — `FormValidation` (`MIN_OPTIONS_PER_QUESTION`,
+`areOptionsValid`, `isQuestionConfigValid`); per-option blank error via `RequiredOutlinedTextField`
+plus a min-count message in the option editors; the create wizard's *Next* and the edit screen's
+*Save* are disabled while invalid.
+**Context:** A fresh option question starts with zero options ("Add option" appends a blank row), and
+nothing enforced a minimum count or non-blank text — the create use-case only rejected >16 options
+and silently inserted blank ones. The `error_min_two_options` and `error_option_text_required`
+strings existed in `strings.xml` but were never wired.
+**Decision:** An option-type question (main or follow-up) is valid only with at least
+`MIN_OPTIONS_PER_QUESTION` (2) options, each non-blank when trimmed (ED-16). While invalid the
+step's forward action is disabled (ED-22). A per-option blank error follows ED-22's timing (shown
+only after that field has held content and then been cleared); the "at least two options" message
+appears once the user has added at least one option but fewer than two, and is not shown for an
+untouched empty list. The edit option editor is gated on the question *being* an option type rather
+than on *having* options, so deleting every option cannot strand the user with Save disabled and no
+way to re-add (the base question type itself is not editable).
+**Tests:** `FormValidationTest` (`areOptionsValid`; option-type question section and follow-up
+validity).
+**Note:** Backstop deferred — like ED-22, this is enforced at the form only. The create use-case
+still inserts whatever options it is given (it neither rejects <2 nor filters blanks), so a non-form
+path (e.g. backup import) could still produce a bad option set. Tracked as follow-up.
+
+### ED-24: A follow-up question requires a specified trigger condition
+**Status:** Implemented (form-level) — `FormValidation.isFollowUpTriggerValid`; `areFollowUpsValid`
+now also requires a valid trigger; inline `error_followup_trigger_required` message in the follow-up
+editor; the create wizard's *Next* and the edit screen's *Save* are disabled while invalid.
+**Context:** A follow-up means "show this follow-up *when the answer is X*," and X cannot be
+defaulted — it is the whole meaning of the follow-up. The trigger fields (`triggerAnswerValue`,
+`triggerOperator`) defaulted to null and were never validated, so a follow-up with text but no
+trigger could be saved in a state that can't fire correctly. The required trigger depends on the
+**main** question's type, since that is what the user answers.
+**Decision:** A follow-up's trigger condition is required. By main type: **Yes/No** and **option**
+mains need a specific answer chosen (`triggerAnswerValue` set); **Number/Scale** mains need both a
+comparison operator and a numeric threshold (`triggerAnswerValue` parses as a number). While an
+*engaged* follow-up (anything other than a pristine ED-21 stub) lacks a valid trigger, the step's
+forward action is disabled (ED-22) and an inline "choose when this follow-up should appear" message
+is shown — suppressed for an untouched stub and when an option main has no options yet (the trigger
+control already prompts to add options first). Free-form mains (text/emoji) can't have follow-ups,
+so nothing is required.
+**Tests:** `FormValidationTest` (a text-only follow-up with no trigger blocks; a chosen Yes/No
+answer satisfies; a Number main requires both operator and a numeric value).
+**Note:** Backstop deferred (as ED-22/23) — the use-case does not yet reject a triggerless follow-up.
+
+### ED-25: A scale question's range must ascend (min < max), surfaced inline
+**Status:** Implemented — `FormValidation.isScaleRangeValid` (folded into `isQuestionConfigValid`);
+inline `error_scale_range_invalid` and an error state on both fields in `ScaleRangeEditor`; the
+create wizard's *Next* / edit *Save* disabled while invalid. The use-case's pre-existing
+`InvalidScaleRange` failure remains as the backstop.
+**Context:** The `CreateNudgeUseCase` already rejected `scaleMin >= scaleMax` (`InvalidScaleRange`),
+but the form surfaced nothing — no inline error, no disabled action — so a user who inverted the
+range advanced and hit a silent save failure. The `error_scale_range_invalid` string existed but was
+unwired.
+**Decision:** A scale (main or follow-up) is valid only when `scaleMin < scaleMax`. While invalid,
+the step's forward action is disabled (ED-22) and both range fields show an error state with an
+inline message. No "appear only after input" timing is needed here (unlike ED-22 text fields): the
+fields default to a valid 0–10 and reject non-numeric input, so the error can only arise from an
+active misconfiguration, never from a pristine state.
+**Tests:** `FormValidationTest` (`isScaleRangeValid` ascending/equal/inverted; a scale question
+section blocks on an inverted range and passes on the default range).

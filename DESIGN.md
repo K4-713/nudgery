@@ -473,6 +473,9 @@ When a schedule is abbreviated for display (e.g. in list rows and the detail scr
 | Mon–Fri | Weekdays |
 | Sat–Sun | Weekends |
 | Any other combination | Individual days joined with `, ` |
+| No days selected | no days enabled |
+
+Deselecting every day is an allowed state — the nudge simply never fires — so it gets an explicit "no days enabled" label rather than rendering as an empty string after a trailing comma.
 
 Individual day abbreviations: **M, Tu, W, Th, F, Sa, Su**.
 

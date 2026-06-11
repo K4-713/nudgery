@@ -117,8 +117,8 @@ fun CreateNudgeScreen(
             // blank; Back/Cancel stay available. An untouched follow-up stub doesn't block (ED-21
             // discards it on navigation).
             val canContinue = when (steps[safeStep]) {
-                WizardStep.QUESTION -> isQuestionSectionValid(formState.nudgeName, formState.mainQuestion.text)
-                WizardStep.FOLLOW_UPS -> areFollowUpsValid(formState.followUpQuestions)
+                WizardStep.QUESTION -> isQuestionSectionValid(formState.nudgeName, formState.mainQuestion)
+                WizardStep.FOLLOW_UPS -> areFollowUpsValid(formState.mainQuestion.type, formState.followUpQuestions)
                 WizardStep.SCHEDULE -> true
             }
 
