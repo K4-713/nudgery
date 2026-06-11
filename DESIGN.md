@@ -653,9 +653,36 @@ The granted/not-granted state is re-evaluated on every `ON_RESUME` lifecycle eve
 
 ### Main List (no nudges yet)
 
-A single oversized "create your first nudge" button, centered on screen. No illustration, no supporting text. The FAB/+ button is promoted to center stage when the list is empty and returns to its normal corner position once nudges exist.
+A welcoming, vertically-centered column — this is one of the deliberate places the whimsy budget is
+spent (see Mood and Tone). Top to bottom:
 
-Illustration may be added in a future pass if more whimsy is needed.
+1. **Hand-drawn welcome illustration.** A CC BY-SA 4.0 artwork (authored in `art/`, rendered to a
+   vector drawable under `res/drawable/`). Width-capped so it stays a friendly focal point rather
+   than ballooning on large screens; it scales down on narrow ones. Decorative — the headline
+   carries the meaning, so it is not separately announced to screen readers.
+2. **Headline** — a warm, short welcome in Nudgery's voice (`headlineSmall`, centered). *[Owner to
+   author final copy.]*
+3. **Supporting line** — one friendly sentence about what a nudge is / inviting the first one
+   (`bodyMedium`, `onSurfaceVariant`, centered). *[Owner to author final copy.]*
+4. **Pill call-to-action** — an extended FAB ("＋ Create your first nudge"). The extended (pill)
+   form lays icon and label out horizontally and centers them by construction; it replaced an
+   earlier oversized *circular* FAB whose multi-word label could not center inside a circle.
+
+The whole group is width-capped and centered so it reads as a single cluster of content on phones,
+tablets, and in landscape alike (see the responsiveness notes below). The corner "＋" FAB is
+suppressed while the list is empty — this centered CTA is the only way in — and returns to its
+normal bottom-corner position once at least one nudge exists.
+
+**Responsiveness.** The illustration should be a vector (density-independent), roughly square /
+non-portrait, and built to read on *both* the dark and light backgrounds — lean on the yellow
+accent (identical in both modes) rather than a single hardcoded violet. The empty-state column is
+**vertically scrollable**: it stays centered while it fits, and yields scroll range only when it
+would otherwise clip — which is what protects it in landscape (short height) and at large system
+font scales. Illustration and column widths are capped so the group does not stretch across large
+screens. The illustration keeps one fixed orientation in every locale — it is **not** mirrored for
+right-to-left layouts. The brand hand doubles as a lowercase "n" (for Nudgery), so flipping it would
+break the letterform; the centered composition means no RTL handling is needed anyway. Keep the
+gesture reading downward/neutral toward the button rather than hard left/right.
 
 ### Other Empty States
 

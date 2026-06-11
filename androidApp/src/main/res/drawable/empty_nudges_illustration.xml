@@ -1,0 +1,25 @@
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<!-- PLACEHOLDER artwork only. This is a throwaway shape so the empty-state layout compiles and
+     can be previewed. It must be replaced by the hand-drawn welcome illustration (authored in
+     Inkscape under art/, licensed CC-BY-SA-4.0). When the real art lands, swap the contents for
+     the exported vector, change the SPDX line above to CC-BY-SA-4.0, and add the source SVG to
+     art/LICENSE's scope note. Intrinsic size below is the design size; the layout scales it
+     responsively, so keep the real art's aspect ratio in mind (see DESIGN.md). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="160"
+    android:viewportHeight="160">
+    <!-- Dashed-look frame (placeholder): a soft rounded square in the violet primary. -->
+    <path
+        android:pathData="M40,16 H120 A24,24 0 0 1 144,40 V120 A24,24 0 0 1 120,144 H40 A24,24 0 0 1 16,120 V40 A24,24 0 0 1 40,16 Z"
+        android:strokeColor="#C8A8F0"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <!-- A yellow-accent plus, echoing the create action (placeholder whimsy). -->
+    <path
+        android:pathData="M80,52 V108 M52,80 H108"
+        android:strokeColor="#FFCC55"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+</vector>

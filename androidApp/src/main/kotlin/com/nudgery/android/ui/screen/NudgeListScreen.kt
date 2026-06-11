@@ -14,15 +14,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Settings
@@ -31,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,7 +62,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -83,6 +91,12 @@ private val LIFTED_NUDGE_ELEVATION = 12.dp
 private const val LIFTED_NUDGE_TILT_DEGREES = 11f
 private const val LIFTED_NUDGE_TILT_PIVOT_X = 0.4f
 private const val LIFTED_NUDGE_TILT_PIVOT_Y = 0.5f
+
+/** FAB-promotion rule (DESIGN.md → Empty States → Main List): the corner "＋" floating action
+ *  button appears only once at least one nudge exists. While the list is empty (or still loading,
+ *  i.e. `null`), the corner FAB is suppressed so the centered empty-state call-to-action is the
+ *  single, unambiguous way to create the first nudge. */
+internal fun showsCornerCreateFab(nudges: List<*>?): Boolean = nudges?.isNotEmpty() == true
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +142,7 @@ fun NudgeListScreen(
             )
         },
         floatingActionButton = {
-            if (nudges?.isNotEmpty() == true) {
+            if (showsCornerCreateFab(nudges)) {
                 FloatingActionButton(onClick = onCreateClick) {
                     Icon(
                         imageVector = Icons.Filled.Add,
@@ -264,27 +278,66 @@ fun NudgeListScreen(
     }
 }
 
+/** Caps how wide the welcome illustration is allowed to grow on large screens, so it stays a
+ *  friendly focal point rather than ballooning to fill a tablet. The column itself is also width-
+ *  capped (see [EMPTY_STATE_MAX_WIDTH]) so the whole group reads as a centered card of content on
+ *  any display. */
+private val EMPTY_STATE_ILLUSTRATION_MAX_SIZE = 200.dp
+private val EMPTY_STATE_MAX_WIDTH = 360.dp
+
+/** The whimsical first-run state (DESIGN.md → Empty States → Main List): a centered column of
+ *  illustration, welcoming headline, a supporting line, and a pill call-to-action. The pill
+ *  ([ExtendedFloatingActionButton]) lays its icon and label out horizontally and centers them by
+ *  construction, which is why it replaced the old circular FAB that crammed a four-word label into
+ *  a circle. The corner FAB is suppressed while the list is empty (see the [Scaffold]) so this is
+ *  the single, unmissable way in. */
 @Composable
 private fun EmptyNudgeList(onCreateClick: () -> Unit, modifier: Modifier = Modifier) {
+    // Centered when it fits, scrollable when it doesn't: in landscape or at large system font
+    // scales the illustration + headline + supporting line + pill can be taller than the viewport,
+    // so the whole group must stay reachable rather than clipping. A Box with verticalScroll
+    // centers the content while there's room and yields scroll range only once it overflows.
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
     ) {
-        FloatingActionButton(
-            onClick = onCreateClick,
-            modifier = Modifier.size(120.dp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.widthIn(max = EMPTY_STATE_MAX_WIDTH)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp)
-                )
-                Text(
-                    text = stringResource(R.string.nudge_list_create_first),
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+            Image(
+                painter = painterResource(R.drawable.empty_nudges_illustration),
+                contentDescription = stringResource(R.string.nudge_list_empty_illustration_desc),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = EMPTY_STATE_ILLUSTRATION_MAX_SIZE)
+                    // The illustration is itself a way in: tapping it starts the first nudge, the
+                    // same as the pill below. Exposed to accessibility as a button whose action is
+                    // described by [onClickLabel].
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.nudge_list_create_first),
+                        onClick = onCreateClick
+                    )
+            )
+            Text(
+                text = stringResource(R.string.nudge_list_empty_headline),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(R.string.nudge_list_empty_supporting),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            ExtendedFloatingActionButton(onClick = onCreateClick) {
+                Text(stringResource(R.string.nudge_list_create_first))
             }
         }
     }

@@ -12,6 +12,12 @@
     <string name="nudge_list_title">Nudgery</string>
     <string name="nudge_list_create_first">Create Your First Nudge</string>
     <string name="nudge_list_add">Add nudge</string>
+    <!-- Empty state (no nudges yet). Headline + supporting line are placeholders for the app
+         owner to author in Nudgery's voice; replace the bracketed text. -->
+    <string name="nudge_list_empty_headline">Let&#39;s look at your world.</string>
+    <string name="nudge_list_empty_supporting">Ask yourself one small question; get the big picture over time.</string>
+    <!-- Decorative illustration: described for screen readers; the headline carries the meaning. -->
+    <string name="nudge_list_empty_illustration_desc">Nudgery welcome illustration</string>
     <string name="nudge_next_fire">Next: %1$s</string>
     <string name="nudge_no_schedule">No schedule</string>
     <string name="nudge_missed_indicator">Missed answer</string>
