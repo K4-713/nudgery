@@ -14,8 +14,8 @@
     <string name="nudge_list_add">Add nudge</string>
     <!-- Empty state (no nudges yet). Headline + supporting line are placeholders for the app
          owner to author in Nudgery's voice; replace the bracketed text. -->
-    <string name="nudge_list_empty_headline">Let\'s look at your world.</string>
-    <string name="nudge_list_empty_supporting">Ask yourself one small question; get the big picture over time.</string>
+    <string name="nudge_list_empty_headline">Let\'s look at your world</string>
+    <string name="nudge_list_empty_supporting">Ask yourself one small question.\nGet the big picture over time.</string>
     <!-- Decorative illustration: described for screen readers; the headline carries the meaning. -->
     <string name="nudge_list_empty_illustration_desc">Nudgery welcome illustration</string>
     <string name="nudge_next_fire">Next: %1$s</string>
