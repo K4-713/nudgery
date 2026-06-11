@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import com.nudgery.android.ui.theme.GhostText
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.android.viewmodel.toAbbreviation
@@ -79,8 +80,11 @@ fun QuestionStep(
             label = { Text(stringResource(R.string.field_question_text)) },
             placeholder = {
                 val hints = stringArrayResource(R.array.question_text_hints)
-                val hint = remember(hints) { hints.random() }
-                Text(hint)
+                // Pick one example once and keep it. Not keyed on `hints`: stringArrayResource
+                // hands back a fresh array instance every recomposition, so keying on it would
+                // re-roll the example on each keystroke elsewhere in the form.
+                val hint = remember { hints.random() }
+                GhostText(hint)
             },
             minLines = 2,
             modifier = Modifier.fillMaxWidth()
@@ -227,7 +231,7 @@ private fun OptionListEditor(
                     onValueChange = { updated ->
                         onOptionsChange(options.toMutableList().also { it[index] = updated })
                     },
-                    placeholder = { Text(stringResource(R.string.option_hint)) },
+                    placeholder = { GhostText(stringResource(R.string.option_hint)) },
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(

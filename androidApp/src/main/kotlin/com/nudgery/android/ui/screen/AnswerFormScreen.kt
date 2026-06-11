@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
+import com.nudgery.android.ui.theme.GhostText
 import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.android.ui.theme.emojiScaledStyle
 import com.nudgery.android.viewmodel.AnswerFormViewModel
@@ -391,7 +392,7 @@ private fun TextInput(currentAnswer: String, onAnswerChange: (String) -> Unit) {
     OutlinedTextField(
         value = currentAnswer,
         onValueChange = onAnswerChange,
-        placeholder = { Text(stringResource(R.string.answer_text_hint)) },
+        placeholder = { GhostText(stringResource(R.string.answer_text_hint)) },
         minLines = 3,
         modifier = Modifier.fillMaxWidth()
     )

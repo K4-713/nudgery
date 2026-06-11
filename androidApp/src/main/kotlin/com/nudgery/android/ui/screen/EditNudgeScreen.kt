@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
+import com.nudgery.android.ui.theme.GhostText
 import com.nudgery.android.viewmodel.EditNudgeViewModel
 import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
@@ -198,7 +199,7 @@ private fun EditQuestionStep(
                     OutlinedTextField(
                         value = option,
                         onValueChange = { onOptionChange(index, it) },
-                        placeholder = { Text(stringResource(R.string.option_hint)) },
+                        placeholder = { GhostText(stringResource(R.string.option_hint)) },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(

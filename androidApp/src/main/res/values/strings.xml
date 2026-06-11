@@ -14,7 +14,7 @@
     <string name="nudge_list_add">Add nudge</string>
     <!-- Empty state (no nudges yet). Headline + supporting line are placeholders for the app
          owner to author in Nudgery's voice; replace the bracketed text. -->
-    <string name="nudge_list_empty_headline">Let&#39;s look at your world.</string>
+    <string name="nudge_list_empty_headline">Let\'s look at your world.</string>
     <string name="nudge_list_empty_supporting">Ask yourself one small question; get the big picture over time.</string>
     <!-- Decorative illustration: described for screen readers; the headline carries the meaning. -->
     <string name="nudge_list_empty_illustration_desc">Nudgery welcome illustration</string>
@@ -37,7 +37,7 @@
     <!-- Wizard step 1 — Question -->
     <string name="step_question_title">The Question</string>
     <string name="field_nudge_name">Nudge name</string>
-    <string name="field_question_text">Question</string>
+    <string name="field_question_text">Question Text</string>
     <string-array name="question_text_hints">
         <item>e.g. Did you see any cool birds today?</item>
         <item>e.g. Did anything surprise you today?</item>

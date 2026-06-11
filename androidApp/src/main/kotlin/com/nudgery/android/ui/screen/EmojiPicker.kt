@@ -60,6 +60,7 @@ import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.Schedule
 import com.nudgery.android.R
+import com.nudgery.android.ui.theme.GhostText
 import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.android.ui.theme.raisedSurfaceColor
 import com.nudgery.shared.emoji.EmojiCatalogEntry
@@ -167,7 +168,7 @@ fun EmojiPicker(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            placeholder = { Text(stringResource(R.string.emoji_search_hint)) },
+            placeholder = { GhostText(stringResource(R.string.emoji_search_hint)) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             // A circle-✕ to wipe the search text (the keyboard, and so search mode, can be dismissed
             // by a pick — leaving the query filled — so the user needs an explicit way to clear it).
