@@ -39,10 +39,14 @@
     <string name="field_nudge_name">Nudge name</string>
     <string name="field_question_text">Question Text</string>
     <string-array name="question_text_hints">
-        <item>e.g. Did you see any cool birds today?</item>
-        <item>e.g. Did anything surprise you today?</item>
-        <item>e.g. How mad are you right now?</item>
-        <item>e.g. Which of the neighborhood cats did you see today?</item>
+        <item>e.g. Did you learn anything cool today?</item>
+        <item>e.g. What are you thinking about right now?</item>
+        <item>e.g. How frustrating was work today?</item>
+        <item>e.g. Did you see that cat this morning?</item>
+        <item>e.g. Did you dream last night?</item>
+        <item>e.g. When was the last time you ate a vegetable?</item>
+        <item>e.g. Was it an extra coffee day?</item>
+        <item>e.g. Hey, how's it going over there?</item>
     </string-array>
     <string name="field_answer_type">Answer type</string>
     <string name="answer_type_yes_no">Yes / No</string>
