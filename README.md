@@ -19,24 +19,25 @@ You can set up a Nudge to have your phone ask you anything, on any schedule. Her
 Additionally, you can set up follow-up questions for specific answers. For instance, if your boss scored 7 or greater on being annoying that day, you could then ask yourself for some brief follow-up notes.
 
 ## Setting Up a Nudge
-Click on the round "+" button on the main screen to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question. 
+Click on the large "+" graphic or on "Create Your First Nudge" to set up a new Nudge. This will bring up a screen that lets you write the main question, and choose what kind of answer you want with the main question. 
 
 At this stage, you may also rename the Nudge, or leave it alone to go with the default name.
 
 ### Question Types
 The basic nudge question types are: 
 * Yes or No : Simple two-option answer. 
-  * With Yes or No questions, you will also get a "One Yes Per Day" option. Selecting this will squish whole calendar days of data down to a single "Yes" (if you answered "Yes" at all that day) or "No" in the graphs, instead of counting all the yesses in a day. Raw data will be saved the same way in either case.
+  * With Yes or No questions, you will also get a "Limit to one 'Yes' per day" option. Selecting this will squish whole calendar days of data down to a single "Yes" (if you answered "Yes" at all that day) or "No" in the graphs, instead of counting all the yesses in a day. Raw data will be saved the same way in either case.
 * Scale : Whole numbers, 0-10 is the default, and you answer with a slider.
 * Any Number : Type any number when asked
 * Option (Single) : Pick one option from a list
   * With this question type, you will be prompted here to add up to 16 selectable answers.
 * Option (Multi) : Pick multiple options from a list
   * Just like the single option type, you will be prompted here to add up to 16 selectable answers.
+  * You'll need to add at least two, so you have something to choose between.
 * Freeform Text
 * Emoji-only answers
 
-Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text or emoji) you will be able to add follow-up questions for specific answers or ranges of answers. Follow-up questions can be any of the main question types. 
+Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text or emoji) you will be able to add follow-up questions for specific answers or ranges of answers to the main question. Follow-up questions can be any of the main question types.
 
 After the questions are finished, you can edit the schedule for your Nudge to ask the question you just set up. Scheduling options include:
 * Daily: Pick a time of day (defaults to noon in your phone's timezone, which will move with your and your phone in case of travel), and the active days of the week
@@ -93,6 +94,7 @@ To restore, tap the Settings icon on the main screen, tap "Import from Backup", 
 
 If an incoming Nudge's name matches one you already have, Nudgery asks what to do for that Nudge: **Replace** the existing one, **Import as a copy** (kept under a numbered name so both survive), or **Skip** it. When you're restoring many Nudges at once, you're asked for each collision in turn, and a "Repeat for all" checkbox lets you apply the same choice to the rest of the batch.
 
+If there's a problem importing your Nudge, and we can fix it, you'll be asked if you want to cancel, or to import and fix it. If you decide to fix it, we'll import as much of the Nudge as we can (including all your past answers) and open it in the editor at the spot that needs correcting.
 
 ## Settings
 
@@ -110,7 +112,7 @@ To get to the Settings page, tap the Settings (gear) icon from the main page. He
 Your nudge will fire on schedule, local to whatever your phone's time is. If you want to be asked a question at 9am, you will be asked at 9am wherever you are.
 
 ## What happens if you restore a nudge that already exists?
-If there's a name collision, you will be given the opportunity to either rename the incoming nudge, or replace the existing one.
+If there's a name collision, you will be given the opportunity to either replace the existing Nudge, import the Nudge as a copy, or skip it.
 
 ## What happens if I set up an hourly nudge to start at 9pm and end at 7am Monday through Friday, and it's Saturday at 1am?
 We're thinking of the hourly nudge run as a single unit of multiple questions that only start on days you have enabled, at the first nudge time you have selected. So, you'll get your Saturday 1am question, because it's part of a run that was scheduled to start on the previous day. Monday 1am is the other side of that: That run would have had to start Sunday, which in this case is not enabled, so: No early Monday morning nudges. 

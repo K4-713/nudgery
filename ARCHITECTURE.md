@@ -59,9 +59,10 @@ nudgery/
 │   │   ├── nav/             # NudgeryScreen sealed class, route/arg constants
 │   │   ├── screen/          # NudgeListScreen, CreateNudgeScreen, EditNudgeScreen,
 │   │   │                    #   NudgeDetailScreen, AnswerFormScreen, SettingsScreen,
-│   │   │                    #   AboutScreen, WizardSteps (shared wizard composables)
+│   │   │                    #   AboutScreen, WizardSteps (shared wizard composables),
+│   │   │                    #   reusable inputs: RequiredOutlinedTextField, InfoButton
 │   │   └── theme/           # NudgeryTheme, Color, Type (Atkinson Hyperlegible Next),
-│   │                        #   nudgeryShapes, nudgeryTypography(bold)
+│   │                        #   nudgeryShapes, nudgeryTypography(bold), GhostText
 │   └── MainActivity.kt
 └── iosApp/                  # (future) SwiftUI app target
 ```
@@ -92,7 +93,7 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 | `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId`); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
 | `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); reads persisted default timeframe from `AppSettings` on init and saves it when changed; live-observes answers via `combine`; owns the shared dashboard window (`selectedTimeframe` + `windowOffsetDays` → `[windowStart, windowEnd]`, label, `canShiftOlder/Newer`); loads one `QuestionVisualizationSource` per charted question from the database only when answers change (`reloadVisualizationSources`), then re-aggregates those cached sources in memory for the current window on every timeframe/scrub change (`renderVisualizations`) so scrubbing touches no storage; `selectTimeframe()`, `shiftWindowDays()`, `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
-| `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for the import-from-backup feature |
+| `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for import-from-backup. Validates a backup before importing and exposes a one-shot `fixNavigation` flow that routes an invalid single import into the editor to fix (ED-27) |
 
 ### ViewModel conventions
 
@@ -102,6 +103,13 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 - `ScheduleFormState` and `QuestionFormState` are shared between `CreateNudgeViewModel` and `EditNudgeViewModel`.
 - The edit flow for question/option text uses a `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` pattern, corresponding to the split-or-in-place choice described in the README.
 - ViewModels are registered in `appModule` via Koin `viewModel { }` blocks. Detail and edit ViewModels receive their `nudgeId` via Koin `parametersOf(nudgeId)` at the call site.
+
+### Input validation
+
+Create/edit input is validated in two layers (ED-22…26):
+
+- **Form-side — `androidApp/viewmodel/FormValidation.kt`:** pure functions (`isRequiredTextProvided`, `isQuestionSectionValid`, `areOptionsValid`, `isScaleRangeValid`, `isFollowUpTriggerValid`, `areFollowUpsValid`) that the create wizard and edit screens use to **disable the forward action** (Next / Save) while required input is missing and to drive inline field errors. Pure and unit-tested without Compose. Reusable input composables support this: `RequiredOutlinedTextField` (surfaces a blank-field error only after the field has held real content), `InfoButton` (a contextual-help dialog), and `GhostText` (de-emphasized placeholder text).
+- **Save-boundary backstop — `shared/commonMain/usecase/QuestionValidation.kt`:** `validateNudgeQuestions` / `configProblem` / `triggerProblem` return a `QuestionValidationProblem` enforcing the same rules at the data boundary. `CreateNudgeUseCase` maps it to `CreateNudgeResult.Failure` (`NotEnoughOptions`, `BlankOption`, `MissingFollowUpTrigger`, plus the existing `TooManyOptions` / `InvalidScaleRange`); `UpdateNudgeUseCase` returns `UpdateNudgeResult.InvalidQuestion` for an invalid follow-up replacement; the import flow consumes it advisorily (ED-27). This guards non-form paths — chiefly backup import — that the form can't reach.
 
 ### Time Display Formatting
 
@@ -328,6 +336,8 @@ Exported files are named via helpers in `androidApp/backup/`: `nudgeBackupFileNa
 **Back up / restore all (Android):** `SettingsViewModel.exportAllNudges()` serializes every nudge to its own JSON (per-nudge filenames de-duplicated with `disambiguateName`); `SettingsScreen` zips the entries into a single archive named `allNudgesBackupFileBase(date)` → `nudges-<YYYYMMDD>.zip` and shares it. The import picker inspects the chosen file's bytes — a ZIP (`PK` magic) feeds every contained JSON into the importer, while a plain JSON is imported as a batch of one.
 
 Import runs as a resumable `ImportSession`: each entry whose name is free imports immediately; each name collision pauses with `ImportStatus.Collision` for the user to choose `CollisionResolution.REPLACE` / `COPY` / `SKIP` (COPY uses `disambiguateName`). A "repeat for all" choice sets `applyToAll` so the rest of the batch resolves without further prompts. The session ends with `ImportStatus.BulkSuccess(imported, skipped, failed)`; a single unreadable file instead yields `ImportStatus.Failure` with the parse error.
+
+Backups are also validated against the shared question rules before import (`ImportNudgeRequest.questionProblem`, ED-26). A **single** invalid backup is neither imported silently nor hard-rejected: `ImportStatus.NeedsFix(name, problem)` pauses for the user to **Cancel** or **Import & Fix** (ED-27). Fix calls `fixInvalidImport()`, which imports the nudge as-is — preserving its answers — and emits a one-shot `FixNavigation(nudgeId, editStep)` that `SettingsScreen` consumes to open `EditNudgeScreen` at the step where the problem is fixable (question step for the main question's options/scale, follow-ups step for a follow-up's options/trigger), where the form validation gates the save. In a **batch** import, invalid backups are skipped and counted (folded into `failed`) rather than pausing per item, since app-exported archives are always valid.
 
 ---
 

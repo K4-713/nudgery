@@ -9,6 +9,33 @@ entry below, then distilled into the Play Store "What's new" text. See AGENTS.md
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-11
+
+### Added
+- **A welcoming first-run screen.** With no Nudges yet, the main screen now greets you with a
+  welcome, a line about what Nudgery does, and a clear "Create Your First Nudge" button (and a
+  tappable illustration) instead of a bare corner "+".
+- **Setup validation.** Nudgery now keeps you from saving a Nudge that can't work: the name and
+  question text are required, option questions need at least two non-blank options, a scale's
+  minimum must be below its maximum, and each follow-up needs a trigger. Next/Save stays disabled
+  with inline hints until things are valid; Back and Cancel stay available.
+- **Contextual help (ⓘ).** A reusable info button tucks explanations a tap away instead of
+  cluttering the form — first used on the Yes/No per-day option.
+- **A short intro to follow-up questions** on the create wizard's follow-up step.
+- **"Import & Fix" for imperfect backups.** If an imported backup has a setup problem (e.g. a
+  hand-edited file missing options or a follow-up trigger), Nudgery offers to import it and open it
+  in the editor to fix — keeping all its answer history — instead of failing.
+
+### Changed
+- Relabeled the Yes/No "One Yes Per Day" option to **"Limit to one 'Yes' per day"**, with its
+  explanation now behind the info button.
+- Refreshed the example question prompts shown while setting up a Nudge.
+
+### Fixed
+- Placeholder ("ghost") text in entry fields is now visibly lighter than text you've typed.
+- The randomly-chosen example question no longer changes as you type elsewhere on the screen.
+- A follow-up you add but never fill in is now discarded automatically instead of lingering blank.
+
 ## [0.7.5] - 2026-06-09
 
 ### Added

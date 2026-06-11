@@ -114,8 +114,8 @@ class SettingsViewModelTest {
 
     @Test
     fun TDD_import_singleInvalidBackup_promptsNeedsFix() = runTest {
-        // ED-26: a single backup with a setup problem (here a follow-up with no trigger) pauses for
-        // the user to cancel or fix, rather than importing silently.
+        // ED-27: a single backup with a setup problem (here a follow-up with no trigger, per ED-26)
+        // pauses for the user to cancel or fix, rather than importing silently.
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
 
         viewModel.importNudgeFromBackup(invalidBackupJson("Broken"))
@@ -129,8 +129,8 @@ class SettingsViewModelTest {
 
     @Test
     fun TDD_fixInvalidImport_importsThenSignalsEditorNavigation() = runTest {
-        // Fix imports the nudge as-is (answers and all) and signals the editor to open at the step
-        // where the problem can be corrected — the follow-ups step for a missing trigger.
+        // ED-27: Fix imports the nudge as-is (answers and all) and signals the editor to open at the
+        // step where the problem can be corrected — the follow-ups step for a missing trigger.
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         viewModel.importNudgeFromBackup(invalidBackupJson("Imported"))
         advanceUntilIdle()
