@@ -114,8 +114,16 @@ fun QuestionStep(
             ScaleRangeEditor(
                 scaleMin = question.scaleMin,
                 scaleMax = question.scaleMax,
-                onScaleMinChange = { onQuestionChange(question.copy(scaleMin = it)) },
-                onScaleMaxChange = { onQuestionChange(question.copy(scaleMax = it)) }
+                scaleMinText = question.scaleMinText,
+                scaleMaxText = question.scaleMaxText,
+                onScaleChange = { newMin, newMax, minText, maxText ->
+                    onQuestionChange(question.copy(
+                        scaleMin = newMin ?: question.scaleMin,
+                        scaleMax = newMax ?: question.scaleMax,
+                        scaleMinText = minText,
+                        scaleMaxText = maxText
+                    ))
+                }
             )
         }
 
@@ -163,37 +171,47 @@ fun OneYesPerDayToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 private fun ScaleRangeEditor(
     scaleMin: Int,
     scaleMax: Int,
-    onScaleMinChange: (Int) -> Unit,
-    onScaleMaxChange: (Int) -> Unit
+    scaleMinText: String,
+    scaleMaxText: String,
+    onScaleChange: (min: Int?, max: Int?, minText: String, maxText: String) -> Unit
 ) {
-    // ED-25: a scale needs min < max. The fields default to a valid 0–10 and can't be left empty
-    // (non-numeric input is ignored), so this error only ever appears when the user actively inverts
-    // or collapses the range — no "don't scold an empty field" timing is needed here.
-    val rangeInvalid = !isScaleRangeValid(scaleMin, scaleMax)
+    val minValid = scaleMinText.toIntOrNull() != null
+    val maxValid = scaleMaxText.toIntOrNull() != null
+    // ED-25: only check range ordering when both fields hold valid integers.
+    val rangeInvalid = minValid && maxValid && !isScaleRangeValid(scaleMin, scaleMax)
+
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             OutlinedTextField(
-                value = scaleMin.toString(),
+                value = scaleMinText,
                 onValueChange = { raw ->
-                    raw.toIntOrNull()?.let { onScaleMinChange(it) }
+                    val filtered = raw.filter { it.isDigit() || it == '-' || it == '.' }
+                    onScaleChange(filtered.toIntOrNull(), null, filtered, scaleMaxText)
                 },
                 label = { Text(stringResource(R.string.field_scale_min)) },
-                isError = rangeInvalid,
+                isError = !minValid || rangeInvalid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f)
             )
             OutlinedTextField(
-                value = scaleMax.toString(),
+                value = scaleMaxText,
                 onValueChange = { raw ->
-                    raw.toIntOrNull()?.let { onScaleMaxChange(it) }
+                    val filtered = raw.filter { it.isDigit() || it == '-' || it == '.' }
+                    onScaleChange(null, filtered.toIntOrNull(), scaleMinText, filtered)
                 },
                 label = { Text(stringResource(R.string.field_scale_max)) },
-                isError = rangeInvalid,
+                isError = !maxValid || rangeInvalid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f)
             )
         }
-        if (rangeInvalid) {
+        if (!minValid || !maxValid) {
+            Text(
+                text = stringResource(R.string.error_scale_not_whole_number),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        } else if (rangeInvalid) {
             Text(
                 text = stringResource(R.string.error_scale_range_invalid),
                 style = MaterialTheme.typography.bodySmall,
@@ -417,8 +435,16 @@ private fun FollowUpEditor(
             ScaleRangeEditor(
                 scaleMin = followUp.scaleMin,
                 scaleMax = followUp.scaleMax,
-                onScaleMinChange = { onUpdate(followUp.copy(scaleMin = it)) },
-                onScaleMaxChange = { onUpdate(followUp.copy(scaleMax = it)) }
+                scaleMinText = followUp.scaleMinText,
+                scaleMaxText = followUp.scaleMaxText,
+                onScaleChange = { newMin, newMax, minText, maxText ->
+                    onUpdate(followUp.copy(
+                        scaleMin = newMin ?: followUp.scaleMin,
+                        scaleMax = newMax ?: followUp.scaleMax,
+                        scaleMinText = minText,
+                        scaleMaxText = maxText
+                    ))
+                }
             )
         }
 

@@ -121,7 +121,9 @@ fun EditNudgeScreen(
                             type = formState.mainQuestionType,
                             options = formState.options.map { it.text },
                             scaleMin = formState.mainQuestionScaleMin,
-                            scaleMax = formState.mainQuestionScaleMax
+                            scaleMax = formState.mainQuestionScaleMax,
+                            scaleMinText = formState.mainQuestionScaleMin.toString(),
+                            scaleMaxText = formState.mainQuestionScaleMax.toString()
                         ),
                         followUps = formState.followUps.map { it.formState },
                         onAdd = { viewModel.addFollowUp() },
@@ -147,7 +149,9 @@ fun EditNudgeScreen(
                         type = formState.mainQuestionType,
                         options = formState.options.map { it.text },
                         scaleMin = formState.mainQuestionScaleMin,
-                        scaleMax = formState.mainQuestionScaleMax
+                        scaleMax = formState.mainQuestionScaleMax,
+                        scaleMinText = formState.mainQuestionScaleMin.toString(),
+                        scaleMaxText = formState.mainQuestionScaleMax.toString()
                     )
                 )
                 1 -> areFollowUpsValid(formState.mainQuestionType, formState.followUps.map { it.formState })

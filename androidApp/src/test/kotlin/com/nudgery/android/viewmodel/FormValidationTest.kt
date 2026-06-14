@@ -67,8 +67,29 @@ class FormValidationTest {
         assertTrue("default 0..10 is valid", isQuestionSectionValid("Tired", scale))
         assertFalse(
             "inverted range blocks",
-            isQuestionSectionValid("Tired", scale.copy(scaleMin = 10, scaleMax = 1))
+            isQuestionSectionValid("Tired", scale.copy(scaleMin = 10, scaleMax = 1, scaleMinText = "10", scaleMaxText = "1"))
         )
+    }
+
+    @Test
+    fun TDD_scaleTextFieldsMustBeWholeNumbers() {
+        // Scale min/max text must parse as integers; decimals, bare minus signs, and empty strings
+        // all block submission.
+        val scale = QuestionFormState(text = "How tired?", type = QuestionType.SCALE)
+        assertTrue("valid integers pass", areScaleTextsValid(scale.scaleMinText, scale.scaleMaxText))
+        assertFalse("decimal min blocks", areScaleTextsValid("3.5", "10"))
+        assertFalse("decimal max blocks", areScaleTextsValid("0", "10.0"))
+        assertFalse("bare minus blocks", areScaleTextsValid("-", "10"))
+        assertFalse("empty min blocks", areScaleTextsValid("", "10"))
+        assertFalse("empty max blocks", areScaleTextsValid("0", ""))
+        assertTrue("negative integers are fine", areScaleTextsValid("-10", "10"))
+    }
+
+    @Test
+    fun TDD_nonIntegerScaleTextBlocksQuestionSection() {
+        // isQuestionConfigValid should reject a Scale question whose text fields don't parse.
+        val scale = QuestionFormState(text = "How tired?", type = QuestionType.SCALE, scaleMinText = "3.5")
+        assertFalse("decimal text blocks section", isQuestionSectionValid("Tired", scale))
     }
 
     @Test

@@ -137,6 +137,7 @@ import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.cartesian.Scroll
 import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
@@ -1385,6 +1386,21 @@ private fun LineGraphChart(
             lineSeries { series(xOffsets, points.map { it.value }) }
         }
     }
+    // Draw a subtle horizontal "tide line" at zero when the y-range spans negative values,
+    // so the boundary between positive and negative is always visible.
+    val spansZero = yMin != null && yMax != null && yMin < 0.0 && yMax > 0.0
+    val zeroLineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+    val zeroLine = remember(spansZero, zeroLineColor) {
+        if (spansZero) {
+            listOf(
+                HorizontalLine(
+                    y = { 0.0 },
+                    line = LineComponent(fill(zeroLineColor), thicknessDp = 1f),
+                )
+            )
+        } else emptyList()
+    }
+
     CartesianChartHost(
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(
@@ -1412,6 +1428,7 @@ private fun LineGraphChart(
                     }
                 }
             ),
+            decorations = zeroLine,
         ),
         modelProducer = modelProducer,
         scrollState = scrollState,

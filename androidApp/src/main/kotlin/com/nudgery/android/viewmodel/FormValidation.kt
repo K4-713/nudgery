@@ -36,7 +36,13 @@ fun areOptionsValid(options: List<String>): Boolean =
 fun isQuestionConfigValid(question: QuestionFormState): Boolean =
     isRequiredTextProvided(question.text) &&
         (!question.type.isOptionType || areOptionsValid(question.options)) &&
-        (question.type != QuestionType.SCALE || isScaleRangeValid(question.scaleMin, question.scaleMax))
+        (question.type != QuestionType.SCALE ||
+            (areScaleTextsValid(question.scaleMinText, question.scaleMaxText) &&
+                isScaleRangeValid(question.scaleMin, question.scaleMax)))
+
+/** Both scale text fields must parse as whole numbers before the range can be checked. */
+fun areScaleTextsValid(minText: String, maxText: String): Boolean =
+    minText.toIntOrNull() != null && maxText.toIntOrNull() != null
 
 /** A scale's range is valid only when its minimum is strictly below its maximum (ED-25). Mirrors
  *  the use-case's existing `InvalidScaleRange` backstop. */

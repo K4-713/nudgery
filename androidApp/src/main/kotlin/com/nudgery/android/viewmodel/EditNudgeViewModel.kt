@@ -270,6 +270,8 @@ class EditNudgeViewModel(
                     triggerOperator = q.triggerOperator,
                     scaleMin = q.scaleMin ?: 0,
                     scaleMax = q.scaleMax ?: 10,
+                    scaleMinText = (q.scaleMin ?: 0).toString(),
+                    scaleMaxText = (q.scaleMax ?: 10).toString(),
                     collapsePerDay = q.collapsePerDay
                 )
             )

@@ -60,6 +60,7 @@
     <string name="field_scale_min">Minimum</string>
     <string name="field_scale_max">Maximum</string>
     <string name="error_scale_range_invalid">Minimum must be less than maximum</string>
+    <string name="error_scale_not_whole_number">Enter a whole number</string>
     <string name="field_options">Options</string>
     <string name="option_add">Add option</string>
     <string name="option_move_up">Move option up</string>
