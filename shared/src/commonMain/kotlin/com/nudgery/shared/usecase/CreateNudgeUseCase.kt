@@ -25,10 +25,6 @@ class CreateNudgeUseCase(
     suspend fun execute(rawRequest: CreateNudgeRequest): CreateNudgeResult {
         // Trim every user-typed field up front so untrimmed text can't reach storage (ED-16).
         val request = rawRequest.normalized()
-        if (!request.mainQuestion.type.allowsFollowUps && request.followUpQuestions.isNotEmpty()) {
-            return CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps
-        }
-
         // ED-26: validate options, scale ranges, and follow-up triggers at the save boundary so bad
         // data can't reach storage even though the form already prevents it (defense in depth).
         validateNudgeQuestions(request.mainQuestion, request.followUpQuestions)?.let {

@@ -8,5 +8,7 @@ enum class TriggerOperator {
     GTE,
     LT,
     LTE,
-    CONTAINS
+    CONTAINS,
+    /** The follow-up is shown unconditionally, regardless of the main answer. */
+    ALWAYS
 }

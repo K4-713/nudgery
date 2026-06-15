@@ -94,6 +94,18 @@ class TriggerEvaluationTest {
         assertFalse(evaluateTrigger("opt-a", TriggerOperator.CONTAINS, "opt-ab"))
     }
 
+    // ALWAYS triggers
+
+    @Test
+    fun TDD_alwaysTrigger_firesRegardlessOfAnswer() {
+        // ENGINEERING_DECISIONS.md ED-28: ALWAYS trigger fires unconditionally.
+        assertTrue(evaluateTrigger("", TriggerOperator.ALWAYS, "YES"))
+        assertTrue(evaluateTrigger("", TriggerOperator.ALWAYS, "NO"))
+        assertTrue(evaluateTrigger("", TriggerOperator.ALWAYS, "7"))
+        assertTrue(evaluateTrigger("", TriggerOperator.ALWAYS, "any text at all"))
+        assertTrue(evaluateTrigger("", TriggerOperator.ALWAYS, ""))
+    }
+
     // OPTION_SINGLE triggers (EQ with option ID)
 
     @Test

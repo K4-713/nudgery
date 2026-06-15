@@ -152,10 +152,10 @@ Belongs to a `Nudge`. The first question (orderIndex 0) is the main question; su
 | scaleMax | Int? | Null unless `type = SCALE`; upper bound of the slider range |
 
 **QuestionType** enum: `YES_NO`, `SCALE`, `NUMBER`, `OPTION_SINGLE`, `OPTION_MULTI`, `TEXT`, `EMOJI`
-`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `EMOJI` is a TEXT question under the hood (ED-1): it stores, exports, and charts exactly like `TEXT`, differing only in input (emoji-only via the picker). `TEXT` and `EMOJI` are the **free-form** types (`QuestionType.isFreeformType`): valid for main and follow-up questions, but a free-form *main* question cannot have follow-ups — there are no fixed answers to define a trigger condition on (`QuestionType.allowsFollowUps` is false for both). The create wizard skips the follow-up step for a free-form main question, and the detail screen hides its follow-up row.
+`SCALE` is a bounded integer range with configurable `scaleMin` and `scaleMax` (defaults 0–10). `EMOJI` is a TEXT question under the hood (ED-1): it stores, exports, and charts exactly like `TEXT`, differing only in input (emoji-only via the picker). `TEXT` and `EMOJI` are the **free-form** types (`QuestionType.isFreeformType`): valid for main and follow-up questions. All main question types support follow-ups (`QuestionType.allowsFollowUps` is always true). Discrete types (Yes/No, Scale, Number, options) support conditional triggers; free-form types support only the unconditional `ALWAYS` trigger (ED-28). The create wizard always includes the follow-up step.
 
-**TriggerOperator** enum: `EQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`
-`CONTAINS` is used for `OPTION_MULTI` follow-ups: the trigger fires when the stored option ID appears anywhere in the comma-separated multi-select answer string.
+**TriggerOperator** enum: `EQ`, `GT`, `GTE`, `LT`, `LTE`, `CONTAINS`, `ALWAYS`
+`CONTAINS` is used for `OPTION_MULTI` follow-ups: the trigger fires when the stored option ID appears anywhere in the comma-separated multi-select answer string. `ALWAYS` fires unconditionally (ED-28); it is the only trigger available for free-form main types and is also available for discrete types.
 
 ### QuestionOption
 Selectable answer choices for `OPTION_SINGLE` and `OPTION_MULTI` questions. Up to 16 per question.

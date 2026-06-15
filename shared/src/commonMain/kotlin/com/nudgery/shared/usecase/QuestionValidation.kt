@@ -3,6 +3,7 @@
 package com.nudgery.shared.usecase
 
 import com.nudgery.shared.model.QuestionType
+import com.nudgery.shared.model.TriggerOperator
 
 /** Bounds on the number of options an option-type question may have (ED-26). */
 const val MIN_OPTIONS_PER_QUESTION = 2
@@ -48,20 +49,21 @@ fun QuestionRequest.configProblem(): QuestionValidationProblem? = when {
 
 /**
  * Validates a follow-up's trigger condition against the main question's type (what the user
- * answers). Mirrors the UI's `isFollowUpTriggerValid`: Yes/No and option mains need a chosen answer;
- * Number/Scale mains need both an operator and a numeric threshold; free-form mains can't have
- * follow-ups, so nothing is required.
+ * answers). Mirrors the UI's `isFollowUpTriggerValid`: an ALWAYS operator is valid for any main
+ * type; Yes/No and option mains also accept a chosen answer; Number/Scale mains also accept an
+ * operator + numeric threshold; free-form mains (text/emoji) accept only ALWAYS.
  */
 fun triggerProblem(mainType: QuestionType, followUp: QuestionRequest): QuestionValidationProblem? {
-    val hasTrigger = when (mainType) {
-        QuestionType.YES_NO,
-        QuestionType.OPTION_SINGLE,
-        QuestionType.OPTION_MULTI -> followUp.triggerAnswerValue != null
-        QuestionType.NUMBER,
-        QuestionType.SCALE ->
-            followUp.triggerOperator != null && followUp.triggerAnswerValue?.toDoubleOrNull() != null
-        QuestionType.TEXT, QuestionType.EMOJI -> true
-    }
+    val hasTrigger = if (followUp.triggerOperator == TriggerOperator.ALWAYS) true
+        else when (mainType) {
+            QuestionType.YES_NO,
+            QuestionType.OPTION_SINGLE,
+            QuestionType.OPTION_MULTI -> followUp.triggerAnswerValue != null
+            QuestionType.NUMBER,
+            QuestionType.SCALE ->
+                followUp.triggerOperator != null && followUp.triggerAnswerValue?.toDoubleOrNull() != null
+            QuestionType.TEXT, QuestionType.EMOJI -> false
+        }
     return if (hasTrigger) null else QuestionValidationProblem.MissingFollowUpTrigger(followUp.text)
 }
 

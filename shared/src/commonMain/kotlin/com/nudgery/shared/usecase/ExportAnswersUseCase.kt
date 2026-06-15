@@ -129,10 +129,13 @@ class ExportAnswersUseCase(
                 sb.append(",\n      \"collapsePerDay\": true")
             }
             if (question.triggerOperator != null) {
-                // Resolve option UUID trigger values to option text for round-trip import
-                val triggerText = optionIdToText[question.triggerAnswerValue] ?: question.triggerAnswerValue ?: ""
                 sb.append(",\n      \"triggerOperator\": \"${question.triggerOperator.name}\"")
-                sb.append(",\n      \"triggerAnswerValue\": ${jsonString(triggerText)}")
+                // ALWAYS triggers have no answer value; all others carry one.
+                if (question.triggerOperator != com.nudgery.shared.model.TriggerOperator.ALWAYS) {
+                    // Resolve option UUID trigger values to option text for round-trip import
+                    val triggerText = optionIdToText[question.triggerAnswerValue] ?: question.triggerAnswerValue ?: ""
+                    sb.append(",\n      \"triggerAnswerValue\": ${jsonString(triggerText)}")
+                }
             }
             val options = optionsByQuestionId[question.id] ?: emptyList()
             if (options.isNotEmpty()) {

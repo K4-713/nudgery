@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.shared.model.QuestionType
+import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
@@ -88,7 +89,10 @@ class EditNudgeViewModel(
 
     fun addFollowUp() {
         _formState.update { state ->
-            state.copy(followUps = state.followUps + EditableFollowUp(questionId = null, formState = QuestionFormState()))
+            state.copy(followUps = state.followUps + EditableFollowUp(
+                questionId = null,
+                formState = QuestionFormState(triggerOperator = TriggerOperator.ALWAYS)
+            ))
         }
     }
 
@@ -109,13 +113,19 @@ class EditNudgeViewModel(
     /**
      * ED-21: drop a newly-added follow-up the user never edited — a pristine stub with no backing
      * question — so an abandoned "Add follow-up question" tap isn't saved as a blank follow-up.
+     * New follow-ups are created with ALWAYS pre-set (ED-28), so both the legacy default (null
+     * trigger) and the current default (ALWAYS trigger) are recognized as untouched.
      * Requires `questionId == null`, so an existing, stored follow-up is never removed here (that
      * stays the explicit trash control). Run before every submit path.
      */
     fun pruneUntouchedFollowUps() {
+        val untouched = setOf(
+            QuestionFormState(),
+            QuestionFormState(triggerOperator = TriggerOperator.ALWAYS)
+        )
         _formState.update { state ->
             state.copy(followUps = state.followUps.filterNot {
-                it.questionId == null && it.formState == QuestionFormState()
+                it.questionId == null && it.formState in untouched
             })
         }
     }

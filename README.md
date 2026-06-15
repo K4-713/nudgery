@@ -37,7 +37,7 @@ The basic nudge question types are:
 * Freeform Text
 * Emoji-only answers
 
-Once the main question is set up, if you have chosen a question type with predictable answers (so, anything that isn't free text or emoji) you will be able to add follow-up questions for specific answers or ranges of answers to the main question. Follow-up questions can be any of the main question types.
+Once the main question is set up, you will be able to add one or more optional follow-up questions. Follow-up questions can be set up to always be asked, or (for main question types other than Freeform Text or Emoji) only be asked when you give specific answers to the main question. Follow-up questions can be any of the main question types.
 
 After the questions are finished, you can edit the schedule for your Nudge to ask the question you just set up. Scheduling options include:
 * Daily: Pick a time of day (defaults to noon in your phone's timezone, which will move with your and your phone in case of travel), and the active days of the week

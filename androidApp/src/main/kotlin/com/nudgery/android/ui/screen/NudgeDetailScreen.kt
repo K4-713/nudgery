@@ -341,8 +341,8 @@ fun NudgeDetailScreen(
                         }
                     }
 
-                    // Follow-up questions row — hidden for free-text main questions, which can't have them.
-                    if (uiState.mainQuestionType?.allowsFollowUps == true) {
+                    // Follow-up questions row — always shown; all question types support follow-ups.
+                    if (uiState.mainQuestionType != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()

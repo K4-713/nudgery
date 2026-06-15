@@ -139,4 +139,28 @@ class FormValidationTest {
         assertFalse("non-numeric value", areFollowUpsValid(QuestionType.NUMBER, listOf(base.copy(triggerOperator = TriggerOperator.GTE, triggerAnswerValue = "-"))))
         assertTrue("operator + numeric value", areFollowUpsValid(QuestionType.NUMBER, listOf(base.copy(triggerOperator = TriggerOperator.GTE, triggerAnswerValue = "7"))))
     }
+
+    @Test
+    fun TDD_alwaysTriggerIsValidForAllMainTypes() {
+        // ENGINEERING_DECISIONS.md ED-28: ALWAYS trigger is valid for every main question type.
+        val always = QuestionFormState(text = "Any notes?", type = QuestionType.TEXT, triggerOperator = TriggerOperator.ALWAYS)
+        assertTrue("YES_NO", areFollowUpsValid(QuestionType.YES_NO, listOf(always)))
+        assertTrue("SCALE", areFollowUpsValid(QuestionType.SCALE, listOf(always)))
+        assertTrue("NUMBER", areFollowUpsValid(QuestionType.NUMBER, listOf(always)))
+        assertTrue("OPTION_SINGLE", areFollowUpsValid(QuestionType.OPTION_SINGLE, listOf(always)))
+        assertTrue("OPTION_MULTI", areFollowUpsValid(QuestionType.OPTION_MULTI, listOf(always)))
+        assertTrue("TEXT", areFollowUpsValid(QuestionType.TEXT, listOf(always)))
+        assertTrue("EMOJI", areFollowUpsValid(QuestionType.EMOJI, listOf(always)))
+    }
+
+    @Test
+    fun TDD_freeformMainRequiresAlwaysTrigger() {
+        // ENGINEERING_DECISIONS.md ED-28: Text/Emoji mains only accept ALWAYS (no conditional triggers).
+        val noTrigger = QuestionFormState(text = "Why?", type = QuestionType.TEXT)
+        assertFalse("TEXT without trigger", areFollowUpsValid(QuestionType.TEXT, listOf(noTrigger)))
+        assertFalse("EMOJI without trigger", areFollowUpsValid(QuestionType.EMOJI, listOf(noTrigger)))
+        val withAlways = noTrigger.copy(triggerOperator = TriggerOperator.ALWAYS)
+        assertTrue("TEXT with ALWAYS", areFollowUpsValid(QuestionType.TEXT, listOf(withAlways)))
+        assertTrue("EMOJI with ALWAYS", areFollowUpsValid(QuestionType.EMOJI, listOf(withAlways)))
+    }
 }

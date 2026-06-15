@@ -384,17 +384,22 @@ private fun FollowUpEditor(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = stringResource(R.string.followup_trigger_label),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            when (mainQuestion.type) {
-                QuestionType.YES_NO -> YesNoTrigger(followUp, onUpdate)
-                QuestionType.SCALE, QuestionType.NUMBER -> NumberTrigger(followUp, onUpdate)
-                QuestionType.OPTION_SINGLE -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = false)
-                QuestionType.OPTION_MULTI -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = true)
-                else -> {}
+            // "Always ask" chip — default for new follow-ups, and the only option for freeform mains.
+            AlwaysTriggerChip(followUp, onUpdate)
+            // Conditional triggers — offered as an alternative for discrete main types.
+            if (!mainQuestion.type.isFreeformType) {
+                Text(
+                    text = stringResource(R.string.trigger_conditional_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                when (mainQuestion.type) {
+                    QuestionType.YES_NO -> YesNoTrigger(followUp, onUpdate)
+                    QuestionType.SCALE, QuestionType.NUMBER -> NumberTrigger(followUp, onUpdate)
+                    QuestionType.OPTION_SINGLE -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = false)
+                    QuestionType.OPTION_MULTI -> OptionTrigger(mainQuestion.options, followUp, onUpdate, containsOnSelect = true)
+                    else -> {}
+                }
             }
             // ED-24: once the user has started defining this follow-up, prompt them to pick a trigger
             // if they haven't — but stay quiet for an untouched stub (ED-21 discards it) and when the
@@ -462,6 +467,18 @@ private fun FollowUpEditor(
             )
         }
     }
+}
+
+@Composable
+private fun AlwaysTriggerChip(followUp: QuestionFormState, onUpdate: (QuestionFormState) -> Unit) {
+    NudgeryToggleChip(
+        selected = followUp.triggerOperator == TriggerOperator.ALWAYS,
+        onClick = {
+            // Reset to ALWAYS, clearing any conditional trigger state.
+            onUpdate(followUp.copy(triggerOperator = TriggerOperator.ALWAYS, triggerAnswerValue = null))
+        },
+        label = { Text(stringResource(R.string.trigger_always_label)) }
+    )
 }
 
 @Composable

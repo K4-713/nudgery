@@ -77,10 +77,11 @@
 
     <!-- Wizard step 2 — Follow-ups -->
     <string name="step_followups_title">Follow-up Questions</string>
-    <string name="step_followups_intro">Follow-up questions ask for more detail, but only when a specific answer calls for it — like a quick “why?” after a “No.” They\'re optional.</string>
+    <string name="step_followups_intro">Follow-up questions ask for more detail, either after every answer or only when a specific answer calls for it. They\'re optional.</string>
     <string name="followup_add">Add follow-up question</string>
     <string name="followup_remove">Remove follow-up</string>
-    <string name="followup_trigger_label">Show this follow-up when the answer is…</string>
+    <string name="trigger_always_label">Always ask this follow-up</string>
+    <string name="trigger_conditional_label">Or, only ask this follow-up when the main answer is…</string>
     <string name="error_followup_trigger_required">Choose when this follow-up should appear</string>
     <string name="trigger_op_eq">Equal to</string>
     <string name="trigger_op_gt">Greater than</string>

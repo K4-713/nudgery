@@ -247,8 +247,9 @@ class EditNudgeViewModelTest {
         viewModel.addFollowUp()
         viewModel.updateFollowUp(0, viewModel.formState.value.followUps[0].formState.copy(
             text = "What did you do?",
-            type = com.nudgery.shared.model.QuestionType.TEXT
-            // no triggerAnswerValue — invalid for a Yes/No main
+            type = com.nudgery.shared.model.QuestionType.TEXT,
+            triggerOperator = null,  // cleared ALWAYS but no conditional trigger set — invalid
+            triggerAnswerValue = null
         ))
         viewModel.submit()
         advanceUntilIdle()

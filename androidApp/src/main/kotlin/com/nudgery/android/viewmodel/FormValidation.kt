@@ -3,6 +3,7 @@
 package com.nudgery.android.viewmodel
 
 import com.nudgery.shared.model.QuestionType
+import com.nudgery.shared.model.TriggerOperator
 
 /**
  * Pure validation rules for the create/edit nudge forms (ED-22, ED-23). Kept free of
@@ -59,30 +60,39 @@ fun isQuestionSectionValid(nudgeName: String, question: QuestionFormState): Bool
  * A follow-up's trigger condition — "show this follow-up when the answer is …" — must be specified;
  * it cannot be defaulted, since it's the whole meaning of the follow-up (ED-24). What's required
  * depends on the **main** question's type, which is what the user is answering:
+ * - Any type: an [ALWAYS][TriggerOperator.ALWAYS] operator is always valid (no value needed).
  * - Yes/No or option main: a specific answer must be chosen (`triggerAnswerValue` set).
  * - Number/Scale main: both a comparison operator and a numeric threshold are required.
- * - Free-form main (text/emoji) can't have follow-ups at all, so there's nothing to require.
+ * - Free-form main (text/emoji): only ALWAYS is accepted (no conditional triggers).
  */
 fun isFollowUpTriggerValid(mainType: QuestionType, followUp: QuestionFormState): Boolean =
-    when (mainType) {
+    if (followUp.triggerOperator == TriggerOperator.ALWAYS) true
+    else when (mainType) {
         QuestionType.YES_NO,
         QuestionType.OPTION_SINGLE,
         QuestionType.OPTION_MULTI -> followUp.triggerAnswerValue != null
         QuestionType.NUMBER,
         QuestionType.SCALE ->
             followUp.triggerOperator != null && followUp.triggerAnswerValue?.toDoubleOrNull() != null
-        QuestionType.TEXT, QuestionType.EMOJI -> true
+        QuestionType.TEXT, QuestionType.EMOJI -> false
     }
 
+/** Pristine stub states that ED-21 discards — the legacy default (null trigger) and the current
+ *  default (ALWAYS trigger, ED-28). */
+private val UNTOUCHED_STUBS = setOf(
+    QuestionFormState(),
+    QuestionFormState(triggerOperator = TriggerOperator.ALWAYS)
+)
+
 /**
- * Follow-ups are valid when every one is either an untouched stub — equal to a pristine
- * [QuestionFormState], which ED-21 discards on navigation/submit so it must not block — or has a
- * valid configuration (real text, valid options if it is an option type) **and** a specified
- * trigger condition for the given [mainType] (ED-24). A follow-up the user configured but left
- * without text, without enough options, or without a trigger blocks submission.
+ * Follow-ups are valid when every one is either an untouched stub — a pristine [QuestionFormState]
+ * which ED-21 discards on navigation/submit so it must not block — or has a valid configuration
+ * (real text, valid options if it is an option type) **and** a specified trigger condition for the
+ * given [mainType] (ED-24). A follow-up the user configured but left without text, without enough
+ * options, or without a trigger blocks submission.
  */
 fun areFollowUpsValid(mainType: QuestionType, followUps: List<QuestionFormState>): Boolean =
     followUps.all {
-        it == QuestionFormState() ||
+        it in UNTOUCHED_STUBS ||
             (isQuestionConfigValid(it) && isFollowUpTriggerValid(mainType, it))
     }

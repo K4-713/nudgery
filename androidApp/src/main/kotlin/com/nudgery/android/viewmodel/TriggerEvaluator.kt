@@ -9,6 +9,7 @@ internal fun evaluateTrigger(triggerValue: String, operator: TriggerOperator?, a
     val answerNum by lazy { answer.toDoubleOrNull() }
     val triggerNum by lazy { triggerValue.toDoubleOrNull() }
     return when (effectiveOperator) {
+        TriggerOperator.ALWAYS -> true
         TriggerOperator.EQ -> answer == triggerValue
         TriggerOperator.CONTAINS -> answer.split(",").contains(triggerValue)
         TriggerOperator.GT -> answerNum != null && triggerNum != null && answerNum!! > triggerNum!!

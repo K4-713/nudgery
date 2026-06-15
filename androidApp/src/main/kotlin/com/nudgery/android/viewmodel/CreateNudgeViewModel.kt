@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.shared.model.Nudge
+import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.usecase.CreateNudgeRequest
 import com.nudgery.shared.usecase.CreateNudgeResult
@@ -48,11 +49,7 @@ class CreateNudgeViewModel(
     fun setNudgeName(name: String) { _formState.update { it.copy(nudgeName = name) } }
     fun setEnabled(isEnabled: Boolean) { _formState.update { it.copy(isEnabled = isEnabled) } }
     fun setMainQuestion(question: QuestionFormState) {
-        _formState.update {
-            // A free-text main question can't have follow-ups; drop any that were added.
-            val followUps = if (question.type.allowsFollowUps) it.followUpQuestions else emptyList()
-            it.copy(mainQuestion = question, followUpQuestions = followUps)
-        }
+        _formState.update { it.copy(mainQuestion = question) }
     }
     fun setSchedule(schedule: ScheduleFormState) { _formState.update { it.copy(schedule = schedule) } }
 
@@ -74,15 +71,18 @@ class CreateNudgeViewModel(
 
     /**
      * Drop any follow-up the user added but never edited — one still equal to a pristine default
-     * stub. Tapping "Add follow-up question" commits a blank stub to the form immediately, so a user
-     * who adds one and then changes nothing (then taps Back or Next) would otherwise be left with a
-     * phantom follow-up that re-opens the editor instead of the step's empty state, and that would
-     * be submitted as a blank follow-up. Called when leaving the follow-up step, and defensively
-     * before submit.
+     * stub (with or without the ALWAYS trigger pre-set, ED-28). Tapping "Add follow-up question"
+     * commits a blank stub to the form immediately, so a user who adds one and then changes nothing
+     * (then taps Back or Next) would otherwise be left with a phantom follow-up. Called when leaving
+     * the follow-up step, and defensively before submit.
      */
     fun pruneUntouchedFollowUps() {
+        val untouched = setOf(
+            QuestionFormState(),
+            QuestionFormState(triggerOperator = TriggerOperator.ALWAYS)
+        )
         _formState.update { state ->
-            state.copy(followUpQuestions = state.followUpQuestions.filterNot { it == QuestionFormState() })
+            state.copy(followUpQuestions = state.followUpQuestions.filterNot { it in untouched })
         }
     }
 

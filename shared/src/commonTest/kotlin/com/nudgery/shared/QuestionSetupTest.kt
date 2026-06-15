@@ -59,35 +59,49 @@ class QuestionSetupTest {
     }
 
     @Test
-    fun TDD_textMainQuestionCannotHaveFollowUps() = runTest {
-        // README "Setting Up a Nudge": a Text main question has no answer conditions to branch on,
-        //   so it cannot have follow-up questions
+    fun TDD_textMainQuestionCanHaveAlwaysFollowUp() = runTest {
+        // ENGINEERING_DECISIONS.md ED-28: Text mains support follow-ups with an ALWAYS trigger.
         val result = createNudge.execute(
             CreateNudgeRequest(
                 mainQuestion = QuestionRequest("Write your thoughts", QuestionType.TEXT),
                 followUpQuestions = listOf(
-                    QuestionRequest("A follow-up", QuestionType.YES_NO)
+                    QuestionRequest("Any notes?", QuestionType.TEXT, triggerOperator = TriggerOperator.ALWAYS)
                 ),
                 schedule = dailySchedule()
             )
         )
-        assertIs<CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps>(result)
+        assertIs<CreateNudgeResult.Success>(result)
     }
 
     @Test
-    fun TDD_emojiMainQuestionCannotHaveFollowUps() = runTest {
-        // README "Setting Up a Nudge": "anything that isn't free text or emoji" can have follow-ups —
-        //   an EMOJI main is free-form (ED-1), so like TEXT it cannot.
+    fun TDD_emojiMainQuestionCanHaveAlwaysFollowUp() = runTest {
+        // ENGINEERING_DECISIONS.md ED-28: Emoji mains support follow-ups with an ALWAYS trigger.
         val result = createNudge.execute(
             CreateNudgeRequest(
                 mainQuestion = QuestionRequest("How do you feel?", QuestionType.EMOJI),
                 followUpQuestions = listOf(
-                    QuestionRequest("A follow-up", QuestionType.YES_NO)
+                    QuestionRequest("Why?", QuestionType.TEXT, triggerOperator = TriggerOperator.ALWAYS)
                 ),
                 schedule = dailySchedule()
             )
         )
-        assertIs<CreateNudgeResult.Failure.FreeformMainCannotHaveFollowUps>(result)
+        assertIs<CreateNudgeResult.Success>(result)
+    }
+
+    @Test
+    fun TDD_freeformMainFollowUpWithoutAlwaysTriggerIsRejected() = runTest {
+        // ENGINEERING_DECISIONS.md ED-28: a freeform main's follow-up needs ALWAYS; without it,
+        // save-boundary validation rejects it as a missing trigger (ED-26).
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest("Write your thoughts", QuestionType.TEXT),
+                followUpQuestions = listOf(
+                    QuestionRequest("Any notes?", QuestionType.TEXT)
+                ),
+                schedule = dailySchedule()
+            )
+        )
+        assertIs<CreateNudgeResult.Failure>(result)
     }
 
     @Test

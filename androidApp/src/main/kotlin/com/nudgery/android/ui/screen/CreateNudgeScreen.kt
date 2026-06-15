@@ -38,10 +38,11 @@ import com.nudgery.android.viewmodel.QuestionFormState
 import com.nudgery.android.viewmodel.ScheduleFormState
 import com.nudgery.android.viewmodel.areFollowUpsValid
 import com.nudgery.android.viewmodel.isQuestionSectionValid
+import com.nudgery.shared.model.TriggerOperator
 import com.nudgery.shared.usecase.CreateNudgeResult
 import org.koin.androidx.compose.koinViewModel
 
-/** Wizard steps. The follow-up step is omitted for a free-text main question (no triggers). */
+/** Wizard steps: Question, Follow-ups, Schedule — always three steps for all question types. */
 private enum class WizardStep { QUESTION, FOLLOW_UPS, SCHEDULE }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,13 +55,8 @@ fun CreateNudgeScreen(
     val formState by viewModel.formState.collectAsState()
     var currentStep by remember { mutableIntStateOf(0) }
 
-    val steps = if (formState.mainQuestion.type.allowsFollowUps) {
-        listOf(WizardStep.QUESTION, WizardStep.FOLLOW_UPS, WizardStep.SCHEDULE)
-    } else {
-        listOf(WizardStep.QUESTION, WizardStep.SCHEDULE)
-    }
+    val steps = listOf(WizardStep.QUESTION, WizardStep.FOLLOW_UPS, WizardStep.SCHEDULE)
     val totalSteps = steps.size
-    // Switching the main type to/from text changes the step count; keep the index in range.
     val safeStep = currentStep.coerceIn(0, totalSteps - 1)
 
     LaunchedEffect(formState.result) {
@@ -100,7 +96,7 @@ fun CreateNudgeScreen(
                     WizardStep.FOLLOW_UPS -> FollowUpStep(
                         mainQuestion = formState.mainQuestion,
                         followUps = formState.followUpQuestions,
-                        onAdd = { viewModel.addFollowUpQuestion(QuestionFormState()) },
+                        onAdd = { viewModel.addFollowUpQuestion(QuestionFormState(triggerOperator = TriggerOperator.ALWAYS)) },
                         onUpdate = { index, q -> viewModel.updateFollowUpQuestion(index, q) },
                         onRemove = { viewModel.removeFollowUpQuestion(it) },
                         showIntro = true

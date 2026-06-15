@@ -21,8 +21,9 @@ enum class QuestionType {
     val isFreeformType: Boolean get() = this == TEXT || this == EMOJI
 
     /**
-     * Whether a main question of this type can have follow-up questions. Free-form types cannot:
-     * they have no fixed set of answers to define a follow-up trigger condition on. All others can.
+     * Whether a main question of this type can have follow-up questions. All types support
+     * follow-ups: discrete types offer conditional triggers (e.g. "when YES"), and all types
+     * (including free-form) support the unconditional [TriggerOperator.ALWAYS] trigger.
      */
-    val allowsFollowUps: Boolean get() = !isFreeformType
+    val allowsFollowUps: Boolean get() = true
 }

@@ -72,16 +72,16 @@ class CreateNudgeViewModelTest {
     }
 
     @Test
-    fun TDD_switchingMainQuestionToTextClearsFollowUps() = runTest {
-        // A free-text main question can't have follow-ups, so any added ones are dropped
+    fun TDD_switchingMainQuestionToTextKeepsFollowUps() = runTest {
+        // ED-28: all main question types support follow-ups; switching to Text preserves them.
         viewModel.setMainQuestion(QuestionFormState(text = "How are you?", type = QuestionType.YES_NO))
         viewModel.addFollowUpQuestion(QuestionFormState(text = "Why?", type = QuestionType.TEXT))
         assertEquals(1, viewModel.formState.value.followUpQuestions.size)
 
         viewModel.setMainQuestion(QuestionFormState(text = "Notes?", type = QuestionType.TEXT))
 
-        assertTrue("Follow-ups should be cleared when main becomes text",
-            viewModel.formState.value.followUpQuestions.isEmpty())
+        assertEquals("Follow-ups should be preserved when main becomes text",
+            1, viewModel.formState.value.followUpQuestions.size)
     }
 
     @Test

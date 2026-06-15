@@ -42,8 +42,6 @@ data class CreateNudgeRequest(
 sealed class CreateNudgeResult {
     data class Success(val nudgeId: String) : CreateNudgeResult()
     sealed class Failure : CreateNudgeResult() {
-        /** A free-form (TEXT or EMOJI) main question may not have follow-ups (no trigger conditions exist). */
-        data object FreeformMainCannotHaveFollowUps : Failure()
         data class TooManyOptions(val questionText: String) : Failure()
         data object InvalidScaleRange : Failure()
         // ED-26 backstops (also enforced by the form, ED-22..25):

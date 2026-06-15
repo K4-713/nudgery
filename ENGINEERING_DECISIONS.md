@@ -482,17 +482,18 @@ defaulted — it is the whole meaning of the follow-up. The trigger fields (`tri
 `triggerOperator`) defaulted to null and were never validated, so a follow-up with text but no
 trigger could be saved in a state that can't fire correctly. The required trigger depends on the
 **main** question's type, since that is what the user answers.
-**Decision:** A follow-up's trigger condition is required. By main type: **Yes/No** and **option**
-mains need a specific answer chosen (`triggerAnswerValue` set); **Number/Scale** mains need both a
-comparison operator and a numeric threshold (`triggerAnswerValue` parses as a number). While an
-*engaged* follow-up (anything other than a pristine ED-21 stub) lacks a valid trigger, the step's
-forward action is disabled (ED-22) and an inline "choose when this follow-up should appear" message
-is shown — suppressed for an untouched stub and when an option main has no options yet (the trigger
-control already prompts to add options first). Free-form mains (text/emoji) can't have follow-ups,
-so nothing is required.
+**Decision:** A follow-up's trigger condition is required. An **Always** trigger
+(`TriggerOperator.ALWAYS`) is valid for every main type and needs no answer value (ED-28).
+By main type: **Yes/No** and **option** mains additionally accept a specific answer chosen
+(`triggerAnswerValue` set); **Number/Scale** mains additionally accept both a comparison operator
+and a numeric threshold (`triggerAnswerValue` parses as a number); **free-form** mains (text/emoji)
+accept only the Always trigger. While an *engaged* follow-up (anything other than a pristine ED-21
+stub) lacks a valid trigger, the step's forward action is disabled (ED-22) and an inline "choose
+when this follow-up should appear" message is shown — suppressed for an untouched stub and when an
+option main has no options yet (the trigger control already prompts to add options first).
 **Tests:** `FormValidationTest` (a text-only follow-up with no trigger blocks; a chosen Yes/No
-answer satisfies; a Number main requires both operator and a numeric value).
-**Note:** Backstop deferred (as ED-22/23) — the use-case does not yet reject a triggerless follow-up.
+answer satisfies; a Number main requires both operator and a numeric value; ALWAYS is valid for all
+main types; freeform mains require ALWAYS).
 
 ### ED-25: A scale question's range must ascend (min < max), surfaced inline
 **Status:** Implemented — `FormValidation.isScaleRangeValid` (folded into `isQuestionConfigValid`);
@@ -555,3 +556,21 @@ with a corrupted main scale routes there but can't be corrected in place (delete
 fallback). This requires hand-editing a backup and is rare.
 **Tests:** `SettingsViewModelTest` (a single invalid backup prompts `NeedsFix`; Fix imports it and
 emits navigation to the follow-ups step; Cancel imports nothing).
+
+### ED-28: An "Always" trigger enables follow-ups for every question type
+**Status:** Implemented — `TriggerOperator.ALWAYS`; `QuestionType.allowsFollowUps` returns `true`
+for all types; form and use-case validation accept ALWAYS for any main type; wizard always shows the
+follow-up step; `AlwaysTriggerChip` in `FollowUpEditor`.
+**Context:** Follow-ups were originally restricted to question types with discrete answers (Yes/No,
+Scale, Number, options) because each follow-up needs a trigger condition ("show when the answer
+is X"), and free-form types (Text, Emoji) have no predictable answer set to condition on. Users
+found it confusing that some question types lacked the follow-up step entirely.
+**Decision:** Add `ALWAYS` to `TriggerOperator`. An Always-triggered follow-up fires unconditionally
+after every answer, enabling use cases like "any notes?" regardless of main question type. For
+discrete main types, Always is offered alongside the existing conditional triggers; for free-form
+mains (Text, Emoji), Always is the only trigger option. The wizard always shows the follow-up step
+(3 steps for every question type). The Always trigger carries no `triggerAnswerValue` (it is
+meaningless); export omits the value field, and import accepts its absence.
+**Tests:** `TriggerEvaluationTest` (ALWAYS fires for any answer including blank);
+`FormValidationTest` (ALWAYS is valid for all main types; freeform mains require ALWAYS);
+`QuestionSetupTest` (Text/Emoji mains with ALWAYS follow-up succeed; without trigger, rejected).
