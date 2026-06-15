@@ -574,3 +574,21 @@ meaningless); export omits the value field, and import accepts its absence.
 **Tests:** `TriggerEvaluationTest` (ALWAYS fires for any answer including blank);
 `FormValidationTest` (ALWAYS is valid for all main types; freeform mains require ALWAYS);
 `QuestionSetupTest` (Text/Emoji mains with ALWAYS follow-up succeed; without trigger, rejected).
+
+### ED-29: Nudge setup is shareable as a `.nudge` file (no answer data)
+**Status:** Implemented — `ExportAnswersUseCase.executeSetupOnly`; "Share nudge setup" in the detail
+screen's export menu; `.nudge` file written to cache, shared via `ACTION_SEND` and the system share
+sheet; `ACTION_VIEW` intent filter registered for `application/octet-stream` and `application/json`
+content URIs; `MainActivity.handleNudgeFileIntent` checks the `.nudge` extension at runtime and
+routes to `SettingsViewModel.importNudgeFromBackup`.
+**Context:** Users wanted to share nudge setups (question, follow-ups, schedule) with friends so
+everyone can track the same thing for a while. A `.nudge` file is the existing backup JSON format
+minus the `answers` array and without a `nudgeId` (so import creates a fresh nudge). The same
+format can later power a bundled sample nudge library.
+**Decision:** A `.nudge` file is a JSON backup with an empty answers array. The filename is
+`{sanitized-nudge-name}.nudge` (human-readable, no date — dates are for data exports, not setup
+sharing). Export uses `executeSetupOnly`; import reuses the existing backup import path unchanged
+(empty answers is a no-op). The manifest registers intent filters for `ACTION_VIEW` on content
+URIs with `application/octet-stream` and `application/json` MIME types; the runtime gate is the
+`.nudge` extension, since Android content URIs don't support `pathPattern` filtering.
+**Tests:** `DataExportTest` (setup-only export contains questions but no answers).

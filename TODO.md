@@ -83,7 +83,7 @@ Net: worth doing for the locked-device / offline-analysis case; not a defense ag
 Prepare before submitting:
 - Export a 512×512 PNG icon for the Play Store store listing (see `art/play_store_icon.png`)
 - Short description (max 80 characters)
-- Full description (max 4000 characters)
+- Full description (max 4000 characters) — mention `.nudge` file sharing so users searching for "nudge file" can find the app
 - At least 2 phone screenshots (additional tablet/foldable screenshots improve ranking)
 - Feature graphic (1024×500 PNG or JPEG)
 - Privacy policy: even though no data leaves the device, Google requires a hosted privacy policy URL; a simple page stating that all data is stored locally and nothing is collected or shared is sufficient

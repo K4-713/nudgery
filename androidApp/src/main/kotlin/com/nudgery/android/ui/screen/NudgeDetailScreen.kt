@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Delete
@@ -111,6 +112,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import com.nudgery.android.R
+import com.nudgery.android.backup.nudgeBackupFileName
 import com.nudgery.android.backup.nudgeExportFileBase
 import com.nudgery.android.viewmodel.AnswerRow
 import com.nudgery.android.viewmodel.FollowUpVisualization
@@ -218,6 +220,23 @@ fun NudgeDetailScreen(
         if (uiState.isDeleted) onBack()
     }
 
+    // Share nudge setup (no answers) as a .nudge file via the system share sheet.
+    LaunchedEffect(uiState.shareContent) {
+        val content = uiState.shareContent ?: return@LaunchedEffect
+        val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
+        val fileName = "${nudgeBackupFileName(uiState.nudgeName)}.nudge"
+        val file = File(exportDir, fileName)
+        file.writeText(content)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, null))
+        viewModel.clearShareContent()
+    }
+
     LaunchedEffect(uiState.exportContent) {
         val content = uiState.exportContent ?: return@LaunchedEffect
         val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
@@ -289,6 +308,9 @@ fun NudgeDetailScreen(
                 actions = {
                     IconButton(onClick = onEditClick) {
                         Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.detail_edit_nudge))
+                    }
+                    IconButton(onClick = { viewModel.shareNudge() }) {
+                        Icon(Icons.Outlined.IosShare, contentDescription = stringResource(R.string.detail_share_nudge))
                     }
                 }
             )
