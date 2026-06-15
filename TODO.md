@@ -88,6 +88,45 @@ iOS picker remains, and it is deferred until iOS work begins.
 - [x] Android UI: custom emoji picker (grid, categories, search field, recents) in a bottom sheet, with skin-tone/gender defaults applied and hair/direction (ED-8) as pick-time variants; wire into `AnswerFormScreen`, plus the create/edit question wizard.
 - [ ] iOS UI: custom picker reusing the shared list (later).
 
+## Smooth Nudge Sharing
+> Share a nudge's *setup* (question + follow-ups + schedule, **no answers**) with friends so a group
+> can log the same thing and compare notes. The first attempt — export a `.nudge` JSON file and
+> register an `ACTION_VIEW` intent filter to open it — was **rolled back from `main`** before release:
+> on stock Android a custom extension resolves to `application/octet-stream`, so opening a `.nudge`
+> file shows every file-capable app instead of Nudgery (`content://` URIs carry no extension, so
+> `pathPattern` can't match, and there is no per-app extension→MIME mapping). The in-app extension
+> check filters correctly, but only *after* the user has already picked Nudgery from the crowd. See
+> `SECURITY_NOTES.md` → *Sharing a nudge by link* for the privacy analysis.
+
+**Chosen direction:** Android **App Links** (verified HTTPS deep links) carrying the nudge setup in
+the **URL fragment** — the only mechanism that makes "Nudgery opens it directly, no chooser" true
+when installed, while keeping the payload off any server (Architecture A in `SECURITY_NOTES.md`).
+
+**Open product decision:** keep the `.nudge` file export too (for Files/Drive archiving and
+non-Nudgery recipients), or replace it entirely with links? Either way the Play listing note (below,
+*Play Store Listing Materials*) currently advertises `.nudge` file sharing and needs revisiting.
+
+**Work breakdown (DDD: docs + tests before code):**
+- [ ] Docs first: rewrite README "Sharing Nudges" for link sharing (author voice); DESIGN.md share
+      UX. (Privacy analysis already captured in `SECURITY_NOTES.md`.)
+- [ ] Record the binding rules as ENGINEERING_DECISIONS entries with `TDD_` tests: the App Link
+      host/path scheme; nudge encoded **only** in the fragment (test: the generated share URL has no
+      payload in path/query); the importer reads the fragment and validates via the existing
+      `ImportNudgeRequest` rules (ED-26/27).
+- [ ] Reuse, don't duplicate, the existing import path: feed the decoded fragment into the same
+      `startImport` / collision-resolution flow already built for backup restore
+      (`SettingsViewModel`, `ImportCollisionDialog`).
+- [ ] Infra: register a domain; host `/.well-known/assetlinks.json` (app signing-cert fingerprint)
+      over HTTPS with no redirects; add a minimal install/fallback landing page that does **not**
+      require the fragment. Coordinate with the Play privacy-policy hosting already on the list.
+- [ ] App: `ACTION_VIEW` intent filter for the verified HTTPS host with `android:autoVerify="true"`;
+      share builds the link (compressed + base64url setup in the fragment); `MainActivity` decodes
+      the fragment and routes into the import flow.
+- [ ] Payload-size guard: cap/encode so realistic nudges fit a safe URL length; define behavior for
+      an over-large nudge (e.g. fall back to file export).
+- [ ] Tests: round-trip (share → link → import) in shared/unit; assert no answer data and no payload
+      in path/query; oversize handling.
+
 ## Encrypt the Database at Rest
 > Part of a broader sensitive-data threat model — see `SECURITY_NOTES.md`. This section is control **C1** there, and is currently being reconsidered in favor of an optional passphrase + dormant-when-locked "Protected mode" (C2) and encrypted backups (C3).
 

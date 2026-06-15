@@ -7,7 +7,7 @@ home: a binding internal rule → `ENGINEERING_DECISIONS.md` (with a `TDD_` test
 user-visible behavior → `README.md`; UX → `DESIGN.md`. Until then, this is where the
 reasoning lives so it can be picked up later.
 
-Last substantive update: 2026-06-08.
+Last substantive update: 2026-06-15.
 
 ---
 
@@ -184,3 +184,57 @@ key may be subsumed or offered only as the no-passphrase default.
 - Backup flow: `ExportAnswersUseCase` (shared) → `NudgeDetailScreen` / `SettingsScreen`
   (write + share) → `NudgeBackupParser` (import). Encryption hooks at the byte boundary.
 - `CatchUpMissedFiresUseCase` — reuse to reconcile fires missed while a vault was locked.
+
+---
+
+## Sharing a nudge by link — privacy tradeoffs (feature design)
+
+**Context.** The first sharing attempt — export a `.nudge` JSON file (`ACTION_SEND`) and open
+it on the recipient via an `ACTION_VIEW` intent filter — was rolled back from `main` before
+release because file association can't make Nudgery the obvious handler: a custom extension
+resolves to `application/octet-stream`, so opening a `.nudge` file lists *every* file-capable
+app (`content://` URIs carry no extension, so `pathPattern` can't match, and there is no
+per-app extension→MIME mapping). The leading replacement is a **link-based share**, which has
+two possible architectures with very different privacy properties. Implementation plan lives in
+`TODO.md` → *Smooth Nudge Sharing*.
+
+**What's shared.** Only the nudge *setup* — question, follow-ups, schedule; **no answers.** But
+per Asset #2 the question text alone can disclose the subject ("Did I take my antidepressant?"),
+so a shared nudge is **not** low-sensitivity by default.
+
+**New adversaries this introduces** (beyond A1–A7, which are all device-local):
+
+| ID | Adversary | Exposure |
+|----|-----------|----------|
+| **S1** | Server operator / its logs & CDN | Every request that reaches the server is logged — client IP, timestamp, User-Agent, and the **full path + query**. If the payload rides in the path/query, the nudge content lands in access logs (and any fronting CDN) in plaintext, and you inherit retention/deletion/GDPR duties you don't have today. |
+| **S2** | Transport & link-preview intermediaries | Messaging/email platforms and corporate security scanners routinely **pre-fetch** shared URLs to build preview cards — pulling whatever is in the path/query into third-party infrastructure *before the recipient taps*, and caching it there. |
+| **S3** | Recipient / forwarder of the link | Like A6 for files: once sent, the link and its embedded payload can be forwarded anywhere. |
+
+**Architecture A — self-contained link, payload in the URL fragment (preferred).**
+Encode the whole nudge setup into the link, after the `#`.
+- Browsers never send the fragment to the server, so even the not-installed fallback (link opens
+  in a browser) never transmits the nudge to your domain → defeats S1's content-logging and S2's
+  prefetch leak *for the payload*.
+- With Nudgery installed and the App Link **verified**, Android routes the tap straight to the app
+  *without contacting the server at all* — no chooser, no server hit.
+- The only server request is the one-time static `assetlinks.json` fetch at verify time, which
+  carries no user data. Nothing is ever uploaded or stored server-side; preserves the
+  "your data stays on your phone" promise.
+- **Constraint:** URL length. A setup-only nudge is small; compressed + base64url it fits
+  comfortably for realistic nudges. Large option lists are the edge to watch.
+- **Pitfall:** the payload **must** be in the fragment, never the query/path, and the
+  browser-fallback landing page must not require it (it just says "install Nudgery").
+
+**Architecture B — server-backed short link (avoid).**
+Store the nudge server-side; the link is just an ID.
+- Requires **uploading every shared nudge**, turning S1/S2 from theoretical into live exposures
+  (content in logs / CDN / preview caches), and creates retention/deletion obligations.
+- Directly contradicts the on-device promise. Its only advantage — short links and unlimited
+  payload size — is not worth the privacy cost for setup-only data.
+
+**Graduation path.** If Architecture A is chosen, the binding rules (App Link host/path,
+fragment-only encoding, verification) graduate to `ENGINEERING_DECISIONS.md` with `TDD_` coverage
+(e.g. assert the generated share URL carries no payload in path/query; assert the importer reads
+only the fragment); user-visible share behavior → `README.md`; share UX → `DESIGN.md`. The one
+infrastructure dependency is hosting `assetlinks.json` (+ a minimal install/fallback page) on a
+controlled domain — and a hosted privacy policy is already on the Play checklist (`TODO.md`).
