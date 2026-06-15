@@ -2,6 +2,7 @@
 
 package com.nudgery.android.ui.theme
 
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,6 +20,8 @@ class EmojiScaleTest {
 
     // titleLarge base size; matches theme/Type.kt.
     private val baseTitleSize = 26.sp
+    // An arbitrary body size for the emojiScaledStyle (ED-14) content tests.
+    private val baseBodySize = 20.sp
     private val defaultHeight = 64.dp
     private val unitDensity = Density(density = 1f, fontScale = 1f)
 
@@ -68,5 +71,34 @@ class EmojiScaleTest {
         }
         // 26sp * 1.1 = 28.6dp + 16dp = 44.6dp, below the 64dp default, so the default holds.
         assertEquals(defaultHeight, height)
+    }
+
+    // The global emoji scale (ED-14) enlarges an emoji-only string by the scale factor.
+    @Test
+    fun TDD_emojiOnlyStringScales() {
+        val base = TextStyle(fontSize = baseBodySize)
+        val scaled = emojiScaledStyle("🐶", base, scale = 2f)
+        assertEquals(baseBodySize * 2f, scaled.fontSize)
+    }
+
+    // ED-14: a string mixing text and emoji rides the text size and is left unscaled.
+    @Test
+    fun TDD_mixedTextStringDoesNotScale() {
+        val base = TextStyle(fontSize = baseBodySize)
+        assertEquals(baseBodySize, emojiScaledStyle("Walk 🐶", base, scale = 2f).fontSize)
+    }
+
+    // ED-14: plain text is left unscaled regardless of the scale factor.
+    @Test
+    fun TDD_plainTextStringDoesNotScale() {
+        val base = TextStyle(fontSize = baseBodySize)
+        assertEquals(baseBodySize, emojiScaledStyle("Walk the dog", base, scale = 2f).fontSize)
+    }
+
+    // ED-14: at scale 1.0 even an emoji-only string is returned unchanged.
+    @Test
+    fun TDD_unitScaleLeavesEmojiUnchanged() {
+        val base = TextStyle(fontSize = baseBodySize)
+        assertEquals(baseBodySize, emojiScaledStyle("🐶", base, scale = 1f).fontSize)
     }
 }

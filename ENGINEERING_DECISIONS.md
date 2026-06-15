@@ -273,7 +273,8 @@ at least the floor (and may go larger by frequency); the small **thumbnail** cha
 **Consequences:** A new persisted setting (`AppSettings`). Emoji-only nudge names can enlarge list
 rows at high scale (intended). The bubble chart's frequency encoding is preserved, just floored in
 full screen.
-**Tests:** pending — emoji-only strings scale; mixed text+emoji strings do not.
+**Tests:** `EmojiScaleTest` (`emojiScaledStyle` scales an emoji-only string by the scale factor;
+mixed text+emoji and plain text are left unchanged; scale 1.0 is a no-op).
 
 ### ED-15: A top app bar grows to fit an emoji-only, emoji-scaled title
 **Status:** Implemented — `theme.emojiScaledAppBarHeight(...)` feeds `TopAppBar(expandedHeight = …)` on the nudge detail screen
@@ -495,22 +496,26 @@ option main has no options yet (the trigger control already prompts to add optio
 answer satisfies; a Number main requires both operator and a numeric value; ALWAYS is valid for all
 main types; freeform mains require ALWAYS).
 
-### ED-25: A scale question's range must ascend (min < max), surfaced inline
-**Status:** Implemented — `FormValidation.isScaleRangeValid` (folded into `isQuestionConfigValid`);
-inline `error_scale_range_invalid` and an error state on both fields in `ScaleRangeEditor`; the
-create wizard's *Next* / edit *Save* disabled while invalid. The use-case's pre-existing
-`InvalidScaleRange` failure remains as the backstop.
+### ED-25: A scale question's range must be two whole numbers that ascend (min < max), surfaced inline
+**Status:** Implemented — `FormValidation.areScaleTextsValid` (both fields parse as integers) and
+`isScaleRangeValid` (min < max), both folded into `isQuestionConfigValid`; inline
+`error_scale_not_whole_number` / `error_scale_range_invalid` and an error state on the offending
+field(s) in `ScaleRangeEditor`; the create wizard's *Next* / edit *Save* disabled while invalid.
+The use-case's pre-existing `InvalidScaleRange` failure remains as the backstop.
 **Context:** The `CreateNudgeUseCase` already rejected `scaleMin >= scaleMax` (`InvalidScaleRange`),
 but the form surfaced nothing — no inline error, no disabled action — so a user who inverted the
 range advanced and hit a silent save failure. The `error_scale_range_invalid` string existed but was
 unwired.
-**Decision:** A scale (main or follow-up) is valid only when `scaleMin < scaleMax`. While invalid,
-the step's forward action is disabled (ED-22) and both range fields show an error state with an
-inline message. No "appear only after input" timing is needed here (unlike ED-22 text fields): the
-fields default to a valid 0–10 and reject non-numeric input, so the error can only arise from an
-active misconfiguration, never from a pristine state.
-**Tests:** `FormValidationTest` (`isScaleRangeValid` ascending/equal/inverted; a scale question
-section blocks on an inverted range and passes on the default range).
+**Decision:** A scale (main or follow-up) is valid only when both bounds parse as whole numbers and
+`scaleMin < scaleMax`. The minimum may be negative, so the fields accept a leading `-` (e.g. -5 to 5);
+the range-ordering check is applied only once both fields hold valid integers. While invalid, the
+step's forward action is disabled (ED-22): a non-integer/empty field shows `error_scale_not_whole_number`,
+and an otherwise-parseable but inverted range shows `error_scale_range_invalid`. No "appear only after
+input" timing is needed here (unlike ED-22 text fields): the fields default to a valid 0–10, so the
+error can only arise from an active edit, never from a pristine state.
+**Tests:** `FormValidationTest` (`areScaleTextsValid` accepts integers incl. negatives and rejects
+decimals/bare-minus/empty; `isScaleRangeValid` ascending/equal/inverted; a scale question section
+blocks on a non-integer field and on an inverted range, and passes on the default range).
 
 ### ED-26: Use-case backstop — questions are validated at the save boundary, not only in the form
 **Status:** Implemented (create + update follow-ups) — shared `QuestionValidation`
@@ -576,9 +581,11 @@ meaningless); export omits the value field, and import accepts its absence.
 `QuestionSetupTest` (Text/Emoji mains with ALWAYS follow-up succeed; without trigger, rejected).
 
 ### ED-29: Nudge setup is shareable as a `.nudge` file (no answer data)
-**Status:** Implemented — `ExportAnswersUseCase.executeSetupOnly`; "Share nudge setup" in the detail
-screen's export menu; `.nudge` file written to cache, shared via `ACTION_SEND` and the system share
-sheet; `ACTION_VIEW` intent filter registered for `application/octet-stream` and `application/json`
+**Status:** Implemented — `ExportAnswersUseCase.executeSetupOnly`; a dedicated Share icon
+(`Icons.Outlined.IosShare`, labelled "Share nudge setup") in the detail screen's top app bar, beside
+the Edit icon, calls `NudgeDetailViewModel.shareNudge()`; `.nudge` file written to cache, shared via
+`ACTION_SEND` and the system share sheet; `ACTION_VIEW` intent filter registered for
+`application/octet-stream` and `application/json`
 content URIs; `MainActivity.handleNudgeFileIntent` checks the `.nudge` extension at runtime and
 routes to `SettingsViewModel.importNudgeFromBackup`.
 **Context:** Users wanted to share nudge setups (question, follow-ups, schedule) with friends so

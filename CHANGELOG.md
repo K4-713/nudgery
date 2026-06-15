@@ -9,6 +9,32 @@ entry below, then distilled into the Play Store "What's new" text. See AGENTS.md
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-14
+
+### Added
+- **Share nudges with friends.** A new Share icon on a nudge's detail screen sends that nudge's
+  *setup* — its question, follow-ups, and schedule, with none of your answer data — as a `.nudge`
+  file through your device's normal share sheet. Open one on a phone that has Nudgery and it imports
+  as a fresh, empty nudge, so a group can all log the same thing and compare notes.
+- **Follow-up questions on every nudge type, with an "Always" trigger.** Follow-ups are no longer
+  limited to questions with fixed answers: any nudge — including Freeform Text and Emoji — can now
+  carry follow-ups via an "Always" trigger that asks the follow-up after every answer (handy for an
+  "any notes?" prompt). The follow-up step now appears while setting up any question type.
+- **Negative scale ranges.** A Scale question's range can now run below zero (for example -5 to 5);
+  both ends must be whole numbers.
+
+### Changed
+- **Smoother Scale slider.** The slider is finer, so every value in a wide range is reachable, and
+  it starts at zero when the range is centered on zero (e.g. -5 to 5).
+- **Chart polish.** Charts now use Nudgery's teal instead of a default blue, and chart labels and
+  gridlines follow light/dark mode.
+- **Emoji picker.** With no recent emoji, the picker opens the first populated category instead of an
+  empty Recents tab, and the selected category is easier to see.
+
+### Fixed
+- Line graphs draw a dot for a single data point (instead of an invisible line) and show a faint zero
+  "tide line" when the data crosses between negative and positive values.
+
 ## [0.8.0] - 2026-06-11
 
 ### Added

@@ -26,14 +26,20 @@ val LocalEmojiScale = compositionLocalOf { 1f }
  * that can show an emoji-only string (nudge names, question text, raw-data answers, …).
  */
 @Composable
-fun emojiScaledStyle(text: String, base: TextStyle): TextStyle {
-    val scale = LocalEmojiScale.current
-    return if (scale != 1f && base.fontSize.isSpecified && isEmojiOnly(text)) {
+fun emojiScaledStyle(text: String, base: TextStyle): TextStyle =
+    emojiScaledStyle(text, base, LocalEmojiScale.current)
+
+/**
+ * Pure form of the [emojiScaledStyle] composable, with [scale] passed explicitly instead of read
+ * from [LocalEmojiScale], so the ED-14 content rule can be unit-tested: scale [base]'s font size only
+ * when [text] is emoji-only and the base size is specified; otherwise return [base] unchanged.
+ */
+fun emojiScaledStyle(text: String, base: TextStyle, scale: Float): TextStyle =
+    if (scale != 1f && base.fontSize.isSpecified && isEmojiOnly(text)) {
         base.copy(fontSize = base.fontSize * scale)
     } else {
         base
     }
-}
 
 /**
  * Vertical breathing room kept above and below an enlarged emoji title so the scaled glyph isn't
