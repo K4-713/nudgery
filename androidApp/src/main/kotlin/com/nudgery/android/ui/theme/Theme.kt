@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.settings.ThemePreference
+import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
+import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
 
 private val darkColorScheme = darkColorScheme(
     primary = ColorDarkViolet,
@@ -78,8 +80,9 @@ fun NudgeryTheme(
         colorScheme = if (darkTheme) darkColorScheme else lightColorScheme,
         typography = nudgeryTypography(boldText),
         shapes = nudgeryShapes,
-        content = content
-    )
+    ) {
+        ProvideVicoTheme(rememberM3VicoTheme(), content)
+    }
 }
 
 /** How far the raised fill is blended from surface toward onSurface — subtle by design. */

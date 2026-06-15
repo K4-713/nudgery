@@ -121,6 +121,8 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelCompone
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.point
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
@@ -131,8 +133,11 @@ import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.component.LineComponent
+import com.patrykandpatrick.vico.core.common.component.ShapeComponent
+import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.cartesian.Scroll
 import com.patrykandpatrick.vico.core.cartesian.Zoom
@@ -1401,9 +1406,27 @@ private fun LineGraphChart(
         } else emptyList()
     }
 
+    // Use the brand teal (secondary) for the line and single-point dot, matching
+    // DESIGN.md: "Teal — secondary UI, data visualization".
+    val lineColor = MaterialTheme.colorScheme.secondary
+    val singlePointProvider = if (points.size == 1) {
+        LineCartesianLayer.PointProvider.single(
+            LineCartesianLayer.point(
+                component = ShapeComponent(fill = fill(lineColor), shape = CorneredShape.Pill),
+            )
+        )
+    } else null
+    val lineProvider = LineCartesianLayer.LineProvider.series(
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(fill(lineColor)),
+            pointProvider = singlePointProvider
+        )
+    )
+
     CartesianChartHost(
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(
+                lineProvider = lineProvider,
                 rangeProvider = CartesianLayerRangeProvider.fixed(
                     minX = 0.0,
                     maxX = (windowDays - 1).toDouble(),
