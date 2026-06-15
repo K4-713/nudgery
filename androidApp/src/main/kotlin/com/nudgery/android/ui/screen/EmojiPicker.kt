@@ -216,7 +216,9 @@ fun EmojiPicker(
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = tab.contentDescription,
-                            tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                            // Selected: the purple accent (primary) on the primaryContainer bubble,
+                            // so the active tab reads as clearly purple, not just bubbled.
+                            tint = if (selected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
