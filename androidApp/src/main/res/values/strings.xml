@@ -37,7 +37,7 @@
     <!-- Wizard step 1 — Question -->
     <string name="step_question_title">The Question</string>
     <string name="field_nudge_name">Nudge name</string>
-    <string name="field_question_text">Question Text</string>
+    <string name="field_question_text">Question text</string>
     <string-array name="question_text_hints">
         <item>e.g. Did you learn anything cool today?</item>
         <item>e.g. What are you thinking about right now?</item>
@@ -92,6 +92,7 @@
 
     <!-- Wizard step 3 — Schedule -->
     <string name="step_schedule_title">Schedule</string>
+    <string name="field_schedule_frequency">Frequency</string>
     <string name="schedule_type_daily">Daily</string>
     <string name="schedule_type_weekly">Weekly</string>
     <string name="schedule_type_monthly">Monthly</string>

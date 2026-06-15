@@ -558,7 +558,7 @@ fun ScheduleStep(
         // Schedule type chips
         Column {
             Text(
-                text = stringResource(R.string.field_answer_type),
+                text = stringResource(R.string.field_schedule_frequency),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
