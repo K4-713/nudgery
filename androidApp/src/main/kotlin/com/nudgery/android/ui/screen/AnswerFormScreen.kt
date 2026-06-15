@@ -52,6 +52,7 @@ import com.nudgery.shared.emoji.Gender
 import com.nudgery.shared.emoji.SkinTone
 import com.nudgery.android.viewmodel.ScheduledAt
 import com.nudgery.shared.model.QuestionType
+import kotlin.math.roundToInt
 import kotlinx.datetime.Instant
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -288,21 +289,21 @@ private fun ScaleInput(
     scaleMax: Int,
     onAnswerChange: (String) -> Unit
 ) {
-    val steps = (scaleMax - scaleMin - 1).coerceAtLeast(0)
+    // When the range is symmetric around zero (e.g. -10..10), default to 0 instead of the minimum.
+    val defaultValue = if (scaleMin < 0 && scaleMin == -scaleMax) 0f else scaleMin.toFloat()
     val value = currentAnswer.toFloatOrNull()?.coerceIn(scaleMin.toFloat(), scaleMax.toFloat())
-        ?: scaleMin.toFloat()
+        ?: defaultValue
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = value.toInt().toString(),
+            text = value.roundToInt().toString(),
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.primary
         )
         Slider(
             value = value,
-            onValueChange = { onAnswerChange(it.toInt().toString()) },
+            onValueChange = { onAnswerChange(it.roundToInt().toString()) },
             valueRange = scaleMin.toFloat()..scaleMax.toFloat(),
-            steps = steps,
             modifier = Modifier.fillMaxWidth()
         )
         Row(
