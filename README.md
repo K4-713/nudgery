@@ -83,6 +83,7 @@ Everything about Nudge configuration can be edited, except for the base type of 
 
 While you cannot edit Nudge answer data once entered, you can select individual answers and tag them as hidden. Hidden rows no longer appear in the data visualization.
 
+
 ## Nudge Backup and Restore
 Nudges can be manually backed up and restored through the data download button on the Nudge detail page, to the right of the main chart. When you back up a Nudge, everything about that Nudge will be saved, including name, question and subquestion text, all answer data, enabled status, and schedule.
 
@@ -95,6 +96,12 @@ To restore, tap the Settings icon on the main screen, tap "Import from Backup", 
 If an incoming Nudge's name matches one you already have, Nudgery asks what to do for that Nudge: **Replace** the existing one, **Import as a copy** (kept under a numbered name so both survive), or **Skip** it. When you're restoring many Nudges at once, you're asked for each collision in turn, and a "Repeat for all" checkbox lets you apply the same choice to the rest of the batch.
 
 If there's a problem importing your Nudge, and we can fix it, you'll be asked if you want to cancel, or to import and fix it. If you decide to fix it, we'll import as much of the Nudge as we can (including all your past answers) and open it in the editor at the spot that needs correcting.
+
+## Sharing Nudges
+You can share a Nudge's setup with friends, so you can all respond to the same Nudge for a while, and compare notes. To share a Nudge's setup without sharing all your own data, tap the Share icon on the nudge detail screen. You'll be able to use your device's built-in sharing options to send the nudge anywhere you like.
+
+Opening a shared Nudge from a device with Nudgery installed will import the empty Nudge. 
+
 
 ## Settings
 

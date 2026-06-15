@@ -20,12 +20,23 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -44,8 +55,11 @@ import com.nudgery.android.ui.screen.ExactAlarmRationaleEffect
 import com.nudgery.android.ui.screen.LicensesScreen
 import com.nudgery.android.ui.screen.NudgeDetailScreen
 import com.nudgery.android.ui.screen.NudgeListScreen
+import com.nudgery.android.ui.screen.ImportCollisionDialog
 import com.nudgery.android.ui.screen.SettingsScreen
 import androidx.compose.runtime.CompositionLocalProvider
+import com.nudgery.android.viewmodel.CollisionResolution
+import com.nudgery.android.viewmodel.ImportStatus
 import com.nudgery.android.ui.theme.LocalEmojiScale
 import com.nudgery.android.ui.theme.NudgeryTheme
 import com.nudgery.android.viewmodel.NudgeListViewModel
@@ -67,14 +81,15 @@ class MainActivity : ComponentActivity() {
 
     // Hoisted so both onCreate (cold-start tap) and onNewIntent (warm tap) can reach it.
     private val nudgeListViewModel: NudgeListViewModel by koinActivityViewModel()
+    private val settingsViewModel: SettingsViewModel by koinActivityViewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // Handle notification tap that cold-started the app.
         handleNudgeIntent(intent)
+        handleNudgeFileIntent(intent)
         setContent {
-            val settingsViewModel: SettingsViewModel = koinViewModel()
             val settingsState by settingsViewModel.uiState.collectAsState()
 
             NudgeryTheme(
@@ -86,7 +101,86 @@ class MainActivity : ComponentActivity() {
                 ExactAlarmRationaleEffect()
 
                 val navController = rememberNavController()
+                val importSnackbarHostState = remember { SnackbarHostState() }
 
+                // Activity-level import feedback — handles .nudge file imports and
+                // Settings-initiated imports, visible from any screen.
+                val importStatus = settingsState.importStatus
+                val activityContext = LocalContext.current
+                val importSuccessMessage = stringResource(R.string.settings_import_success)
+
+                LaunchedEffect(importStatus) {
+                    when (importStatus) {
+                        is ImportStatus.BulkSuccess -> {
+                            val message = if (importStatus.imported == 1 &&
+                                importStatus.skipped == 0 && importStatus.failed == 0) {
+                                importSuccessMessage
+                            } else buildString {
+                                append(activityContext.getString(R.string.settings_import_all_success, importStatus.imported))
+                                if (importStatus.skipped > 0) {
+                                    append(" ")
+                                    append(activityContext.getString(R.string.settings_import_skipped, importStatus.skipped))
+                                }
+                                if (importStatus.failed > 0) {
+                                    append(" ")
+                                    append(activityContext.getString(R.string.settings_import_unreadable, importStatus.failed))
+                                }
+                            }
+                            importSnackbarHostState.showSnackbar(message)
+                            settingsViewModel.clearImportStatus()
+                        }
+                        is ImportStatus.Failure -> {
+                            importSnackbarHostState.showSnackbar(
+                                activityContext.getString(R.string.settings_import_failure, importStatus.message)
+                            )
+                            settingsViewModel.clearImportStatus()
+                        }
+                        else -> Unit
+                    }
+                }
+
+                // Fix navigation — after importing a nudge with validation issues, open the editor.
+                val fixNavigation by settingsViewModel.fixNavigation.collectAsState()
+                LaunchedEffect(fixNavigation) {
+                    val nav = fixNavigation ?: return@LaunchedEffect
+                    settingsViewModel.clearFixNavigation()
+                    navController.navigate(NudgeryScreen.EditNudge.createRoute(nav.nudgeId, initialStep = nav.editStep))
+                }
+
+                // Import collision dialog
+                if (importStatus is ImportStatus.Collision) {
+                    ImportCollisionDialog(
+                        incomingName = importStatus.incomingName,
+                        showRepeatForAll = importStatus.hasMore,
+                        onResolve = { resolution, repeatForAll ->
+                            settingsViewModel.resolveCollision(resolution, repeatForAll)
+                        },
+                        onDismiss = {
+                            settingsViewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false)
+                        }
+                    )
+                }
+
+                // Import validation fix dialog
+                if (importStatus is ImportStatus.NeedsFix) {
+                    AlertDialog(
+                        onDismissRequest = { settingsViewModel.cancelInvalidImport() },
+                        title = { Text(stringResource(R.string.import_fix_title)) },
+                        text = { Text(stringResource(R.string.import_fix_body, importStatus.incomingName)) },
+                        confirmButton = {
+                            TextButton(onClick = { settingsViewModel.fixInvalidImport() }) {
+                                Text(stringResource(R.string.import_fix_action))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { settingsViewModel.cancelInvalidImport() }) {
+                                Text(stringResource(R.string.import_fix_cancel))
+                            }
+                        }
+                    )
+                }
+
+                Box(Modifier.fillMaxSize()) {
                 NavHost(
                     navController = navController,
                     startDestination = NudgeryScreen.NudgeList.route,
@@ -181,10 +275,7 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
                             onAboutClick = { navController.navigate(NudgeryScreen.About.route) },
-                            // After importing a backup that needs fixing, open it in the editor.
-                            onNavigateToEdit = { nudgeId, step ->
-                                navController.navigate(NudgeryScreen.EditNudge.createRoute(nudgeId, initialStep = step))
-                            }
+                            viewModel = settingsViewModel
                         )
                     }
 
@@ -199,6 +290,14 @@ class MainActivity : ComponentActivity() {
                         LicensesScreen(onBack = { navController.popBackStack() })
                     }
                 }
+
+                SnackbarHost(
+                    hostState = importSnackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                )
+                } // Box
               }
             }
         }
@@ -223,6 +322,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleNudgeIntent(intent)
+        handleNudgeFileIntent(intent)
     }
 
     private fun handleNudgeIntent(intent: Intent?) {
@@ -230,6 +330,34 @@ class MainActivity : ComponentActivity() {
         val scheduledAtMs = intent.getLongExtra(EXTRA_SCHEDULED_AT, -1L)
         val scheduledAt = if (scheduledAtMs > 0) Instant.fromEpochMilliseconds(scheduledAtMs) else null
         nudgeListViewModel.handleNotificationIntent(nudgeId, scheduledAt)
+    }
+
+    /** Handle ACTION_VIEW for a .nudge file: read the content and route to the import flow. */
+    private fun handleNudgeFileIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        val uri = intent.data ?: return
+        // Check file extension: only accept .nudge files. The display name may come from
+        // the content provider (content:// URI) or the last path segment (file:// URI).
+        val displayName = contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0) cursor.getString(nameIndex) else null
+            } else null
+        } ?: uri.lastPathSegment
+        if (displayName == null || !displayName.endsWith(".nudge")) {
+            Log.d(TAG, "Ignoring non-.nudge file: $displayName")
+            return
+        }
+        val jsonContent = try {
+            contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read .nudge file", e)
+            null
+        }
+        if (jsonContent != null) {
+            Log.i(TAG, "Importing shared nudge from $displayName")
+            settingsViewModel.importNudgeFromBackup(jsonContent)
+        }
     }
 }
 

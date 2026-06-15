@@ -135,6 +135,7 @@
     <string name="detail_export_csv">Export data (CSV)</string>
     <string name="detail_export_tsv">Export data (TSV)</string>
     <string name="detail_export_backup">Back up nudge (JSON)</string>
+    <string name="detail_share_nudge">Share nudge setup</string>
     <string name="detail_followup_questions">Follow-up questions</string>
     <string name="detail_followup_question_label">Follow-up: %1$s</string>
 

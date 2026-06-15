@@ -377,4 +377,19 @@ class DataExportTest {
         assertTrue(dataRows[0].contains("T"), "Export row should contain an ISO timestamp")
         assertTrue(dataRows[0].contains("Z") || dataRows[0].contains("+"), "Timestamp should include timezone")
     }
+
+    @Test
+    fun TDD_setupOnlyExportContainsQuestionsButNoAnswers() = runTest {
+        // ENGINEERING_DECISIONS.md ED-29: setup-only export for sharing includes questions and
+        // schedule but no answer data.
+        val (nudgeId, _, _) = createNudgeWithAnswer()
+        val json = exportAnswers.executeSetupOnly(nudgeId)
+
+        assertTrue(json.contains("Did you sleep well?"), "Should contain question text")
+        assertTrue(json.contains("Sleep Tracker"), "Should contain nudge name")
+        assertTrue(json.contains("DAILY"), "Should contain schedule")
+        assertTrue(json.contains("\"answers\""), "Should contain answers key")
+        // The answers array should be empty (no user data shared)
+        assertFalse(json.contains("\"value\""), "Answers array should be empty")
+    }
 }

@@ -19,7 +19,14 @@ class ExportAnswersUseCase(
     private val answerRepository: AnswerRepository,
     private val scheduleRepository: ScheduleRepository
 ) {
-    suspend fun execute(nudgeId: String, format: ExportFormat): String {
+    suspend fun execute(nudgeId: String, format: ExportFormat): String =
+        export(nudgeId, format, includeAnswers = true)
+
+    /** Export the nudge setup only (questions, options, schedule) — no answer data. */
+    suspend fun executeSetupOnly(nudgeId: String): String =
+        export(nudgeId, ExportFormat.JSON, includeAnswers = false)
+
+    private suspend fun export(nudgeId: String, format: ExportFormat, includeAnswers: Boolean): String {
         val nudge = nudgeRepository.getById(nudgeId) ?: return ""
         val questions = questionRepository.getByNudgeId(nudgeId).sortedBy { it.orderIndex }
 
@@ -27,7 +34,7 @@ class ExportAnswersUseCase(
             .filter { it.type.isOptionType }
             .associate { q -> q.id to questionOptionRepository.getByQuestionId(q.id).sortedBy { it.orderIndex } }
 
-        val answers = answerRepository.getAllByNudgeId(nudgeId)
+        val answers = if (includeAnswers) answerRepository.getAllByNudgeId(nudgeId) else emptyList()
 
         return when (format) {
             ExportFormat.JSON -> {
@@ -83,6 +90,12 @@ class ExportAnswersUseCase(
     ): String {
         val sb = StringBuilder()
         sb.append("{\n")
+
+        // Human-readable breadcrumb for anyone who opens this file in a text editor.
+        sb.append("  \"_meta\": {\n")
+        sb.append("    \"format\": \"nudgery-backup\",\n")
+        sb.append("    \"hint\": \"This is a Nudgery data file. Open it with the Nudgery app to import this nudge.\"\n")
+        sb.append("  },\n")
 
         // nudge
         sb.append("  \"nudge\": {\n")

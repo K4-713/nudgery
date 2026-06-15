@@ -90,6 +90,7 @@ data class NudgeDetailUiState(
     val exportContent: String? = null,
     val exportFormat: ExportFormat = ExportFormat.CSV,
     val isExporting: Boolean = false,
+    val shareContent: String? = null,
     val isDeleted: Boolean = false
 )
 
@@ -270,6 +271,18 @@ class NudgeDetailViewModel(
 
     fun clearExportContent() {
         _uiState.update { it.copy(exportContent = null) }
+    }
+
+    fun shareNudge() {
+        viewModelScope.launch {
+            val content = exportAnswers.executeSetupOnly(nudgeId)
+            _uiState.update { it.copy(shareContent = content) }
+            Log.i(TAG, "Nudge setup exported for sharing")
+        }
+    }
+
+    fun clearShareContent() {
+        _uiState.update { it.copy(shareContent = null) }
     }
 
     private suspend fun loadNudgeData(nudge: Nudge) {

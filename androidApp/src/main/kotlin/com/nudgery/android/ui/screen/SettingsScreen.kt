@@ -97,48 +97,11 @@ import java.util.zip.ZipOutputStream
 fun SettingsScreen(
     onBack: () -> Unit,
     onAboutClick: () -> Unit,
-    onNavigateToEdit: (nudgeId: String, step: Int) -> Unit = { _, _ -> },
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-
-    val importSuccessMessage = stringResource(R.string.settings_import_success)
-    val importStatus = uiState.importStatus
-    val importFailureMessage = if (importStatus is ImportStatus.Failure)
-        stringResource(R.string.settings_import_failure, importStatus.message)
-    else null
-
-    LaunchedEffect(importStatus) {
-        when (importStatus) {
-            is ImportStatus.BulkSuccess -> {
-                val message = if (importStatus.imported == 1 &&
-                    importStatus.skipped == 0 && importStatus.failed == 0) {
-                    importSuccessMessage
-                } else buildString {
-                    append(context.getString(R.string.settings_import_all_success, importStatus.imported))
-                    if (importStatus.skipped > 0) {
-                        append(" ")
-                        append(context.getString(R.string.settings_import_skipped, importStatus.skipped))
-                    }
-                    if (importStatus.failed > 0) {
-                        append(" ")
-                        append(context.getString(R.string.settings_import_unreadable, importStatus.failed))
-                    }
-                }
-                snackbarHostState.showSnackbar(message)
-                viewModel.clearImportStatus()
-            }
-            is ImportStatus.Failure -> {
-                if (importFailureMessage != null) {
-                    snackbarHostState.showSnackbar(importFailureMessage)
-                }
-                viewModel.clearImportStatus()
-            }
-            else -> Unit
-        }
-    }
 
     // When "back up all" has serialized every nudge, zip the per-nudge JSONs and share the archive.
     val backupAllFiles by viewModel.backupAllFiles.collectAsState()
@@ -168,42 +131,6 @@ fun SettingsScreen(
         }
         context.startActivity(Intent.createChooser(intent, null))
         viewModel.clearBackupAll()
-    }
-
-    // After a "Fix", the just-imported nudge opens in the editor at the problem step.
-    val fixNavigation by viewModel.fixNavigation.collectAsState()
-    LaunchedEffect(fixNavigation) {
-        val nav = fixNavigation ?: return@LaunchedEffect
-        viewModel.clearFixNavigation()
-        onNavigateToEdit(nav.nudgeId, nav.editStep)
-    }
-
-    if (importStatus is ImportStatus.Collision) {
-        ImportCollisionDialog(
-            incomingName = importStatus.incomingName,
-            showRepeatForAll = importStatus.hasMore,
-            onResolve = { resolution, repeatForAll -> viewModel.resolveCollision(resolution, repeatForAll) },
-            // Dismissing (back / tap-outside) skips just this one and continues the batch.
-            onDismiss = { viewModel.resolveCollision(CollisionResolution.SKIP, repeatForAll = false) }
-        )
-    }
-
-    if (importStatus is ImportStatus.NeedsFix) {
-        AlertDialog(
-            onDismissRequest = { viewModel.cancelInvalidImport() },
-            title = { Text(stringResource(R.string.import_fix_title)) },
-            text = { Text(stringResource(R.string.import_fix_body, importStatus.incomingName)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.fixInvalidImport() }) {
-                    Text(stringResource(R.string.import_fix_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.cancelInvalidImport() }) {
-                    Text(stringResource(R.string.import_fix_cancel))
-                }
-            }
-        )
     }
 
     // Accepts either a single-nudge JSON backup or an all-nudges ZIP; the file content decides which.
@@ -431,7 +358,7 @@ private fun ExactAlarmDiagnosticRow() {
 }
 
 @Composable
-private fun ImportCollisionDialog(
+internal fun ImportCollisionDialog(
     incomingName: String,
     showRepeatForAll: Boolean,
     onResolve: (CollisionResolution, Boolean) -> Unit,
