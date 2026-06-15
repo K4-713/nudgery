@@ -123,7 +123,9 @@ fun EmojiPicker(
             }
     }
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    // Open on Recents if the user has any; otherwise start on the first content category
+    // (Smileys & Emotion), matching standard Android/iOS keyboard behavior.
+    var selectedTab by remember { mutableIntStateOf(if (recents.isNotEmpty()) 0 else 1) }
     var query by remember { mutableStateOf("") }
     val emojiScale = LocalEmojiScale.current // ED-14: emoji surfaces honor the global scale
 
@@ -203,6 +205,10 @@ fun EmojiPicker(
                     Box(
                         modifier = Modifier
                             .clip(CircleShape)
+                            .background(
+                                if (selected) MaterialTheme.colorScheme.primaryContainer
+                                else Color.Transparent
+                            )
                             .clickable { selectedTab = index }
                             .padding(6.dp),
                         contentAlignment = Alignment.Center
@@ -210,7 +216,7 @@ fun EmojiPicker(
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = tab.contentDescription,
-                            tint = if (selected) MaterialTheme.colorScheme.primary
+                            tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
