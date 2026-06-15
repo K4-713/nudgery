@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Delete
@@ -37,6 +36,7 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.QuestionAnswer
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -310,7 +310,7 @@ fun NudgeDetailScreen(
                         Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.detail_edit_nudge))
                     }
                     IconButton(onClick = { viewModel.shareNudge() }) {
-                        Icon(Icons.Outlined.IosShare, contentDescription = stringResource(R.string.detail_share_nudge))
+                        Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.detail_share_nudge))
                     }
                 }
             )

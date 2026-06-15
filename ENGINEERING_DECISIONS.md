@@ -582,7 +582,7 @@ meaningless); export omits the value field, and import accepts its absence.
 
 ### ED-29: Nudge setup is shareable as a `.nudge` file (no answer data)
 **Status:** Implemented — `ExportAnswersUseCase.executeSetupOnly`; a dedicated Share icon
-(`Icons.Outlined.IosShare`, labelled "Share nudge setup") in the detail screen's top app bar, beside
+(`Icons.Outlined.Share`, labelled "Share nudge setup") in the detail screen's top app bar, beside
 the Edit icon, calls `NudgeDetailViewModel.shareNudge()`; `.nudge` file written to cache, shared via
 `ACTION_SEND` and the system share sheet; `ACTION_VIEW` intent filter registered for
 `application/octet-stream` and `application/json`
