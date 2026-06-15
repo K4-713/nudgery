@@ -584,6 +584,11 @@ meaningless); export omits the value field, and import accepts its absence.
 **Status:** Implemented — `ExportAnswersUseCase.executeSetupOnly`; "Share nudge setup" in the detail
 screen's export menu; `.nudge` file written to cache, shared via `ACTION_SEND` and the system share
 sheet; `ACTION_VIEW` intent filter registered for `application/octet-stream` and `application/json`
+**Status:** Implemented — `ExportAnswersUseCase.executeSetupOnly`; a dedicated Share icon
+(`Icons.Outlined.Share`, labelled "Share nudge setup") in the detail screen's top app bar, beside
+the Edit icon, calls `NudgeDetailViewModel.shareNudge()`; `.nudge` file written to cache, shared via
+`ACTION_SEND` and the system share sheet; `ACTION_VIEW` intent filter registered for
+`application/octet-stream` and `application/json`
 content URIs; `MainActivity.handleNudgeFileIntent` checks the `.nudge` extension at runtime and
 routes to `SettingsViewModel.importNudgeFromBackup`.
 **Context:** Users wanted to share nudge setups (question, follow-ups, schedule) with friends so
