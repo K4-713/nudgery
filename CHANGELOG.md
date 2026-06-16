@@ -9,6 +9,8 @@ entry below, then distilled into the Play Store "What's new" text. See AGENTS.md
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-06-16
+
 ### Fixed
 - **Removing a follow-up no longer crashes.** Deleting a follow-up that had ever been answered
   previously crashed the app (a database constraint failure) — most often the leftover blank
