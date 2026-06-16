@@ -83,6 +83,11 @@ Everything about Nudge configuration can be edited, except for the base type of 
 
 While you cannot edit Nudge answer data once entered, you can select individual answers and tag them as hidden. Hidden rows no longer appear in the data visualization.
 
+## Deleting Nudges
+To delete a Nudge, go to that Nudge's detail screen and tap the "Delete nudge" button on the bottom of the screen. This will permanently delete the nudge, and all its associated data.
+
+To delete a Nudge's follow-up question, go to the Nudge's detail screen. If you have one or more follow-up questions, tap the icon next to the line saying how many follow-ups you have, and click the trash icon on the same line as the name of the follow-up question you want to delete. Deleting a follow-up will permanently remove that follow-up, and any answers you gave for that particular follow-up question.  
+
 ## Nudge Backup and Restore
 Nudges can be manually backed up and restored through the data download button on the Nudge detail page, to the right of the main chart. When you back up a Nudge, everything about that Nudge will be saved, including name, question and subquestion text, all answer data, enabled status, and schedule.
 

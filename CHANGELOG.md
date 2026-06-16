@@ -9,6 +9,17 @@ entry below, then distilled into the Play Store "What's new" text. See AGENTS.md
 
 ## [Unreleased]
 
+### Fixed
+- **Removing a follow-up no longer crashes.** Deleting a follow-up that had ever been answered
+  previously crashed the app (a database constraint failure) — most often the leftover blank
+  follow-up some nudges picked up from the old creation wizard. Removing a follow-up now also
+  deletes that follow-up's recorded answers, as it always should have.
+
+### Changed
+- When you remove a follow-up that has question text and recorded answers, Nudgery now asks you to
+  confirm first (since its answers are deleted too). Blank or never-answered follow-ups are removed
+  without a prompt.
+
 ## [0.9.0] - 2026-06-14
 
 ### Added

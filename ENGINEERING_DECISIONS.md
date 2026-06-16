@@ -579,3 +579,40 @@ meaningless); export omits the value field, and import accepts its absence.
 **Tests:** `TriggerEvaluationTest` (ALWAYS fires for any answer including blank);
 `FormValidationTest` (ALWAYS is valid for all main types; freeform mains require ALWAYS);
 `QuestionSetupTest` (Text/Emoji mains with ALWAYS follow-up succeed; without trigger, rejected).
+
+### ED-29: Removing a question deletes its recorded answers
+**Status:** Implemented — `AnswerRepository.deleteByQuestionId`; `UpdateNudgeUseCase`
+deletes a removed follow-up's answers (then its options, then the question row).
+**Context:** The `Answer.questionId` foreign key references `Question(id)` **without**
+`ON DELETE CASCADE` (only `Answer.nudgeId` cascades, which is why deleting a whole nudge works).
+With `PRAGMA foreign_keys = ON` (Android driver), deleting a question that still has answer rows
+throws `SQLITE_CONSTRAINT_FOREIGNKEY`. This crashed the app whenever a user removed a follow-up that
+had ever been answered — notably the always-shown, null-trigger stub stranded by the old creation
+wizard, which accrued answers on every session because `triggerAnswerValue == null` reads as
+"always show".
+**Decision:** Removing a follow-up always deletes that follow-up's answer data first, then its
+options, then the question. The deletion is unconditional (independent of the ED-30 confirmation),
+so the destructive cleanup is driven by the data model, not the UI. Answers are hard-deleted, not
+hidden: a removed question has no detail screen or export to surface them again.
+**Scope:** Applies to follow-up removal. In-place follow-up edits keep the same `questionId`, so
+their answers are retained even across a type change. Whole-nudge deletion continues to rely on the
+`nudgeId` cascade.
+**Tests:** `UpdateNudgeFollowUpTest` (removing an answered follow-up succeeds and deletes its
+answers — the v0.9.0 crash repro); `EditNudgeViewModelTest` (confirm-then-save deletes the answers).
+
+### ED-30: Removing a follow-up only prompts for confirmation when it has text and recorded answers
+**Status:** Implemented — `followUpRemovalNeedsConfirmation()` in `FormValidation`;
+`EditNudgeViewModel.removeFollowUp()` raises `FollowUpRemovalPrompt`; `FollowUpRemovalDialog` in
+`EditNudgeScreen`.
+**Context:** Removing a follow-up is destructive (ED-29 deletes its answers), but interrupting the
+user for every removal is noise — especially for the stranded blank stub this work was prompted by,
+which has no text and which the user only ever wanted gone.
+**Decision:** Show a confirmation dialog before removing a follow-up **only when both** its current
+question text is non-blank (trimmed) **and** it has at least one recorded answer. A blank follow-up,
+or one that was never answered, is removed immediately with no prompt. The check uses the follow-up's
+current (on-screen) text and the answer count loaded from storage (new, unsaved follow-ups have a
+count of 0). The confirmation gates only the in-form removal; the actual answer deletion happens on
+save via ED-29.
+**Tests:** `FormValidationTest` (the predicate: prompt only for text + answers);
+`EditNudgeViewModelTest` (text + answers prompts; confirm removes; dismiss keeps; blank or
+answerless removes without a prompt).

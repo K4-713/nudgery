@@ -48,7 +48,7 @@ val sharedModule = module {
 
     factory { CreateNudgeUseCase(get(), get(), get(), get(), get()) }
     factory { DeleteNudgeUseCase(get(), get()) }
-    factory { UpdateNudgeUseCase(get(), get(), get(), get(), get(), get()) }
+    factory { UpdateNudgeUseCase(get(), get(), get(), get(), get(), get(), get()) }
     factory { RecordAnswerUseCase(get(), get()) }
     factory { ReorderNudgesUseCase(get()) }
     factory { SetAnswerHiddenUseCase(get()) }

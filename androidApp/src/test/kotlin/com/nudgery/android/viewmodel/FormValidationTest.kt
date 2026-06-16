@@ -164,4 +164,15 @@ class FormValidationTest {
         assertTrue("TEXT with ALWAYS", areFollowUpsValid(QuestionType.TEXT, listOf(withAlways)))
         assertTrue("EMOJI with ALWAYS", areFollowUpsValid(QuestionType.EMOJI, listOf(withAlways)))
     }
+
+    @Test
+    fun TDD_followUpRemovalConfirmationOnlyWhenTextAndAnswers() {
+        // ENGINEERING_DECISIONS.md ED-30: confirm a follow-up removal only when it has real
+        // question text AND at least one recorded answer; otherwise remove silently.
+        assertTrue("text + answers", followUpRemovalNeedsConfirmation("How bad?", 3))
+        assertFalse("text but no answers", followUpRemovalNeedsConfirmation("How bad?", 0))
+        assertFalse("blank text with answers", followUpRemovalNeedsConfirmation("", 3))
+        assertFalse("whitespace text with answers", followUpRemovalNeedsConfirmation("   ", 3))
+        assertFalse("blank text, no answers", followUpRemovalNeedsConfirmation("", 0))
+    }
 }

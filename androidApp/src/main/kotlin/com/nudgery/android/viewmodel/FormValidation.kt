@@ -77,6 +77,16 @@ fun isFollowUpTriggerValid(mainType: QuestionType, followUp: QuestionFormState):
         QuestionType.TEXT, QuestionType.EMOJI -> false
     }
 
+/**
+ * Whether removing a follow-up should ask the user to confirm first (ED-30). Removing a follow-up
+ * always deletes its recorded answers (ED-29), but we only interrupt the user when there is
+ * something worth losing: a follow-up with real (non-blank) question text **and** at least one
+ * recorded answer. A blank follow-up (e.g. the stranded creation-wizard stub) or one that was never
+ * answered is removed without a prompt.
+ */
+fun followUpRemovalNeedsConfirmation(questionText: String, answerCount: Int): Boolean =
+    isRequiredTextProvided(questionText) && answerCount > 0
+
 /** Pristine stub states that ED-21 discards — the legacy default (null trigger) and the current
  *  default (ALWAYS trigger, ED-28). */
 private val UNTOUCHED_STUBS = setOf(

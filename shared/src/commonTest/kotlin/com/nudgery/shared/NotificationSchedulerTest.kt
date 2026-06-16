@@ -40,7 +40,7 @@ class NotificationSchedulerTest {
         )
         updateNudge = UpdateNudgeUseCase(
             repos.nudgeRepository, repos.questionRepository, repos.questionOptionRepository,
-            repos.scheduleRepository, repos.nudgeEditRepository, fakeScheduler
+            repos.scheduleRepository, repos.nudgeEditRepository, repos.answerRepository, fakeScheduler
         )
     }
 

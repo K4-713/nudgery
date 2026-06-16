@@ -159,6 +159,15 @@
     <string name="split_dialog_in_place">Edit in place</string>
     <string name="split_dialog_cancel">Cancel</string>
 
+    <!-- Confirmation shown when removing a follow-up that has recorded answers (ED-30). -->
+    <string name="followup_delete_dialog_title">Delete follow-up and its answers?</string>
+    <plurals name="followup_delete_dialog_body">
+        <item quantity="one">Removing “%1$s” will also permanently delete its 1 recorded answer. This can\'t be undone.</item>
+        <item quantity="other">Removing “%1$s” will also permanently delete its %2$d recorded answers. This can\'t be undone.</item>
+    </plurals>
+    <string name="followup_delete_dialog_confirm">Delete</string>
+    <string name="followup_delete_dialog_cancel">Keep</string>
+
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
     <string name="settings_theme">Theme</string>

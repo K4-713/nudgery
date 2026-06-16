@@ -2,6 +2,7 @@
 
 package com.nudgery.shared
 
+import com.nudgery.shared.model.Answer
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
 import com.nudgery.shared.model.TriggerOperator
@@ -18,6 +19,7 @@ import com.nudgery.shared.util.FakeNotificationScheduler
 import com.nudgery.shared.util.TestRepositories
 import com.nudgery.shared.util.createTestRepositories
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalTime
 import kotlin.test.BeforeTest
@@ -49,6 +51,7 @@ class UpdateNudgeFollowUpTest {
             repos.questionOptionRepository,
             repos.scheduleRepository,
             repos.nudgeEditRepository,
+            repos.answerRepository,
             scheduler
         )
     }
@@ -157,6 +160,43 @@ class UpdateNudgeFollowUpTest {
         val updated = repos.questionRepository.getByNudgeId(nudgeId).first { !it.isMainQuestion }
         assertEquals("Rate the pain from 1 to 10", updated.text)
         assertEquals(existingFollowUp.id, updated.id, "Question ID should be preserved on in-place update")
+    }
+
+    @Test
+    fun TDD_removingFollowUpDeletesItsRecordedAnswers() = runTest {
+        // ENGINEERING_DECISIONS.md ED-29: removing a follow-up must delete its recorded answers.
+        // The Answer→Question foreign key has no ON DELETE CASCADE, so deleting a still-answered
+        // follow-up would otherwise throw a constraint error and crash. (Repro of the v0.9.0 crash.)
+        val nudgeId = createSimpleNudge(withFollowUp = true)
+        val followUp = repos.questionRepository.getByNudgeId(nudgeId).first { !it.isMainQuestion }
+
+        val now = Clock.System.now()
+        repos.answerRepository.insert(
+            Answer(
+                id = "ans-1",
+                nudgeId = nudgeId,
+                questionId = followUp.id,
+                value = "3",
+                scheduledAt = now,
+                answeredAt = now,
+                isHidden = false
+            )
+        )
+        assertEquals(1, repos.answerRepository.countByQuestionId(followUp.id), "Precondition: one answer")
+
+        val result = updateNudge.execute(
+            UpdateNudgeRequest(nudgeId = nudgeId, followUpReplacements = emptyList())
+        )
+
+        assertIs<UpdateNudgeResult.Success>(result)
+        assertTrue(
+            repos.questionRepository.getByNudgeId(nudgeId).none { !it.isMainQuestion },
+            "Follow-up should be removed"
+        )
+        assertEquals(
+            0, repos.answerRepository.countByQuestionId(followUp.id),
+            "The follow-up's answers should have been deleted too"
+        )
     }
 
     @Test

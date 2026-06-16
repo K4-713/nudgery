@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.TriggerOperator
+import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
 import com.nudgery.shared.repository.QuestionRepository
@@ -35,7 +36,21 @@ data class OptionEditState(
 
 data class EditableFollowUp(
     val questionId: String?,  // null for newly-added follow-ups not yet in DB
-    val formState: QuestionFormState
+    val formState: QuestionFormState,
+    /** How many answers are already recorded against this follow-up; 0 for newly-added ones. Drives
+     *  the "removing this also deletes its answers" confirmation (ED-30). */
+    val answerCount: Int = 0
+)
+
+/**
+ * A pending request to remove an existing follow-up that carries recorded answers — surfaced as a
+ * confirmation dialog (ED-30) because removing it will also delete those answers. [questionText] and
+ * [answerCount] are shown to the user; [index] is the follow-up's position in the form list.
+ */
+data class FollowUpRemovalPrompt(
+    val index: Int,
+    val questionText: String,
+    val answerCount: Int
 )
 
 data class EditNudgeFormState(
@@ -54,6 +69,7 @@ data class EditNudgeFormState(
     val originalOptionOrder: List<String> = emptyList(),
     val removedOptionIds: Set<String> = emptySet(),
     val followUps: List<EditableFollowUp> = emptyList(),
+    val followUpRemovalPrompt: FollowUpRemovalPrompt? = null,
     val schedule: ScheduleFormState = ScheduleFormState(),
     val showSplitDialog: Boolean = false,
     val isSubmitting: Boolean = false,
@@ -73,6 +89,7 @@ class EditNudgeViewModel(
     private val questionRepository: QuestionRepository,
     private val questionOptionRepository: QuestionOptionRepository,
     private val scheduleRepository: ScheduleRepository,
+    private val answerRepository: AnswerRepository,
     private val updateNudge: UpdateNudgeUseCase
 ) : ViewModel() {
 
@@ -104,8 +121,42 @@ class EditNudgeViewModel(
         }
     }
 
+    /**
+     * Handles the user tapping a follow-up's trash control. Removing a follow-up always deletes its
+     * recorded answers on save (ED-29), so when the follow-up has both real question text and at
+     * least one recorded answer we first raise a confirmation (ED-30); a blank or never-answered
+     * follow-up — including the stranded stub this guards against — is removed straight away.
+     */
     fun removeFollowUp(index: Int) {
+        val followUp = _formState.value.followUps.getOrNull(index) ?: return
+        if (followUpRemovalNeedsConfirmation(followUp.formState.text, followUp.answerCount)) {
+            _formState.update {
+                it.copy(followUpRemovalPrompt = FollowUpRemovalPrompt(
+                    index = index,
+                    questionText = followUp.formState.text,
+                    answerCount = followUp.answerCount
+                ))
+            }
+        } else {
+            removeFollowUpAt(index)
+        }
+    }
+
+    /** Confirms a pending answer-bearing follow-up removal (ED-30). */
+    fun confirmFollowUpRemoval() {
+        val prompt = _formState.value.followUpRemovalPrompt ?: return
+        removeFollowUpAt(prompt.index)
+        _formState.update { it.copy(followUpRemovalPrompt = null) }
+    }
+
+    /** Dismisses the removal confirmation without removing anything. */
+    fun dismissFollowUpRemoval() {
+        _formState.update { it.copy(followUpRemovalPrompt = null) }
+    }
+
+    private fun removeFollowUpAt(index: Int) {
         _formState.update { state ->
+            if (index !in state.followUps.indices) return@update state
             state.copy(followUps = state.followUps.toMutableList().also { it.removeAt(index) })
         }
     }
@@ -272,6 +323,7 @@ class EditNudgeViewModel(
             }
             EditableFollowUp(
                 questionId = q.id,
+                answerCount = answerRepository.countByQuestionId(q.id),
                 formState = QuestionFormState(
                     text = q.text,
                     type = q.type,

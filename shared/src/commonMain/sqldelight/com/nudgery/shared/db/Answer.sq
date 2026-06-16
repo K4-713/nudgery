@@ -35,3 +35,9 @@ WHERE nudgeId = :nudgeId AND isHidden = 0;
 
 observeAll:
 SELECT * FROM Answer;
+
+countByQuestionId:
+SELECT COUNT(*) FROM Answer WHERE questionId = :questionId;
+
+deleteByQuestionId:
+DELETE FROM Answer WHERE questionId = :questionId;

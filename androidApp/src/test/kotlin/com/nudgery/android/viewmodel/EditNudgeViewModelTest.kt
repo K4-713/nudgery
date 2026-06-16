@@ -203,6 +203,98 @@ class EditNudgeViewModelTest {
     }
 
     @Test
+    fun TDD_removeFollowUpWithAnswersPromptsConfirmation() = runTest {
+        // ED-30: removing a follow-up that has real text AND recorded answers raises a confirmation
+        // before it is removed (its answers will be deleted on save).
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        insertAnswerForFirstFollowUp(nudgeId)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.removeFollowUp(0)
+
+        val prompt = viewModel.formState.value.followUpRemovalPrompt
+        assertNotNull("A confirmation prompt should be raised", prompt)
+        assertEquals("Describe your workout", prompt!!.questionText)
+        assertEquals(1, prompt.answerCount)
+        // Not yet removed — still awaiting confirmation.
+        assertEquals(1, viewModel.formState.value.followUps.size)
+    }
+
+    @Test
+    fun TDD_confirmFollowUpRemovalRemovesAndDeletesAnswers() = runTest {
+        // ED-30 + ED-29: confirming the prompt removes the follow-up, and saving deletes its answers.
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        val followUpId = insertAnswerForFirstFollowUp(nudgeId)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.removeFollowUp(0)
+        viewModel.confirmFollowUpRemoval()
+        assertEquals(null, viewModel.formState.value.followUpRemovalPrompt)
+        assertTrue("Follow-up removed from form", viewModel.formState.value.followUps.isEmpty())
+
+        viewModel.submit()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.formState.value.result is UpdateNudgeResult.Success)
+        assertTrue(
+            "Follow-up deleted from DB",
+            repos.questionRepo.getByNudgeId(nudgeId).none { !it.isMainQuestion }
+        )
+        assertEquals("Its answers deleted too", 0, repos.answerRepo.countByQuestionId(followUpId))
+    }
+
+    @Test
+    fun TDD_dismissFollowUpRemovalKeepsIt() = runTest {
+        // ED-30: dismissing the confirmation leaves the follow-up in place.
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        insertAnswerForFirstFollowUp(nudgeId)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.removeFollowUp(0)
+        viewModel.dismissFollowUpRemoval()
+
+        assertEquals(null, viewModel.formState.value.followUpRemovalPrompt)
+        assertEquals(1, viewModel.formState.value.followUps.size)
+    }
+
+    @Test
+    fun TDD_removeAnsweredButBlankFollowUpHasNoPrompt() = runTest {
+        // ED-30: a blank follow-up (the stranded creation-wizard stub) is removed without a prompt
+        // even if it somehow accrued answers — there is no meaningful text to warn about.
+        val nudgeId = createNudge("Did you exercise?")
+        val stub = com.nudgery.shared.model.Question(
+            id = "stub-1", nudgeId = nudgeId, text = "", type = QuestionType.YES_NO, orderIndex = 1,
+            triggerAnswerValue = null, triggerOperator = null, scaleMin = null, scaleMax = null,
+            collapsePerDay = false
+        )
+        repos.questionRepo.insert(stub)
+        insertAnswer(nudgeId, stub.id)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.removeFollowUp(0)
+
+        assertEquals("No prompt for a blank follow-up", null, viewModel.formState.value.followUpRemovalPrompt)
+        assertTrue("Removed immediately", viewModel.formState.value.followUps.isEmpty())
+    }
+
+    @Test
+    fun TDD_removeFollowUpWithoutAnswersHasNoPrompt() = runTest {
+        // ED-30: a follow-up with text but no recorded answers is removed without a prompt.
+        val nudgeId = createNudge("Did you exercise?", withFollowUp = true)
+        val viewModel = buildViewModel(nudgeId)
+        advanceUntilIdle()
+
+        viewModel.removeFollowUp(0)
+
+        assertEquals(null, viewModel.formState.value.followUpRemovalPrompt)
+        assertTrue(viewModel.formState.value.followUps.isEmpty())
+    }
+
+    @Test
     fun TDD_untouchedAddedFollowUpNotSavedOnEdit() = runTest {
         // ED-21: a follow-up added in the edit screen but never edited is discarded on save,
         // matching the create wizard — not persisted as a blank follow-up.
@@ -328,8 +420,31 @@ class EditNudgeViewModelTest {
         questionRepository = repos.questionRepo,
         questionOptionRepository = repos.optionRepo,
         scheduleRepository = repos.scheduleRepo,
+        answerRepository = repos.answerRepo,
         updateNudge = repos.updateNudgeUseCase()
     )
+
+    /** Records one answer against the first (only) follow-up of a nudge; returns its question id. */
+    private suspend fun insertAnswerForFirstFollowUp(nudgeId: String): String {
+        val followUpId = repos.questionRepo.getByNudgeId(nudgeId).first { !it.isMainQuestion }.id
+        insertAnswer(nudgeId, followUpId)
+        return followUpId
+    }
+
+    private suspend fun insertAnswer(nudgeId: String, questionId: String) {
+        val now = kotlinx.datetime.Clock.System.now()
+        repos.answerRepo.insert(
+            com.nudgery.shared.model.Answer(
+                id = "ans-${questionId}",
+                nudgeId = nudgeId,
+                questionId = questionId,
+                value = "YES",
+                scheduledAt = now,
+                answeredAt = now,
+                isHidden = false
+            )
+        )
+    }
 
     private suspend fun createNudge(
         questionText: String,

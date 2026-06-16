@@ -66,6 +66,14 @@ class SqlDelightAnswerRepository(private val database: NudgeryDatabase) : Answer
                 ?.let { Instant.parse(it) }
         }
 
+    override suspend fun countByQuestionId(questionId: String): Int = withContext(Dispatchers.Default) {
+        database.answerQueries.countByQuestionId(questionId).executeAsOne().toInt()
+    }
+
+    override suspend fun deleteByQuestionId(questionId: String) = withContext(Dispatchers.Default) {
+        database.answerQueries.deleteByQuestionId(questionId)
+    }
+
     override fun observeAll(): Flow<List<Answer>> =
         database.answerQueries.observeAll()
             .asFlow()

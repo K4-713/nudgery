@@ -90,7 +90,7 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 |---|---|
 | `NudgeListViewModel` | Observes nudge list; builds `NudgeSummary` (name, schedule description, next fire time formatted as `String?` in local time, enabled); `toggleEnabled()`; holds `PendingAnswerNavigation` state for notification-tap routing |
 | `CreateNudgeViewModel` | Manages `CreateNudgeFormState` (main question, follow-ups, schedule, name, enabled); calls `CreateNudgeUseCase` on `submit()` |
-| `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId`); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
+| `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId` and an `answerCount` loaded from storage); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; `removeFollowUp()` raises a `FollowUpRemovalPrompt` confirmation when the follow-up has text + recorded answers (ED-30), resolved via `confirmFollowUpRemoval()` / `dismissFollowUpRemoval()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
 | `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); reads persisted default timeframe from `AppSettings` on init and saves it when changed; live-observes answers via `combine`; owns the shared dashboard window (`selectedTimeframe` + `windowOffsetDays` → `[windowStart, windowEnd]`, label, `canShiftOlder/Newer`); loads one `QuestionVisualizationSource` per charted question from the database only when answers change (`reloadVisualizationSources`), then re-aggregates those cached sources in memory for the current window on every timeframe/scrub change (`renderVisualizations`) so scrubbing touches no storage; `selectTimeframe()`, `shiftWindowDays()`, `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
 | `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for import-from-backup. Validates a backup before importing and exposes a one-shot `fixNavigation` flow that routes an invalid single import into the editor to fix (ED-27) |
@@ -186,12 +186,14 @@ One row per question answered per notification event.
 | Field | Type | Notes |
 |---|---|---|
 | id | UUID | |
-| nudgeId | UUID | FK → Nudge |
-| questionId | UUID | FK → Question |
+| nudgeId | UUID | FK → Nudge (cascade delete) |
+| questionId | UUID | FK → Question (**no** cascade — see below) |
 | value | String | Serialized answer value; format depends on QuestionType |
 | scheduledAt | Instant | The nudge's intended fire time; used to anchor the data point to the correct day in visualizations |
 | answeredAt | Instant | When the user actually submitted the answer; kept for transparency and auditing |
 | isHidden | Boolean | Hidden rows excluded from visualizations |
+
+The `questionId` foreign key intentionally has **no** `ON DELETE CASCADE` (unlike `nudgeId`). Deleting a whole nudge cascades through `nudgeId` and clears its answers; deleting a single question does not. So when `UpdateNudgeUseCase` removes a follow-up it must delete that question's answers explicitly (`AnswerRepository.deleteByQuestionId`) before deleting the question row, or the FK constraint (`PRAGMA foreign_keys = ON`) aborts the delete (ED-29).
 
 ### NotificationFire
 Written by `NudgeNotificationWorker` at the moment a notification is actually delivered (not the scheduled time). Used to determine whether a notification has been sent but not yet answered, driving the missed-nudge indicator in the UI.

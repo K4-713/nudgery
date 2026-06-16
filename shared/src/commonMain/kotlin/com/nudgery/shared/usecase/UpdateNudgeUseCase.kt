@@ -8,6 +8,7 @@ import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionOption
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.Schedule
+import com.nudgery.shared.repository.AnswerRepository
 import com.nudgery.shared.repository.NudgeEditRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
@@ -24,6 +25,7 @@ class UpdateNudgeUseCase(
     private val questionOptionRepository: QuestionOptionRepository,
     private val scheduleRepository: ScheduleRepository,
     private val nudgeEditRepository: NudgeEditRepository,
+    private val answerRepository: AnswerRepository,
     private val notificationScheduler: NotificationScheduler
 ) {
     suspend fun execute(rawRequest: UpdateNudgeRequest): UpdateNudgeResult {
@@ -192,11 +194,15 @@ class UpdateNudgeUseCase(
             emptyList()
         }
 
-        // Delete follow-ups that were removed from the list
+        // Delete follow-ups that were removed from the list. Order matters: the follow-up's answers
+        // must go first because the Answer→Question foreign key has no ON DELETE CASCADE, so deleting
+        // a still-referenced question throws a constraint error (ED-29). Removing a follow-up always
+        // discards its recorded answers.
         val keptIds = replacements.mapNotNull { it.questionId }.toSet()
         existingFollowUps
             .filter { it.id !in keptIds }
             .forEach { removed ->
+                answerRepository.deleteByQuestionId(removed.id)
                 questionOptionRepository.deleteByQuestionId(removed.id)
                 questionRepository.deleteById(removed.id)
             }

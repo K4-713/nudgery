@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nudgery.android.R
@@ -69,6 +70,15 @@ fun EditNudgeScreen(
             onSplit = { viewModel.submitWithSplit() },
             onInPlace = { viewModel.submitInPlace() },
             onCancel = { viewModel.dismissSplitDialog() }
+        )
+    }
+
+    formState.followUpRemovalPrompt?.let { prompt ->
+        FollowUpRemovalDialog(
+            questionText = prompt.questionText,
+            answerCount = prompt.answerCount,
+            onConfirm = { viewModel.confirmFollowUpRemoval() },
+            onCancel = { viewModel.dismissFollowUpRemoval() }
         )
     }
 
@@ -271,6 +281,39 @@ private fun EditQuestionStep(
             OneYesPerDayToggle(checked = collapsePerDay, onCheckedChange = onCollapsePerDayChange)
         }
     }
+}
+
+@Composable
+private fun FollowUpRemovalDialog(
+    questionText: String,
+    answerCount: Int,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.followup_delete_dialog_title)) },
+        text = {
+            Text(
+                pluralStringResource(
+                    R.plurals.followup_delete_dialog_body,
+                    answerCount,
+                    questionText,
+                    answerCount
+                )
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text(stringResource(R.string.followup_delete_dialog_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.followup_delete_dialog_cancel))
+            }
+        }
+    )
 }
 
 @Composable

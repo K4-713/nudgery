@@ -178,6 +178,11 @@ class FakeAnswerRepository : AnswerRepository {
     }
     override suspend fun getMostRecentAnsweredAtByNudgeId(nudgeId: String): Instant? =
         _answers.value.filter { it.nudgeId == nudgeId && !it.isHidden }.maxOfOrNull { it.answeredAt }
+    override suspend fun countByQuestionId(questionId: String): Int =
+        _answers.value.count { it.questionId == questionId }
+    override suspend fun deleteByQuestionId(questionId: String) {
+        _answers.update { list -> list.filterNot { it.questionId == questionId } }
+    }
     override fun observeAll(): Flow<List<Answer>> = _answers
 }
 
@@ -243,7 +248,7 @@ class TestViewModelRepositories {
     fun deleteNudgeUseCase() =
         DeleteNudgeUseCase(nudgeRepo, scheduler)
     fun updateNudgeUseCase() =
-        UpdateNudgeUseCase(nudgeRepo, questionRepo, optionRepo, scheduleRepo, nudgeEditRepo, scheduler)
+        UpdateNudgeUseCase(nudgeRepo, questionRepo, optionRepo, scheduleRepo, nudgeEditRepo, answerRepo, scheduler)
     fun setAnswerHiddenUseCase() = SetAnswerHiddenUseCase(answerRepo)
     fun exportAnswersUseCase() = ExportAnswersUseCase(nudgeRepo, questionRepo, optionRepo, answerRepo, scheduleRepo)
     fun getVisualizationDataUseCase() = GetVisualizationDataUseCase(answerRepo, questionRepo, optionRepo)
