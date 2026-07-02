@@ -43,6 +43,17 @@ enum class HeatMapGranularity {
     MONTH
 }
 
+/**
+ * How a heat map's week/month buckets combine their days' values
+ * (DESIGN.md "Heat Map Value-to-Color Scaling").
+ */
+enum class HeatMapBucketAggregation {
+    /** Buckets sum their days — event tallies (Yes/No counts, number quantities). */
+    SUM,
+    /** Buckets average their logged days — scale answers are levels, not counts, and must stay within the question's defined scale. */
+    AVERAGE
+}
+
 sealed class VisualizationData {
     data class CalendarHeatMap(
         val dailyCounts: List<DailyCount>,
@@ -57,7 +68,17 @@ sealed class VisualizationData {
         val weekAnchor: LocalDate,
         val granularity: HeatMapGranularity,
         /** When true, the chart sizes cells to fit the entire dataset in view without scrolling. */
-        val fillViewport: Boolean = false
+        val fillViewport: Boolean = false,
+        /**
+         * Fixed bounds for the value→color gradient: a scale question passes its defined min/max so
+         * a given value keeps the same color across every timeframe and window (DESIGN.md "Heat Map
+         * Value-to-Color Scaling"). Null = fit the gradient to the observed cell values (Yes/No and
+         * number questions).
+         */
+        val colorScaleMin: Double? = null,
+        val colorScaleMax: Double? = null,
+        /** SUM for event tallies; AVERAGE for scale questions, whose cells are levels, not counts. */
+        val bucketAggregation: HeatMapBucketAggregation = HeatMapBucketAggregation.SUM
     ) : VisualizationData()
     data class LineGraph(
         val points: List<DataPoint>,

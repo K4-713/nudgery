@@ -152,6 +152,7 @@ import com.nudgery.android.ui.theme.paletteStops
 import com.nudgery.android.viewmodel.SettingsViewModel
 import com.nudgery.shared.model.DailyCount
 import com.nudgery.shared.model.DataPoint
+import com.nudgery.shared.model.HeatMapBucketAggregation
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Timeframe
@@ -840,7 +841,10 @@ private fun NudgeryChart(
                         weekAnchor = visualization.weekAnchor,
                         granularity = visualization.granularity,
                         palette = chartPalette,
-                        fillViewport = visualization.fillViewport
+                        fillViewport = visualization.fillViewport,
+                        colorScaleMin = visualization.colorScaleMin,
+                        colorScaleMax = visualization.colorScaleMax,
+                        bucketAggregation = visualization.bucketAggregation
                     )
                 }
                 is VisualizationData.LineGraph -> Box(Modifier.fillMaxSize().timeWindowDrag(nav)) {
@@ -974,7 +978,11 @@ private fun CalendarHeatMapChart(
     weekAnchor: LocalDate,
     granularity: HeatMapGranularity,
     palette: ChartPalettePreference,
-    fillViewport: Boolean = false
+    fillViewport: Boolean = false,
+    // Fixed value→color bounds (a scale question's defined range); null = fit observed cells.
+    colorScaleMin: Double? = null,
+    colorScaleMax: Double? = null,
+    bucketAggregation: HeatMapBucketAggregation = HeatMapBucketAggregation.SUM
 ) {
     val textMeasurer = rememberTextMeasurer()
     val emptyCellColor = MaterialTheme.colorScheme.surfaceVariant
@@ -1013,33 +1021,39 @@ private fun CalendarHeatMapChart(
         }
     }
 
-    val weekCells = remember(counts, windowStart, windowEnd, weekAnchor) {
-        buildWeekCells(counts, windowStart, windowEnd, weekAnchor)
+    val weekCells = remember(counts, windowStart, windowEnd, weekAnchor, bucketAggregation) {
+        buildWeekCells(counts, windowStart, windowEnd, weekAnchor, bucketAggregation)
     }
 
-    val monthCells = remember(counts, windowStart, windowEnd) {
-        buildMonthCells(counts, windowStart, windowEnd)
+    val monthCells = remember(counts, windowStart, windowEnd, bucketAggregation) {
+        buildMonthCells(counts, windowStart, windowEnd, bucketAggregation)
     }
 
-    val maxValue = remember(counts, granularity, singleDayCells, weekCells, monthCells) {
+    // The values of the cells actually drawn at this granularity (days with no data excluded).
+    val cellValues = remember(counts, granularity, weekCells, monthCells) {
         when (granularity) {
-            HeatMapGranularity.SINGLE_DAY -> singleDayCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
-            HeatMapGranularity.DAY -> counts.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
-            HeatMapGranularity.WEEK, HeatMapGranularity.WEEK_GRID ->
-                weekCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
-            HeatMapGranularity.MONTH -> monthCells.maxOfOrNull { it.second ?: 0.0 }?.coerceAtLeast(1.0) ?: 1.0
-        }
-    }
-
-    // The color→value scale is only meaningful once cells hold something other than 0 or 1; a plain
-    // yes/no-once-a-day map (only 0s and 1s) needs no legend.
-    val showValueScale = remember(counts, granularity, weekCells, monthCells) {
-        val values = when (granularity) {
             HeatMapGranularity.SINGLE_DAY, HeatMapGranularity.DAY -> counts.map { it.value }
             HeatMapGranularity.WEEK, HeatMapGranularity.WEEK_GRID -> weekCells.mapNotNull { it.second }
             HeatMapGranularity.MONTH -> monthCells.mapNotNull { it.second }
         }
-        values.any { it != 0.0 && it != 1.0 }
+    }
+
+    // DESIGN.md "Heat Map Value-to-Color Scaling": scale questions anchor the gradient to their
+    // defined bounds so a value keeps one color in every view; other types fit the observed cells.
+    val colorScale = remember(cellValues, colorScaleMin, colorScaleMax) {
+        if (colorScaleMin != null && colorScaleMax != null)
+            HeatColorScale.fixed(colorScaleMin, colorScaleMax)
+        else
+            HeatColorScale.fromObservedValues(cellValues)
+    }
+
+    // Show the color→value legend whenever it carries information: always for a fixed (scale
+    // question) gradient with data on screen — its colors are normalized against the full defined
+    // range, not the visible max — and for observed fits once cells hold something other than 0 or
+    // 1 (a plain yes/no-once-a-day map needs no legend).
+    val showValueScale = remember(cellValues, colorScaleMin, colorScaleMax) {
+        if (colorScaleMin != null && colorScaleMax != null) cellValues.isNotEmpty()
+        else cellValues.any { it != 0.0 && it != 1.0 }
     }
     val gradientStops = if (isDark) paletteStops.darkStops else paletteStops.lightStops
     // Subtle ring marking the tapped cell — visible on any palette color without dominating it.
@@ -1110,10 +1124,11 @@ private fun CalendarHeatMapChart(
                             }
                         }
                         drawRoundRect(
-                            color = when {
-                                value == null -> emptyCellColor
-                                value <= 0.0 -> zeroCellColor
-                                else -> paletteStops.colorAt((value / maxValue).toFloat().coerceIn(0f, 1f), isDark)
+                            color = when (value) {
+                                null -> emptyCellColor
+                                else -> colorScale.fractionFor(value)
+                                    ?.let { paletteStops.colorAt(it, isDark) }
+                                    ?: zeroCellColor
                             },
                             topLeft = Offset(x, y),
                             size = Size(cellPx, cellPx),
@@ -1191,12 +1206,11 @@ private fun CalendarHeatMapChart(
                                 drawText(measured, topLeft = Offset(x, maxOf(0f, y - measured.size.height.toFloat())))
                             }
                             drawRoundRect(
-                                color = when {
-                                    value == null -> emptyCellColor
-                                    value <= 0.0 -> zeroCellColor
-                                    else -> paletteStops.colorAt(
-                                        (value / maxValue).toFloat().coerceIn(0f, 1f), isDark
-                                    )
+                                color = when (value) {
+                                    null -> emptyCellColor
+                                    else -> colorScale.fractionFor(value)
+                                        ?.let { paletteStops.colorAt(it, isDark) }
+                                        ?: zeroCellColor
                                 },
                                 topLeft = Offset(x, y),
                                 size = Size(cellPx, cellPx),
@@ -1236,9 +1250,15 @@ private fun CalendarHeatMapChart(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Color→value scale: cold end is 0, hot end is the maximum cell value.
+                // Color→value scale: labeled with the gradient's actual bounds — the question's
+                // defined range for scale questions, 0 (or the lowest negative cell) to the hottest
+                // cell for observed fits.
                 if (showValueScale) {
-                    Text("0", style = MaterialTheme.typography.labelSmall, color = labelColor)
+                    Text(
+                        text = formatHeatValue(colorScale.min),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor
+                    )
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
@@ -1247,7 +1267,7 @@ private fun CalendarHeatMapChart(
                             .background(Brush.horizontalGradient(gradientStops), RoundedCornerShape(2.dp))
                     )
                     Text(
-                        text = formatHeatValue(maxValue),
+                        text = formatHeatValue(colorScale.max),
                         style = MaterialTheme.typography.labelSmall,
                         color = labelColor
                     )
@@ -2010,11 +2030,31 @@ private fun FollowUpAnswerRows(
  * are dropped rather than shown as a misleadingly low partial cell. A `null` value = no data that
  * week.
  */
+/**
+ * Combines daily [counts] into one value per bucket, keyed by [bucketStartOf]. SUM tallies the
+ * days' values; AVERAGE means the mean of the days that have data (unlogged days don't drag it
+ * down), used by scale questions so buckets stay within the defined scale (DESIGN.md "Heat Map
+ * Value-to-Color Scaling").
+ */
+private fun bucketDailyCounts(
+    counts: List<DailyCount>,
+    aggregation: HeatMapBucketAggregation,
+    bucketStartOf: (LocalDate) -> LocalDate
+): Map<LocalDate, Double> =
+    counts.groupBy({ bucketStartOf(it.date) }, { it.value })
+        .mapValues { (_, dayValues) ->
+            when (aggregation) {
+                HeatMapBucketAggregation.SUM -> dayValues.sum()
+                HeatMapBucketAggregation.AVERAGE -> dayValues.average()
+            }
+        }
+
 internal fun buildWeekCells(
     counts: List<DailyCount>,
     windowStart: LocalDate,
     windowEnd: LocalDate,
-    weekAnchor: LocalDate
+    weekAnchor: LocalDate,
+    aggregation: HeatMapBucketAggregation = HeatMapBucketAggregation.SUM
 ): List<Pair<LocalDate, Double?>> {
     // Start of the 7-day period (anchored on weekAnchor) that contains [date].
     fun weekStartOf(date: LocalDate): LocalDate {
@@ -2022,11 +2062,7 @@ internal fun buildWeekCells(
         return weekAnchor.plus(periods * 7, DateTimeUnit.DAY)
     }
 
-    val weeklyMap = mutableMapOf<LocalDate, Double>()
-    counts.forEach { dc ->
-        val weekStart = weekStartOf(dc.date)
-        weeklyMap[weekStart] = (weeklyMap[weekStart] ?: 0.0) + dc.value
-    }
+    val weeklyMap = bucketDailyCounts(counts, aggregation, ::weekStartOf)
 
     // First whole period that begins on or after the window start (so the leading cell is never a
     // window-clipped partial week).
@@ -2042,16 +2078,13 @@ internal fun buildWeekCells(
     return result
 }
 
-private fun buildMonthCells(
+internal fun buildMonthCells(
     counts: List<DailyCount>,
     windowStart: LocalDate,
-    windowEnd: LocalDate
+    windowEnd: LocalDate,
+    aggregation: HeatMapBucketAggregation = HeatMapBucketAggregation.SUM
 ): List<Pair<LocalDate, Double?>> {
-    val monthlyMap = mutableMapOf<LocalDate, Double>()
-    counts.forEach { dc ->
-        val monthStart = LocalDate(dc.date.year, dc.date.month, 1)
-        monthlyMap[monthStart] = (monthlyMap[monthStart] ?: 0.0) + dc.value
-    }
+    val monthlyMap = bucketDailyCounts(counts, aggregation) { LocalDate(it.year, it.month, 1) }
     val gridStart = LocalDate(windowStart.year, windowStart.month, 1)
     val result = mutableListOf<Pair<LocalDate, Double?>>()
     var month = gridStart

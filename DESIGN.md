@@ -116,6 +116,8 @@ Where possible, charts visually distinguish between a period with **no data reco
 
 This distinction is implemented in the calendar heat map across every granularity (the day strip, the day grid, the week grid, the week strip, and the month strip). Other chart types — line graphs, bar/column charts, and packed bubble charts — simply omit periods with no data and do not have a corresponding null state to represent.
 
+The zero style only applies when zero is the *bottom* of the cell's value range — "recorded, but nothing". When a question's range extends below zero (a scale defined with a negative minimum, or a number question with negative responses), zero is an ordinary point on the gradient and is colored like any other value; see **Heat Map Value-to-Color Scaling** below.
+
 **Validation:** Adjacent stops in each palette are tested against Viénot 1999 colorblind simulation matrices (deuteranopia, protanopia, and tritanopia) applied in sRGB space. Separation is measured as Euclidean distance in sRGB. The general-purpose SPECTRUM palette requires ≥ 0.06 minimum distance; the purpose-built colorblind palettes (HORIZON, EMBER) require ≥ 0.10 (or ≥ 0.08 for Ember light under tritanopia). These thresholds are enforced by automated tests.
 
 #### SPECTRUM — Full ROYGBV gradient (default)
@@ -158,6 +160,15 @@ Steps 3–6 invert direction (decreasing R), but maintain sufficient inter-stop 
 Dark mode ends at warm peach (`#FAD090`) — the brightest, most saturated stop represents maximum intensity on a dark background.
 
 Minimum separation threshold: 0.10 (dark mode), 0.08 (light mode) under tritanopia simulation.
+
+### Heat Map Value-to-Color Scaling
+
+How a heat map cell's value maps onto the palette gradient depends on the question type. These rules are meant to feel completely intuitive — the map should simply look right — so they are captured here rather than explained to users.
+
+- **Scale questions: the color scale is fixed to the question's defined min/max, in every view.** A given answer value is always the same color regardless of timeframe, granularity, or where the window is scrubbed. The gradient legend is labeled with the scale's defined min and max whenever the window holds any data.
+  - **Zero is only "recorded zero" grey when it is the bottom of the scale.** On a scale defined from 0 upward, a zero answer means "bottom of scale" and keeps the Null-vs-Zero grey treatment. On a scale that extends below zero (e.g. −10 to 10), zero is an ordinary mid-gradient value and gets a normal palette color — only null (no data) renders as empty.
+  - **Week/month cells average their logged days, they do not sum.** A scale answer is a level, not an event count: daily cells already show the day's average answer, and larger buckets show the average of the days that have data. (Summing would push cells past the defined scale bounds and paint a fully-logged week of middling answers hotter than any single day.) Scale question cells therefore always sit within the defined scale.
+- **Yes/No and number questions: the color scale fits the observed responses.** These are tallies of events and quantities, so week/month cells keep summing their days' values, and the gradient spans from zero up to the hottest cell currently in view (zero keeps the recorded-zero grey). If a number question's responses go negative, the gradient extends down to the lowest visible cell instead of zero, and — as above — the zero-grey treatment no longer applies, since zero is then just another point in the range.
 
 ## App Icon
 

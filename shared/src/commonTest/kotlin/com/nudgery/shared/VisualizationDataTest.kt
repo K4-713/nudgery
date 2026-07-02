@@ -3,6 +3,7 @@
 package com.nudgery.shared
 
 import com.nudgery.shared.model.Answer
+import com.nudgery.shared.model.HeatMapBucketAggregation
 import com.nudgery.shared.model.Question
 import com.nudgery.shared.model.QuestionType
 import com.nudgery.shared.model.ScheduleType
@@ -188,6 +189,54 @@ class VisualizationDataTest {
 
         assertTrue(charts.any { it is VisualizationData.CalendarHeatMap },
             "SCALE should provide a CalendarHeatMap")
+    }
+
+    @Test
+    fun TDD_scaleHeatMapIsFixedToTheQuestionsDefinedRange_andAveragesItsBuckets() = runTest {
+        // DESIGN.md "Heat Map Value-to-Color Scaling": "Scale questions: the color scale is fixed to
+        // the question's defined min/max, in every view" and "Week/month cells average their logged
+        // days, they do not sum."
+        val result = createNudge.execute(
+            CreateNudgeRequest(
+                mainQuestion = QuestionRequest(
+                    "How's the mood?", QuestionType.SCALE, scaleMin = -10, scaleMax = 10
+                ),
+                schedule = dailySchedule()
+            )
+        ) as CreateNudgeResult.Success
+        val questionId = repos.questionRepository.getByNudgeId(result.nudgeId).first { it.isMainQuestion }.id
+        repos.answerRepository.insert(
+            Answer(
+                id = "ans-scale-neg", nudgeId = result.nudgeId, questionId = questionId,
+                value = "-4", scheduledAt = Clock.System.now(), answeredAt = Clock.System.now(),
+                isHidden = false
+            )
+        )
+
+        val charts = getVisualizationData.execute(result.nudgeId, questionId, Timeframe.ALL_TIME)
+        val heatMap = charts.filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+
+        assertEquals(-10.0, heatMap.colorScaleMin, "Color scale should anchor at the defined scale min")
+        assertEquals(10.0, heatMap.colorScaleMax, "Color scale should anchor at the defined scale max")
+        assertEquals(HeatMapBucketAggregation.AVERAGE, heatMap.bucketAggregation,
+            "Scale buckets must average so cells stay within the defined scale")
+    }
+
+    @Test
+    fun TDD_countStyleHeatMapsFitObservedValues_andSumTheirBuckets() = runTest {
+        // DESIGN.md "Heat Map Value-to-Color Scaling": "Yes/No and number questions: the color scale
+        // fits the observed responses" — no fixed bounds — and "week/month cells keep summing their
+        // days' values."
+        for (type in listOf(QuestionType.YES_NO to "YES", QuestionType.NUMBER to "7")) {
+            val (nudgeId, questionId) = createNudgeAndRecordAnswer(type.first, answerValue = type.second)
+            val charts = getVisualizationData.execute(nudgeId, questionId, Timeframe.ALL_TIME)
+            val heatMap = charts.filterIsInstance<VisualizationData.CalendarHeatMap>().first()
+
+            assertEquals(null, heatMap.colorScaleMin, "${type.first} heat map should fit observed values")
+            assertEquals(null, heatMap.colorScaleMax, "${type.first} heat map should fit observed values")
+            assertEquals(HeatMapBucketAggregation.SUM, heatMap.bucketAggregation,
+                "${type.first} buckets are event tallies and must keep summing")
+        }
     }
 
     @Test

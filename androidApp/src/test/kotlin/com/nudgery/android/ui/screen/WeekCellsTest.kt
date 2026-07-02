@@ -3,6 +3,7 @@
 package com.nudgery.android.ui.screen
 
 import com.nudgery.shared.model.DailyCount
+import com.nudgery.shared.model.HeatMapBucketAggregation
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
@@ -64,5 +65,58 @@ class WeekCellsTest {
         assertEquals(2, cells.size)
         assertEquals(7.0, cells[0].second)
         assertEquals(null, cells[1].second) // no data the second week
+    }
+
+    @Test
+    fun TDD_averageWeekBucketsAverageTheirLoggedDays_notSum() {
+        // DESIGN.md "Heat Map Value-to-Color Scaling": "Week/month cells average their logged days,
+        // they do not sum" for scale questions. Two logged days (2.0 and 4.0) make the week 3.0 —
+        // and the five unlogged days do not drag the average down.
+        val anchor = LocalDate(2026, 1, 5)
+        val counts = listOf(
+            DailyCount(anchor, 2.0),
+            DailyCount(anchor.plus(1, DateTimeUnit.DAY), 4.0)
+        )
+        val cells = buildWeekCells(
+            counts, anchor, anchor.plus(6, DateTimeUnit.DAY), weekAnchor = anchor,
+            aggregation = HeatMapBucketAggregation.AVERAGE
+        )
+
+        assertEquals(1, cells.size)
+        assertEquals(3.0, cells[0].second)
+    }
+
+    @Test
+    fun TDD_averageMonthBucketsAverageTheirLoggedDays_notSum() {
+        // DESIGN.md "Heat Map Value-to-Color Scaling": same averaging rule for month cells.
+        val start = LocalDate(2026, 1, 1)
+        val counts = listOf(
+            DailyCount(start, -6.0),
+            DailyCount(start.plus(10, DateTimeUnit.DAY), 2.0)
+        )
+        val cells = buildMonthCells(
+            counts, start, LocalDate(2026, 2, 28),
+            aggregation = HeatMapBucketAggregation.AVERAGE
+        )
+
+        assertEquals(2, cells.size)
+        assertEquals(-2.0, cells[0].second)  // (-6 + 2) / 2 logged days
+        assertEquals(null, cells[1].second)  // February has no data
+    }
+
+    @Test
+    fun TDD_bucketsWithoutDataStayNullUnderAverage() {
+        val anchor = LocalDate(2026, 3, 2)
+        val cells = buildWeekCells(
+            counts = dailyOnes(anchor, 7),
+            windowStart = anchor,
+            windowEnd = anchor.plus(13, DateTimeUnit.DAY),
+            weekAnchor = anchor,
+            aggregation = HeatMapBucketAggregation.AVERAGE
+        )
+
+        assertEquals(2, cells.size)
+        assertEquals(1.0, cells[0].second)  // seven 1.0 days average to 1.0
+        assertEquals(null, cells[1].second)
     }
 }

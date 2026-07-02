@@ -5,6 +5,7 @@ package com.nudgery.shared.usecase
 import com.nudgery.shared.model.Answer
 import com.nudgery.shared.model.DailyCount
 import com.nudgery.shared.model.DataPoint
+import com.nudgery.shared.model.HeatMapBucketAggregation
 import com.nudgery.shared.model.HeatMapGranularity
 import com.nudgery.shared.model.NamedCount
 import com.nudgery.shared.model.Question
@@ -122,7 +123,7 @@ class GetVisualizationDataUseCase(
 
         return when (question.type) {
             QuestionType.YES_NO -> buildYesNoCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange, question.collapsePerDay)
-            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange)
+            QuestionType.SCALE, QuestionType.NUMBER -> buildNumberCharts(question, answers, timeZone, windowStart, windowEnd, earliest, granularity, fillViewport, lineVisibleDays, lineYRange)
             QuestionType.OPTION_SINGLE -> buildOptionCharts(answers, source.optionsById, includeColumnChart = true)
             QuestionType.OPTION_MULTI -> buildOptionCharts(answers, source.optionsById, includeColumnChart = false)
             QuestionType.TEXT, QuestionType.EMOJI -> buildTextCharts(answers)
@@ -198,6 +199,7 @@ class GetVisualizationDataUseCase(
     }
 
     private fun buildNumberCharts(
+        question: Question,
         answers: List<Answer>,
         timeZone: TimeZone,
         windowStart: LocalDate,
@@ -222,9 +224,20 @@ class GetVisualizationDataUseCase(
             }
             .sortedBy { it.date }
 
+        // DESIGN.md "Heat Map Value-to-Color Scaling": a scale answer is a level, not an event
+        // count, so its heat map colors are anchored to the question's defined bounds in every view
+        // and its week/month buckets average their logged days. NUMBER answers are quantities: the
+        // color scale fits the observed cells and buckets keep summing.
+        val isScale = question.type == QuestionType.SCALE
         return listOf(
             VisualizationData.LineGraph(points, windowStart, windowEnd, lineVisibleDays, lineYRange?.first, lineYRange?.second),
-            VisualizationData.CalendarHeatMap(dailyCounts, windowStart, windowEnd, dataStart, granularity, fillViewport)
+            VisualizationData.CalendarHeatMap(
+                dailyCounts, windowStart, windowEnd, dataStart, granularity, fillViewport,
+                colorScaleMin = if (isScale) (question.scaleMin ?: 0).toDouble() else null,
+                colorScaleMax = if (isScale) (question.scaleMax ?: 10).toDouble() else null,
+                bucketAggregation = if (isScale) HeatMapBucketAggregation.AVERAGE
+                                    else HeatMapBucketAggregation.SUM
+            )
         )
     }
 
