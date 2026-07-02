@@ -80,6 +80,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -109,7 +111,6 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 import com.nudgery.android.R
 import com.nudgery.android.backup.nudgeExportFileBase
 import com.nudgery.android.viewmodel.AnswerRow
@@ -1619,6 +1620,13 @@ private const val MAX_BUBBLES = 25
 private const val MIN_BUBBLE_ZOOM = 1f
 private const val MAX_BUBBLE_ZOOM = 6f
 
+/**
+ * How long the packed bubble chart takes to morph between two windows' packings (DESIGN.md
+ * "Packed bubble scrub transitions") — one short beat: long enough to follow a word's movement,
+ * short enough to keep up with step-by-step scrubbing.
+ */
+private const val BUBBLE_TRANSITION_MS = 350
+
 @Composable
 private fun PackedBubbleChart(
     entries: List<NamedCount>,
@@ -1632,7 +1640,6 @@ private fun PackedBubbleChart(
         return
     }
     val textMeasurer = rememberTextMeasurer()
-    val maxCount = entries.maxOf { it.count }.toFloat()
     val emojiScale = LocalEmojiScale.current // captured for the draw lambda (ED-14, full-screen floor)
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val stops = palette.paletteStops
@@ -1641,42 +1648,51 @@ private fun PackedBubbleChart(
 
     // Pack once per data set. Radius scales with sqrt(count) so a bubble's *area* encodes
     // frequency. Positions are packed tangentially around a center for an organic cluster.
-    val packed = remember(shown) {
-        val circles = shown.map { PackedCircle(it, sqrt(it.count.toDouble())) }
-        packSiblings(circles)
-        circles
+    val targetLayout = remember(shown) { packedBubbleLayout(shown) }
+
+    // Scrub transition (DESIGN.md "Packed bubble scrub transitions"): when a window shift delivers
+    // a new packing, the chart morphs to it from whatever is currently on screen — including a
+    // mid-flight morph, so rapid scrubbing retargets smoothly instead of queueing replays.
+    var transitionFrom by remember { mutableStateOf(targetLayout) }
+    var transitionTo by remember { mutableStateOf(targetLayout) }
+    val transitionProgress = remember { Animatable(1f) }
+    LaunchedEffect(targetLayout) {
+        if (targetLayout == transitionTo) return@LaunchedEffect // first load: nothing to morph from
+        transitionFrom = interpolateBubbles(transitionFrom, transitionTo, transitionProgress.value)
+        transitionTo = targetLayout
+        transitionProgress.snapTo(0f)
+        transitionProgress.animateTo(1f, tween(BUBBLE_TRANSITION_MS))
     }
 
-    val bounds = remember(packed) {
-        var minX = Double.MAX_VALUE
-        var minY = Double.MAX_VALUE
-        var maxX = -Double.MAX_VALUE
-        var maxY = -Double.MAX_VALUE
-        packed.forEach { c ->
-            minX = min(minX, c.x - c.r)
-            maxX = max(maxX, c.x + c.r)
-            minY = min(minY, c.y - c.r)
-            maxY = max(maxY, c.y + c.r)
-        }
-        PackBounds(minX, minY, maxX, maxY)
-    }
+    val drawBubbles: DrawScope.() -> Unit = drawBubbles@{
+        val bubbles = interpolateBubbles(transitionFrom, transitionTo, transitionProgress.value)
+        if (bubbles.isEmpty()) return@drawBubbles
 
-    val drawBubbles: DrawScope.() -> Unit = {
         // Scale the packed cluster to fill the available space (works for both the small
         // card thumbnail and the full-screen view), keeping its aspect ratio and centering it.
-        val contentW = (bounds.maxX - bounds.minX).coerceAtLeast(1e-6)
-        val contentH = (bounds.maxY - bounds.minY).coerceAtLeast(1e-6)
-        val scale = (minOf(size.width / contentW, size.height / contentH) * 0.98).toFloat()
-        val offsetX = (size.width - (contentW * scale).toFloat()) / 2f
-        val offsetY = (size.height - (contentH * scale).toFloat()) / 2f
+        // Bounds follow the interpolated geometry, so a mid-morph cluster refits continuously.
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = -Float.MAX_VALUE
+        var maxY = -Float.MAX_VALUE
+        bubbles.forEach { b ->
+            minX = min(minX, b.x - b.r)
+            maxX = max(maxX, b.x + b.r)
+            minY = min(minY, b.y - b.r)
+            maxY = max(maxY, b.y + b.r)
+        }
+        val contentW = (maxX - minX).coerceAtLeast(1e-6f)
+        val contentH = (maxY - minY).coerceAtLeast(1e-6f)
+        val scale = minOf(size.width / contentW, size.height / contentH) * 0.98f
+        val offsetX = (size.width - contentW * scale) / 2f
+        val offsetY = (size.height - contentH * scale) / 2f
 
-        packed.forEach { c ->
-            val cx = ((c.x - bounds.minX) * scale).toFloat() + offsetX
-            val cy = ((c.y - bounds.minY) * scale).toFloat() + offsetY
-            val r = (c.r * scale).toFloat()
+        bubbles.forEach { c ->
+            val cx = (c.x - minX) * scale + offsetX
+            val cy = (c.y - minY) * scale + offsetY
+            val r = c.r * scale
 
-            val intensity = (c.entry.count / maxCount).coerceIn(0f, 1f)
-            val bubbleColor = stops.colorAt(intensity, isDark)
+            val bubbleColor = stops.colorAt(c.intensity, isDark)
             drawCircle(color = bubbleColor, radius = r, center = Offset(cx, cy))
 
             // Only label bubbles big enough to read; smaller ones stay as plain dots (thumbnail).
@@ -1685,7 +1701,7 @@ private fun PackedBubbleChart(
 
             // A lone emoji floats in a sea of bubble; with no neighbors it has room to be twice the
             // size of regular word labels (and to use more of the bubble's width before wrapping).
-            val emojiOnly = isSingleEmoji(c.entry.label)
+            val emojiOnly = isSingleEmoji(c.label)
             // The emoji scale (ED-14) is a *floor*: enforced only in the full-screen (zoomable) chart,
             // where lone emoji are at least the chosen size and may go larger; the thumbnail stays small.
             val emojiFloor = if (zoomable) emojiScale else 1f
@@ -1697,21 +1713,21 @@ private fun PackedBubbleChart(
                 // otherwise vanish into an ellipsis). Measure it unconstrained, then shrink the glyph
                 // to fit the bubble if it's wider than the bubble.
                 val natural = textMeasurer.measure(
-                    text = c.entry.label,
+                    text = c.label,
                     style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
                     maxLines = 1
                 )
                 if (natural.size.width > labelMaxWidth && natural.size.width > 0) {
                     val fitted = wordPx * labelMaxWidth / natural.size.width
                     textMeasurer.measure(
-                        text = c.entry.label,
+                        text = c.label,
                         style = TextStyle(color = textColor, fontSize = fitted.toSp(), fontWeight = FontWeight.Bold),
                         maxLines = 1
                     )
                 } else natural
             } else {
                 textMeasurer.measure(
-                    text = c.entry.label,
+                    text = c.label,
                     style = TextStyle(color = textColor, fontSize = wordPx.toSp(), fontWeight = FontWeight.Bold),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
@@ -1724,7 +1740,7 @@ private fun PackedBubbleChart(
             // neither clips the bubble.
             val countLayout = if (zoomable && r >= 26f) {
                 textMeasurer.measure(
-                    text = c.entry.count.toString(),
+                    text = c.count.toString(),
                     style = TextStyle(color = textColor.copy(alpha = 0.8f), fontSize = (wordPx * 0.7f).toSp()),
                     maxLines = 1
                 )

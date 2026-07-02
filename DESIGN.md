@@ -590,6 +590,27 @@ alive across reloads (keyed on chart *type*, not on the data object) so that:
   user switches chart type — not on every shift.
 Rapid shifts conflate to the latest resting window so a fast drag issues one reload, not a backlog.
 
+**Packed bubble scrub transitions.** When the shared window slides (or the timeframe changes), the
+packed bubble chart *morphs* from the old packing to the new one instead of popping in a fresh
+render. Bubbles are matched across windows by their label:
+- A bubble present in both windows glides to its new packed position while its radius and its
+  magnitude color interpolate to the new count. Its count caption reads the destination count
+  immediately — numerals ticking through intermediate values would imply data that never existed.
+- A bubble new to the window inflates in place from nothing at its packed position; a departing
+  bubble deflates in place, drawn *beneath* the surviving bubbles so it slips under the cluster
+  rather than covering it.
+- The cluster's fit-to-canvas scaling follows the interpolated geometry continuously, so the whole
+  cluster gently rescales as it morphs.
+- A transition interrupted by another shift (rapid scrubbing) retargets from the bubbles' current
+  in-flight geometry — a fast drag reads as one continuous morph, never a backlog of replays.
+- Duration is one short beat (`BUBBLE_TRANSITION_MS`), long enough to follow a word's movement,
+  short enough to keep up with step-by-step scrubbing.
+
+This is deliberately different from the line graph, which *snaps* between windows: line points at
+the same x in different windows are unrelated measurements, so tweening them would draw shapes the
+data never made — whereas a bubble's label gives the same entity on both sides, making the motion
+meaningful.
+
 **Heat map fill vs. scroll.** "Fill the canvas" means the whole current period is visible at once
 without having to scroll *within* it — not that scrolling is disabled. Monthly, yearly, and all-time
 heat maps size their cells so the entire month/year/history fits the chart; weekly shows a short,
