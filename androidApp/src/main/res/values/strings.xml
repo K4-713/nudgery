@@ -213,6 +213,8 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_open_source">Nudgery is free and open source software.</string>
     <string name="about_licenses_link">Open-source licenses</string>
+    <string name="about_website_link">More at nudgery.k4-713.com</string>
+    <string name="about_review_link">Leave a review on Google Play</string>
 
     <!-- Open-source licenses screen -->
     <string name="licenses_title">Open-source licenses</string>

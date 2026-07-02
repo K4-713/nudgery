@@ -616,3 +616,23 @@ save via ED-29.
 **Tests:** `FormValidationTest` (the predicate: prompt only for text + answers);
 `EditNudgeViewModelTest` (text + answers prompts; confirm removes; dismiss keeps; blank or
 answerless removes without a prompt).
+
+### ED-31: The About screen's "leave a review" entry appears only for Play Store installs
+**Status:** Implemented — `InstallSource.kt` (androidApp `ui/screen`); review row in `AboutScreen`
+**Context:** Nudgery is published on Google Play, and the About screen should offer a pathway to
+leave a review there. But the app is open source and can arrive on a device other ways — sideloaded
+APK, another store, a debug build — and for those installs a Play review link is a dead end (and, on
+devices without the Play Store, a broken one). Android reports who installed an app:
+`PackageManager.getInstallSourceInfo(...).installingPackageName` on API 30+, and the deprecated
+`getInstallerPackageName` below that (minSdk is 26).
+**Decision:** The review entry is shown **iff** the reported installing package is exactly the Play
+Store's (`com.android.vending`). The check **fails closed**: a null installer (sideload/debug), any
+other store, or a lookup error hides the entry. The visibility rule is a pure predicate
+(`isInstalledFromPlayStore(installerPackageName)`) separated from the platform lookup so it is unit-
+testable. Tapping the entry deep-links to the app's Play listing via `market://details?id=<applicationId>`
+pinned to the Play Store package, falling back to the public web listing URL if that intent cannot
+resolve. We deliberately do **not** use the Play In-App Review library: it would add a production
+dependency (AGENTS.md says avoid), and its API is quota-limited with no guarantee any UI shows —
+the deep link is deterministic and dependency-free.
+**Tests:** `InstallSourceTest` (predicate: Play Store package → shown; null / other installers →
+hidden; listing URI and web-fallback URL are well-formed and carry the application id).

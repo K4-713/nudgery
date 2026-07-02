@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -25,9 +26,16 @@ import androidx.compose.ui.unit.dp
 import com.nudgery.android.BuildConfig
 import com.nudgery.android.R
 
+/** The project website linked from the About screen. */
+private const val NUDGERY_WEBSITE_URL = "https://nudgery.k4-713.com"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(onBack: () -> Unit, onLicensesClick: () -> Unit) {
+    val context = LocalContext.current
+    // ED-31: only offer the Play review pathway when this install actually came from the Play
+    // Store; a sideloaded or otherwise-sourced install would get a dead-end link.
+    val showReviewLink = remember { isInstalledFromPlayStore(installerPackageName(context)) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -81,15 +89,36 @@ fun AboutScreen(onBack: () -> Unit, onLicensesClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
+            AboutLinkRow(
                 text = stringResource(R.string.about_licenses_link),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable(onClick = onLicensesClick)
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                onClick = onLicensesClick
             )
+
+            AboutLinkRow(
+                text = stringResource(R.string.about_website_link),
+                onClick = { openUrl(context, NUDGERY_WEBSITE_URL) }
+            )
+
+            if (showReviewLink) {
+                AboutLinkRow(
+                    text = stringResource(R.string.about_review_link),
+                    onClick = { openPlayStoreListing(context, BuildConfig.APPLICATION_ID) }
+                )
+            }
         }
     }
+}
+
+/** A full-width tappable link line, styled like the rest of the About screen's links. */
+@Composable
+private fun AboutLinkRow(text: String, onClick: () -> Unit) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    )
 }

@@ -325,7 +325,7 @@ The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background
 | `EditNudgeScreen` | Pencil icon on NudgeDetail top bar (step 0 — question/name); follow-up icon on NudgeDetail (step 1 — follow-ups); calendar icon on NudgeDetail (step 2 — schedule) |
 | `AnswerFormScreen` | "Answer Now" on NudgeDetail; notification tap |
 | `SettingsScreen` | Settings icon on NudgeList |
-| `AboutScreen` | About link on Settings |
+| `AboutScreen` | About link on Settings. Links to the open-source licenses screen, the project website (`nudgery.k4-713.com`), and — only when the app was installed by the Play Store (ED-31, `InstallSource.kt`) — the app's Play listing for leaving a review |
 
 ---
 
