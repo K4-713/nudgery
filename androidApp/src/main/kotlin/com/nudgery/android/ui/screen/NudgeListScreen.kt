@@ -49,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -435,10 +436,19 @@ private fun NudgeListItem(
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Switch(
-                checked = nudge.isEnabled,
-                onCheckedChange = { onToggleEnabled() }
-            )
+            // key() works around a Material3 (≤1.4.0) bug: LazyColumn recycles item compositions
+            // across different nudges, and the Switch's internal thumb node carries its previous
+            // animation position through that reuse (its ThumbNode lacks onReset), so switches
+            // visibly slide to their new state while scrolling. Keying the switch on the nudge
+            // makes the recycled subtree rebuild instead — a fresh thumb starts at the right
+            // position with no animation. Drop this once the upstream ThumbNode.onReset fix
+            // (already on androidx-main) reaches a stable material3 release; see TODO.md.
+            key(nudge.nudgeId) {
+                Switch(
+                    checked = nudge.isEnabled,
+                    onCheckedChange = { onToggleEnabled() }
+                )
+            }
         }
     }
 }

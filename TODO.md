@@ -12,6 +12,12 @@ commit(s), separate from feature work, with a full green test run and a verified
 - [ ] Reconsider the JVM 11 bytecode target.
 - [ ] After bumping, regenerate `CREDITS.md` (`./gradlew :androidApp:generateCredits`) if the
       dependency graph shifts.
+- [ ] When bumping the Compose BOM: check whether material3's `Switch` now resets its thumb
+      animation state on lazy-list reuse (`ThumbNode.onReset`, present on androidx-main as of
+      2026-07 but absent through material3 1.4.0). Once a stable release has it, remove the
+      `key(nudge.nudgeId)` workaround around the `Switch` in `NudgeListScreen.kt`
+      (`NudgeListItem`), which exists only to stop recycled switches from visibly animating
+      to their state while the main list scrolls.
 
 ## Test Debt (implemented EDs without TDD coverage)
 - [ ] ED-3 (ship no emoji glyphs; render from device font): add a TDD_ test asserting no emoji image
