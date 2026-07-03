@@ -94,7 +94,7 @@ shared subset.
 **Tests:** pending — see TODO.md.
 
 ### ED-5: The emoji catalog is generated from Unicode data, not hand-curated
-**Status:** Implemented — `buildSrc` parser/generator + `:shared:generateEmojiCatalog` (base catalog; CLDR keywords pending in ED-10)
+**Status:** Implemented — `buildSrc` parser/generator + `:shared:generateEmojiCatalog` (base catalog; CLDR keywords shipped via ED-10)
 **Context:** Maintaining an emoji list by hand would be error-prone and would drift from Unicode.
 **Decision:** A generator parses Unicode's canonical, pre-categorized `emoji-test.txt` into a
 shared categorized list in the KMP module; skin-tone and ZWJ variants are produced by rule. It is

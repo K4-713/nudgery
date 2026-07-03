@@ -413,16 +413,16 @@ Default to Material 3 motion and only deviate with intention. The goal is polish
 ### Everywhere (subliminal layer)
 - Screen transitions: crossfade at 490ms (`NAV_TRANSITION_DURATION_MS`). The `NavHost` carries `Modifier.background(MaterialTheme.colorScheme.background)` so the blend-through color matches the active theme — dark in dark mode, light in light mode — rather than the Android window background.
 - Button press: Material 3 ripple default — keep as-is
-- Nudge list load: very subtle fade-in stagger — 30–50ms offset per item; the list feels like it arrived rather than popped
+- Nudge list load: very subtle fade-in stagger — 30–50ms offset per item; the list feels like it arrived rather than popped *(aspirational — not yet implemented; see TODO.md → Motion Polish)*
 
 ### Answer Form
 - Question-to-question transition: gentle horizontal page slide, consistent with the step pagination
-- "Save Answer" confirmation: brief checkmark or pulse before advancing (300ms)
+- "Save Answer" confirmation: brief checkmark or pulse before advancing (300ms) *(aspirational — not yet implemented; see TODO.md → Motion Polish)*
 
 ### Detail Screen
 - Charts animate in on load — Vico's built-in entry animation applies to both `LineCartesianLayer` (line graphs) and `ColumnCartesianLayer` (bar and column charts); do not suppress it
-- Calendar heat map has no Vico equivalent and will use a custom Canvas composable; its entry animation should match Vico's timing
-- Answer submission from the detail screen gets the most expressive treatment — golden yellow accent plays here
+- Calendar heat map has no Vico equivalent and uses a custom Canvas composable; an entry animation matching Vico's timing is *aspirational — not yet implemented; see TODO.md → Motion Polish*. (The packed bubble chart, also custom Canvas, does animate: see *Packed bubble scrub transitions*.)
+- Answer submission from the detail screen gets the most expressive treatment — golden yellow accent plays here *(aspirational — not yet implemented; see TODO.md → Motion Polish)*
 
 ## Shape Language
 
@@ -512,7 +512,7 @@ Bottom of screen: Back and Next buttons. Final step has a Save button in place o
 
 - Nudge name (text field)
 - Main question text (text field)
-- Answer type selector: Yes/No, Scale, Number, Option Single, Option Multi
+- Answer type selector: Yes/No, Scale, Number, Option Single, Option Multi, Text, Emoji
 - If Option Single or Option Multi: option builder (add/remove/reorder up to 16 options)
 
 **Answer type change warning:** If the user changes answer type after follow-up questions have been defined in step 2, or after options have been defined for an Option type, warn them that the change will discard their follow-up configuration and give them the option to cancel the type change. No warning if no follow-ups or options have been defined yet. Changing between Option Single and Option Multi is never destructive — no warning.
@@ -527,7 +527,7 @@ Each follow-up question defines:
   - *Number*: operator chips (=, >, ≥, <, ≤) + numeric text field
   - *Option Single / Option Multi*: one chip per option from the main question; OPTION_MULTI uses `CONTAINS` operator so the follow-up fires when that option appears anywhere in the multi-select answer
 - Question text
-- Answer type (Yes/No, Number, Option Single, Option Multi, or Text)
+- Answer type (any of the main question types: Yes/No, Scale, Number, Option Single, Option Multi, Text, or Emoji)
 - Options if Option type
 
 Multiple follow-ups can be added. Follow-ups can be removed.
@@ -559,7 +559,7 @@ Items 1–3 form a **tight header group** — they share much less vertical spac
    - Download icon (opens export menu: Export data (CSV), Export data (TSV), Back up nudge (JSON))
    - Magnifying glass (opens expanded chart view)
    - Icons are visually small but maintain 48dp touch targets
-6. **Timeframe picker** — row of chips just below the chart; changes the current view but does not persist. Persistent default is set inside the chart editor.
+6. **Timeframe picker** — row of chips just below the chart. Picking a timeframe changes the view *and* is persisted immediately as that nudge's default, so the detail screen reopens on whatever timeframe was last used — no separate "default" control to manage.
 7. **Raw data table** — collapsed by default, with a visible header row (e.g. "12 answers") indicating content. Each row has a per-answer hide control; tapping it triggers a confirmation dialog before hiding.
 
 ### Charts and Visualizations
@@ -578,9 +578,10 @@ period. There is no separate "page" concept; earlier data is reached only by sli
 - Categorical charts (bar, column, packed bubble) have no time axis, so a slim scrubber strip below
   the chart slides the window instead.
 - A drag is a continuous gesture: one sweep moves through as many days as the finger travels, and
-  the gesture is never interrupted mid-drag. One full-width swipe slides the window by three times
-  the selected timeframe (3 weeks on weekly, 3 months on monthly, 3 years on yearly), so scrolling
-  through history feels the same speed at every zoom level (`FULL_SWIPE_TIMEFRAME_MULTIPLIER`).
+  the gesture is never interrupted mid-drag. One full-width swipe slides the window by twice
+  the selected timeframe (2 weeks on weekly, 2 months on monthly, 2 years on yearly), so scrolling
+  through history feels the same speed at every zoom level (`FULL_SWIPE_TIMEFRAME_MULTIPLIER`;
+  tuned down from 3× — the mellower rate felt nicer in hand).
 
 **Smooth scrolling.** A window shift reloads each chart's data, but the chart composables are kept
 alive across reloads (keyed on chart *type*, not on the data object) so that:
@@ -653,9 +654,9 @@ both the inline card and the expanded full-screen view.
 
 ### Chart Editor
 
-Accessed via the chart type icon. Contains:
-- Chart type selector
-- Default timeframe selector (persists across sessions)
+Accessed via the chart type icon. Contains the chart type selector only. (The nudge's persistent
+default timeframe is not set here — it simply follows the last timeframe picked on the detail
+screen; see *Detail Screen Layout → Timeframe picker*.)
 
 ### General Nudge Editing
 
@@ -746,7 +747,11 @@ To be defined during implementation as needed.
 | Theme | Three-option toggle: System / Light / Dark | System |
 | Bold text | Toggle | Off |
 | Chart palette | Three-option radio: Full spectrum / Blue to orange / Purple to red | Full spectrum |
-| Import | Button: "Import Nudge from Backup" (opens file picker for `.json` backup files) | — |
+| Emoji defaults | Skin-tone and gender swatch selectors + emoji-scale slider (ED-6/7/14) | Neutral / Neutral / 1× |
+| Diagnostics | Exact-alarm grant status row with an "Open Settings" recovery action | — |
+| Back up all | Button: "Back Up All Nudges" (produces one ZIP of per-nudge JSON) | — |
+| Import | Button: "Import from Backup" (file picker; accepts a single `.json` or a full backup `.zip`) | — |
+| About | Link to the About screen (version, website, licenses, Play review when applicable) | — |
 
 Bold text toggle swaps Regular → Medium and SemiBold → Bold throughout the theme's `Typography` object.
 

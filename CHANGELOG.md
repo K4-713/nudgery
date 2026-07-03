@@ -9,6 +9,31 @@ entry below, then distilled into the Play Store "What's new" text. See AGENTS.md
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-02
+
+Nudgery's first full release — published on Google Play.
+
+### Added
+- **About page links.** The About page now links to the project website (nudgery.k4-713.com) and —
+  when the app was installed from Google Play — offers a "Leave a review on Google Play" link that
+  opens Nudgery's Play listing. Installs from anywhere else simply don't see the review link.
+
+### Changed
+- **Bubble charts morph while you scrub.** Moving the time window under a packed bubble chart now
+  animates the change: bubbles that stay glide and resize to their new place, new ones grow in, and
+  departing ones shrink away — instead of a whole new chart popping in at each step.
+
+### Fixed
+- **Heat map colors for Scale questions.** Scale answers of zero or below used to render as the
+  "no data recorded" grey, and colors were normalized against the visible maximum. The heat map's
+  color scale is now anchored to the question's own defined range in every view, so a given answer
+  is always the same color — and on a scale that extends below zero (like -10 to 10), zero is just
+  another color on the gradient. Week- and month-sized heat cells for Scale questions now show the
+  **average** of their logged days rather than a sum, so they stay within the scale's bounds.
+- **Main-list toggles no longer wiggle.** Scrolling the nudge list quickly made the enable/disable
+  switches visibly slide into position as rows scrolled back into view (a Material 3 list-recycling
+  bug). Worked around until the upstream fix ships.
+
 ## [0.9.1] - 2026-06-16
 
 ### Fixed

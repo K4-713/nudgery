@@ -42,8 +42,16 @@ ENGINEERING_DECISIONS.md (ED-19).
       reorder is usable without long-press-drag.
 - [ ] Phase 4 — Backup/restore order (ED-19): full-ZIP backups preserve relative order; single-nudge
       JSON imports append. Add the field to the backup format + round-trip tests.
-- [ ] Phase 5 — Docs: DESIGN.md interaction spec for the drag/lift/gap behavior; README if the
-      reordering is surfaced as a user-facing feature.
+- [ ] Phase 5 — Docs: DESIGN.md interaction spec for the drag/lift/gap behavior. (The README half is
+      done — reordering was documented as user-facing in the v1.0.0 release prep.)
+
+## Motion Polish
+DESIGN.md's Motion section specifies four animations that are not yet implemented (each tagged
+*aspirational* there as of v0.9.1+):
+- [ ] Nudge list load: subtle fade-in stagger, 30–50ms offset per item.
+- [ ] "Save Answer" confirmation: brief checkmark or pulse (~300ms) before advancing.
+- [ ] Calendar heat map entry animation matching Vico's timing.
+- [ ] Detail-screen answer submission celebration — the golden-yellow whimsy moment.
 
 ## Detail Screen Edit-Affordance Redesign (exploration)
 Tighten the detail-screen header and clarify how each part is edited. Not yet decided — captured
@@ -107,25 +115,9 @@ It does **not** help once the device is unlocked. A key insight is the forensic 
 
 Net: worth doing for the locked-device / offline-analysis case; not a defense against an unlocked device. When this lands, record it as an ENGINEERING_DECISIONS entry (binding internal decision) with this rationale, plus instrumented `androidTest` coverage for the encrypted round-trip and the one-time plaintext→encrypted migration.
 
-## Play Store Listing Materials
-Prepare before submitting:
-- Export a 512×512 PNG icon for the Play Store store listing (see `art/play_store_icon.png`)
-- Short description (max 80 characters)
-- Full description (max 4000 characters)
-- At least 2 phone screenshots (additional tablet/foldable screenshots improve ranking)
-- Feature graphic (1024×500 PNG or JPEG)
-- Privacy policy: even though no data leaves the device, Google requires a hosted privacy policy URL; a simple page stating that all data is stored locally and nothing is collected or shared is sufficient
-- Complete the **Data Safety** form in Play Console (declare: no data shared with third parties, data stored on-device, no account required)
-- Complete the **Content Rating** questionnaire
-
-## applicationId and Versioning
-- Confirm `applicationId = "com.nudgery.android"` is final — it cannot be changed after the first publish without losing all installs and reviews
-- Consider enabling **Play App Signing** (Google holds the upload key; strongly recommended for new apps)
-
-## Release Build (`androidApp`)
-- Create a signing keystore and add `signingConfigs` to `androidApp/build.gradle.kts`
-- Store keystore path and credentials in `local.properties` (already gitignored); never commit secrets to the repo
-- Verify ProGuard/R8 rules don't strip needed classes — check SQLDelight generated code, Koin reflection, WorkManager, and Vico; add keep rules to `proguard-rules.pro` as needed
-- Run `./gradlew :androidApp:bundleRelease` to produce an AAB for Play Store submission (AAB is required; APK is not accepted for new apps)
-- Test the release build on a physical device before submitting
-- The app declares `USE_EXACT_ALARM` (API 33+) rather than `SCHEDULE_EXACT_ALARM`; Play Store review for this permission is approval-based for reminder/scheduling apps. No special justification workflow is planned — approval is assumed.
+## Empty-State Welcome Illustration
+The main list's empty state still ships the CC0 **placeholder** shape
+(`res/drawable/empty_nudges_illustration.xml` — see its header comment). When the hand-drawn
+illustration is ready (authored in Inkscape under `art/`, CC-BY-SA-4.0):
+- [ ] Swap in the exported vector, change the drawable's SPDX line to `CC-BY-SA-4.0`, and add the
+      source SVG + drawable to the `LICENSE` scope note (requirements in DESIGN.md → Empty States).

@@ -26,7 +26,7 @@ Platform-specific concerns (notifications, file I/O) are abstracted behind inter
 | Notification scheduling (iOS, future) | UNUserNotificationCenter | Will implement the same `NotificationScheduler` interface |
 | Charts (Android) | Vico | Compose-native charting library |
 | Open-source licenses | AboutLibraries (core only) | Gradle plugin harvests dependency/license data into `R.raw.aboutlibraries`; rendered by our own `LicensesScreen`. Compose-Multiplatform UI module intentionally not used (see *iOS Readiness Notes*) |
-| Settings persistence | DataStore Preferences | Stores `ThemePreference`, bold text toggle, `ChartPalette`, and per-nudge default timeframe (keyed as `default_timeframe_<nudgeId>`); flows observed by `SettingsViewModel` and `NudgeDetailViewModel` |
+| Settings persistence | DataStore Preferences | Stores `ThemePreference`, bold text toggle, `ChartPalette`, emoji defaults (`SkinTone`/`Gender`), emoji recents (capped list), emoji scale, and per-nudge default timeframe (keyed as `default_timeframe_<nudgeId>`); flows observed by `SettingsViewModel`, `NudgeDetailViewModel`, and `AnswerFormViewModel` |
 | Typeface | Atkinson Hyperlegible Next | All 14 weight/style variants bundled as TTF in `androidApp/src/main/res/font/`; wired into `nudgeryTypography()` in `Type.kt` |
 
 ---
@@ -59,8 +59,11 @@ nudgery/
 │   │   ├── nav/             # NudgeryScreen sealed class, route/arg constants
 │   │   ├── screen/          # NudgeListScreen, CreateNudgeScreen, EditNudgeScreen,
 │   │   │                    #   NudgeDetailScreen, AnswerFormScreen, SettingsScreen,
-│   │   │                    #   AboutScreen, WizardSteps (shared wizard composables),
-│   │   │                    #   reusable inputs: RequiredOutlinedTextField, InfoButton
+│   │   │                    #   AboutScreen, LicensesScreen, EmojiPicker,
+│   │   │                    #   WizardSteps (shared wizard composables),
+│   │   │                    #   chart helpers: BubblePacking, BubbleTransition, HeatColorScale,
+│   │   │                    #   list/nav helpers: NudgeReorder, PermissionHelpers, InstallSource,
+│   │   │                    #   reusable inputs: RequiredOutlinedTextField, InfoButton, Chips
 │   │   └── theme/           # NudgeryTheme, Color, Type (Atkinson Hyperlegible Next),
 │   │                        #   nudgeryShapes, nudgeryTypography(bold), GhostText
 │   └── MainActivity.kt
@@ -93,7 +96,7 @@ ViewModels live in the platform app modules (`androidApp`, future `iosApp`). All
 | `EditNudgeViewModel` | Pre-populates form from DB; tracks follow-ups as `List<EditableFollowUp>` (wraps `QuestionFormState` with an optional DB `questionId` and an `answerCount` loaded from storage); `addFollowUp()`, `updateFollowUp()`, `removeFollowUp()`; `removeFollowUp()` raises a `FollowUpRemovalPrompt` confirmation when the follow-up has text + recorded answers (ED-30), resolved via `confirmFollowUpRemoval()` / `dismissFollowUpRemoval()`; passes `followUpReplacements` to `UpdateNudgeUseCase` on save; detects question/option text changes; `submit()` → optional split dialog → `submitWithSplit()` / `submitInPlace()` |
 | `NudgeDetailViewModel` | Loads static data on init (including `mainQuestionText` and `followUpCount` for display); reads persisted default timeframe from `AppSettings` on init and saves it when changed; live-observes answers via `combine`; owns the shared dashboard window (`selectedTimeframe` + `windowOffsetDays` → `[windowStart, windowEnd]`, label, `canShiftOlder/Newer`); loads one `QuestionVisualizationSource` per charted question from the database only when answers change (`reloadVisualizationSources`), then re-aggregates those cached sources in memory for the current window on every timeframe/scrub change (`renderVisualizations`) so scrubbing touches no storage; `selectTimeframe()`, `shiftWindowDays()`, `setAnswerHidden()`, `exportAnswers()` |
 | `AnswerFormViewModel` | Loads questions; evaluates follow-up trigger conditions (EQ/GT/GTE/LT/LTE/CONTAINS); records each answer with its `scheduledAt` time; manages multi-step form progression |
-| `SettingsViewModel` | Combines `themePreference`, `boldText`, and `chartPalette` flows from `AppSettings` (DataStore) with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for import-from-backup. Validates a backup before importing and exposes a one-shot `fixNavigation` flow that routes an invalid single import into the editor to fix (ED-27) |
+| `SettingsViewModel` | Combines the `AppSettings` (DataStore) flows — `themePreference`, `boldText`, `chartPalette`, and the emoji defaults (`defaultEmojiSkinTone`, `defaultEmojiGender`, `emojiScale`) — with `importStatus` into a single `SettingsUiState`; accepts `ImportNudgeUseCase` and `NudgeBackupParser` for import-from-backup. Validates a backup before importing and exposes a one-shot `fixNavigation` flow that routes an invalid single import into the editor to fix (ED-27) |
 
 ### ViewModel conventions
 
@@ -326,6 +329,7 @@ The `NavHost` is given `Modifier.background(MaterialTheme.colorScheme.background
 | `AnswerFormScreen` | "Answer Now" on NudgeDetail; notification tap |
 | `SettingsScreen` | Settings icon on NudgeList |
 | `AboutScreen` | About link on Settings. Links to the open-source licenses screen, the project website (`nudgery.k4-713.com`), and — only when the app was installed by the Play Store (ED-31, `InstallSource.kt`) — the app's Play listing for leaving a review |
+| `LicensesScreen` | "Open-source licenses" link on About; renders the AboutLibraries-harvested license data (`R.raw.aboutlibraries`) with our own Compose UI |
 
 ---
 
@@ -385,7 +389,7 @@ All chart composables live in `NudgeDetailScreen.kt` (private). The dispatch is 
 
 ## Emoji Catalog (build-time generation)
 
-The emoji picker (in progress) is backed by a catalog generated from Unicode data at build time, not hand-maintained or parsed at runtime — see ENGINEERING_DECISIONS.md ED-3/ED-4/ED-5 for the rationale.
+The emoji picker (shipped on Android; iOS deferred) is backed by a catalog generated from Unicode data at build time, not hand-maintained or parsed at runtime — see ENGINEERING_DECISIONS.md ED-3/ED-4/ED-5 for the rationale.
 
 - **Source of truth:** vendored under `shared/emoji-data/` — `emoji-test.txt` (Unicode UTS #51) plus CLDR `cldr-annotations-en.xml` and `cldr-annotationsDerived-en.xml` for search keywords (ED-10). Annual refresh = swap those files and rebuild.
 - **Build-time tools (`buildSrc`):** `EmojiTestParser` parses `emoji-test.txt`; `CldrAnnotationParser` parses the CLDR keyword lists (matched to emoji by FE0F-normalized form); `EmojiCatalogGenerator` derives **base concepts** (fully-qualified, no skin-tone modifier, no hair component) flagged with `acceptsSkinTone`/`hairCapable` and carrying CLDR `keywords`, and emits them as Kotlin source. These live in `buildSrc` so they never ship in the app, and are unit-tested there.

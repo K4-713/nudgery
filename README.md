@@ -30,7 +30,7 @@ The basic nudge question types are:
 * Scale : Whole numbers, 0-10 is the default, and you answer with a slider.
 * Any Number : Type any number when asked
 * Option (Single) : Pick one option from a list
-  * With this question type, you will be prompted here to add up to 16 selectable answers.
+  * With this question type, you will be prompted here to add anywhere from two to 16 selectable answers.
 * Option (Multi) : Pick multiple options from a list
   * Just like the single option type, you will be prompted here to add up to 16 selectable answers.
   * You'll need to add at least two, so you have something to choose between.
@@ -46,12 +46,12 @@ After the questions are finished, you can edit the schedule for your Nudge to as
 * Hourly: Pick the time of your first nudge of the day (hour and minute) and the time of your last nudge, plus the active days of the week. Starting the hour and minute you chose for the first nudge, you'll be nudged once an hour until your last nudge time on enabled days. 
   * Note: If your schedule contains a date change (going past midnight), nudges on days you don't have enabled will still fire if that particular run started on an enabled day, and you won't get nudged after midnight on days that are enabled if the previous day wouldn't have started a run.
 
-Save the Nudge. It will appear on the main screen in the list with the rest of your Nudges, indicating the Nudge's name, schedule, next nudge date and time, and whether or not it is enabled. 
+Save the Nudge. It will appear on the main screen in the list with the rest of your Nudges, indicating the Nudge's name, schedule, next nudge date and time, and whether or not it is enabled. Your nudges can be re-ordered by long-pressing the nudge you want to move, and dragging it to the desired position.
 
 Enabled Nudges will send you notifications when it's time to answer your questions. When the notification pops up, clicking on it will take you directly to the question form.
 
 ## Viewing Nudges
-From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV file or saved as a full JSON backup (more on this later). There is also an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately, outside of a scheduled answer.
+From the main screen, select the Nudge you would like to view. The Nudge's details will open, with a visualization of the data you have entered so far, editable details of that Nudge, and a raw table of the answer data which can be exported to a CSV or TSV file, or saved as a full JSON backup (more on this later). There is also an "Answer Now" button that you can use if you missed a Nudge notification, or if you want to add a data point immediately, outside of a scheduled answer.
 
 The raw data shown on the Nudge detail screen displays all nudge responses when expanded. A response consists of a single main question answer, the actual time that answer was received, and answers to any follow-up questions that came along with that main answer (expandable from the main answer).
 
