@@ -1,14 +1,18 @@
 # Next Steps
 
 ## Toolchain / Dependency Currency
-Gradle, AGP, and Kotlin have been pinned at the values set in the original scaffolding commit
-(`5f9c4a3`, 2026-05-12) and never bumped: **Gradle 8.11.1**, **AGP 8.7.3**, **Kotlin 2.1.0** — all
-late-2024 releases, i.e. already ~6 months stale when the project was scaffolded. This is *not* a
-deliberate compatibility pin (no ED or note justifies it); it's just scaffolding-baseline drift. The
-modules also target **JVM 11** bytecode (`sourceCompatibility`/`jvmTarget`), which is conservative.
-Per AGENTS.md ("dependencies must be kept current"), schedule a dedicated upgrade pass — its own prep
-commit(s), separate from feature work, with a full green test run and a verified rollback path:
-- [ ] Bump Gradle wrapper, AGP, and Kotlin to current releases (check actual latest at the time).
+Gradle and Kotlin are still pinned at the values set in the original scaffolding commit (`5f9c4a3`,
+2026-05-12) — **Gradle 8.11.1** and **Kotlin 2.1.0**, both late-2024 releases, i.e. already ~6 months
+stale when the project was scaffolded. This is *not* a deliberate compatibility pin (no ED or note
+justifies it); it's just scaffolding-baseline drift. **AGP** was moved off that baseline to **8.10.1**
+on 2026-07-30, but only as far as targeting Android 16 required: 8.10 is the newest line that runs on
+Gradle 8.11.1, so it was the smallest step that supports `compileSdk 36`. Current AGP is 8.13.x, with
+a 9.x line out. The modules also target **JVM 11** bytecode (`sourceCompatibility`/`jvmTarget`), which
+is conservative. Per AGENTS.md ("dependencies must be kept current"), schedule a dedicated upgrade
+pass — its own prep commit(s), separate from feature work, with a full green test run and a verified
+rollback path:
+- [ ] Bump the Gradle wrapper and Kotlin to current releases, and AGP the rest of the way (check
+      actual latest at the time). AGP past 8.10 needs Gradle 8.13+, so those move together.
 - [ ] Reconsider the JVM 11 bytecode target.
 - [ ] After bumping, regenerate `CREDITS.md` (`./gradlew :androidApp:generateCredits`) if the
       dependency graph shifts.
