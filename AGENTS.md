@@ -2,6 +2,19 @@
 This project will take a Documentation Driven Development approach, in which the end-user documentation is written as if the software already exists, and is then used (by humans or agents) as directions to create the software. 
 See @.claude/shared/AGENTS.md
 
+# Repository Setup
+The always-on agent rules and the shared workflow skills are not stored in this repo — they come
+from the [k5](https://github.com/K4-713/k5) submodule mounted at `.claude/shared`.
+
+* **After cloning, run `git submodule update --init`.** Without it `.claude/shared` is empty: the
+  `@.claude/shared/AGENTS.md` import above resolves to nothing and the skill symlinks in
+  `.claude/skills/` dangle, so the shared rules and workflows silently go missing.
+* **To update the shared rules:** `git -C .claude/shared pull && .claude/shared/install.sh && git add .claude`,
+  then commit the moved submodule pointer along with any added or pruned skill links. Re-running
+  `install.sh` is what picks up skills k5 has added or removed.
+* Skills are scanned when a session starts, so start a fresh agent session after either step to pick
+  up changes.
+
 ## Dependencies
 * Whenever a dependency is introduced, updated, or removed (in `gradle/libs.versions.toml` or a module's `build.gradle.kts`), regenerate the open-source credits so attribution stays accurate:
   * Run `./gradlew :androidApp:generateCredits` and commit the updated `CREDITS.md`. It is generated from the release build's actual dependency graph (harvested by the AboutLibraries Gradle plugin), so it must be refreshed by hand — it does not update itself.
@@ -12,16 +25,8 @@ See @.claude/shared/AGENTS.md
 See the **Regenerating Icon Assets** section under **App Icon** in `DESIGN.md` for artwork requirements, prerequisites, and step-by-step instructions.
 
 # Tagging a new release
-Prior to tagging a new release, ensure that we are adhering to our own rules. Make and work through tasks to do the following:
-* Look through the README.md file and compare the contents to the current code.
-  * Identify areas of the code that need more end-user documentation
-  * Identify parts of README.md that need to be corrected
-  * Leave descriptive placeholders in square brackets in the README file, containing a short description of the fixes or undocumented behaviors that must be addressed.
-  * Code behaviors that are currently tested in the TDDs without related information in the README.md should be prioritized.
-  * Wait for the user to fix README.md before continuing to the next step.
-* Have a look through the ARCHITECTURE.md, DESIGN.md, ENGINEERING_DECISIONS.md, and TODO.md files, and call out any places where the documentation doesn't match the code. Decide interactively with the user which side is more correct in each mismatch case, and change the other side to match.
-* If there are any substantial items in the README.md, DESIGN.md, or ARCHITECTURE.md docs that don't have TDD tests, write and run those tests which verify accuracy of the documentation.
-* Confirm every decision in ENGINEERING_DECISIONS.md has at least one TDD_ test enforcing it; write any that are missing. (Decisions still marked "implementation pending" are exempt until their feature lands.)
+Prior to tagging a new release:
+* Run the `wrap-up-work` skill to ensure that the work adheres to our own processes.
 * Verify the licensing split is intact. The project is dual-licensed: Nudgery's own
   source code and non-art assets are CC0 1.0 (public domain), while the original
   hand-drawn artwork is CC BY-SA 4.0. Check that:
