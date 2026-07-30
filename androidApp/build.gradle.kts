@@ -126,7 +126,6 @@ dependencies {
 
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
-    androidTestImplementation(composeBom)
 
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
@@ -162,11 +161,6 @@ dependencies {
     testImplementation(libs.androidx.test.ext)
     testImplementation(libs.workmanager.testing)
     testImplementation(libs.sqldelight.android.driver)
-    androidTestImplementation(libs.androidx.test.ext)
-    androidTestImplementation(libs.compose.ui.test)
-    androidTestImplementation(libs.workmanager.testing)
-    androidTestImplementation(libs.kotlinx.datetime)
-    androidTestImplementation(libs.sqldelight.android.driver)
 }
 
 // Regenerates the human-readable CREDITS.md at the repo root from the license data AboutLibraries

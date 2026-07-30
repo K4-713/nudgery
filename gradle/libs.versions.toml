@@ -63,7 +63,6 @@ aboutlibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref
 junit = { module = "junit:junit", version.ref = "junit" }
 org-json = { module = "org.json:json", version = "20240303" }
 androidx-test-ext = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext" }
-compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4" }
 # Runs Android-framework tests on the JVM, so the alarm/scheduling/notification tests are part of
 # `./gradlew build` instead of needing a booted emulator. Test-only: never on the shipped classpath.
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
