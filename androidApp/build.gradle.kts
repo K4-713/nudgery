@@ -40,12 +40,12 @@ val gitVersionName: String = try {
 
 android {
     namespace = "com.nudgery.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.nudgery.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = gitVersionCode
         versionName = gitVersionName
 
