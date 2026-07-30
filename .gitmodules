@@ -1,0 +1,4 @@
+[submodule ".claude/shared"]
+	path = .claude/shared
+	url = https://github.com/K4-713/k5.git
+	branch = main

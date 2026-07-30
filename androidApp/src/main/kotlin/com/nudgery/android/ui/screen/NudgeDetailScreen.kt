@@ -135,7 +135,6 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.component.ShapeComponent
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
@@ -1556,6 +1555,11 @@ private fun HorizontalBarChart(entries: List<NamedCount>, palette: ChartPaletteP
 private val COLUMN_AXIS_LABEL_SIZE = 9.sp
 private const val COLUMN_AXIS_LABEL_ROTATION_DEGREES = 45f
 
+// Thickness of a category column, in dp. This is the same width Vico gives its own default columns,
+// but the library's constant for it is restricted to Vico's own library group, so we state the value
+// here rather than reaching into their internals.
+private const val COLUMN_WIDTH_DP = 16f
+
 @Composable
 private fun NamedCountChart(entries: List<NamedCount>, palette: ChartPalettePreference) {
     if (entries.isEmpty()) {
@@ -1574,7 +1578,7 @@ private fun NamedCountChart(entries: List<NamedCount>, palette: ChartPalettePref
     val columnProvider = remember(entries, isDark, palette) {
         val stops = palette.paletteStops
         val columns = entries.map { entry ->
-            LineComponent(fill(stops.colorAt(entry.orderFraction, isDark)), Defaults.COLUMN_WIDTH)
+            LineComponent(fill(stops.colorAt(entry.orderFraction, isDark)), COLUMN_WIDTH_DP)
         }
         object : ColumnCartesianLayer.ColumnProvider {
             override fun getColumn(

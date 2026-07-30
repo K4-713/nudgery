@@ -40,12 +40,12 @@ val gitVersionName: String = try {
 
 android {
     namespace = "com.nudgery.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.nudgery.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = gitVersionCode
         versionName = gitVersionName
 
@@ -100,6 +100,8 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric needs the merged manifest and resources to build its test application.
+            isIncludeAndroidResources = true
         }
     }
 
@@ -124,7 +126,6 @@ dependencies {
 
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
-    androidTestImplementation(composeBom)
 
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
@@ -153,11 +154,13 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlinx.datetime)
     testImplementation(libs.org.json)
-    androidTestImplementation(libs.androidx.test.ext)
-    androidTestImplementation(libs.compose.ui.test)
-    androidTestImplementation(libs.workmanager.testing)
-    androidTestImplementation(libs.kotlinx.datetime)
-    androidTestImplementation(libs.sqldelight.android.driver)
+    // Robolectric runs the Android framework on the JVM, so the alarm/scheduling/notification tests
+    // live in this source set and run with every `./gradlew build` rather than needing an emulator.
+    // They keep @RunWith(AndroidJUnit4::class), which delegates to Robolectric off-device.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext)
+    testImplementation(libs.workmanager.testing)
+    testImplementation(libs.sqldelight.android.driver)
 }
 
 // Regenerates the human-readable CREDITS.md at the repo root from the license data AboutLibraries
@@ -176,8 +179,13 @@ tasks.register("generateCredits") {
     val creditsFile = rootProject.layout.projectDirectory.file("CREDITS.md")
     // Manual license definitions (e.g. Unicode-3.0) for licenses AboutLibraries doesn't bundle text for.
     val licensesConfigDir = layout.projectDirectory.dir("config/licenses").asFile
+    // Thanks to the tooling that builds and tests the app. It is deliberately absent from the release
+    // dependency graph, so it cannot be harvested — this section is written by hand and appended
+    // verbatim. Keeping it here rather than in CREDITS.md means regenerating the file preserves it.
+    val toolingCreditsFile = layout.projectDirectory.file("config/credits/build-and-test-tooling.md").asFile
     inputs.file(licenseJson)
     inputs.dir(licensesConfigDir)
+    inputs.file(toolingCreditsFile)
     outputs.file(creditsFile)
 
     doLast {
@@ -251,6 +259,10 @@ tasks.register("generateCredits") {
                 }
                 sb.appendLine()
             }
+
+        // Everything above is what ships; this is what builds and tests it. The heading says so, so
+        // the list of shipped libraries stays an accurate statement about the app's own contents.
+        sb.appendLine(toolingCreditsFile.readText().trimEnd()).appendLine()
 
         sb.appendLine("---").appendLine()
         // AboutLibraries may key a manually-defined license by a content hash rather than its SPDX id,

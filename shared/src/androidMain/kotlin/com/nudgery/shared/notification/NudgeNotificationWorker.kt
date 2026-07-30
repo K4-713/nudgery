@@ -69,6 +69,15 @@ class NudgeNotificationWorker(
     }
 
     private fun showNotification(nudgeId: String, title: String, text: String, scheduledAtMs: Long) {
+        // Posting needs POST_NOTIFICATIONS on API 33+, and the user can switch nudge alerts off in
+        // system settings on any version. Either way the alert simply cannot be shown: log it and
+        // move on, so the caller still records the fire and schedules the next one.
+        val notificationManager = NotificationManagerCompat.from(applicationContext)
+        if (!notificationManager.areNotificationsEnabled()) {
+            Log.w(TAG, "Notifications are turned off — no alert shown for nudge $nudgeId")
+            return
+        }
+
         val launchIntent = applicationContext.packageManager
             .getLaunchIntentForPackage(applicationContext.packageName)
             ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -90,8 +99,13 @@ class NudgeNotificationWorker(
             .setAutoCancel(true)
             .build()
 
-        NotificationManagerCompat.from(applicationContext).notify(nudgeNotificationId(nudgeId), notification)
-        Log.i(TAG, "Notification shown for nudge: $nudgeId")
+        try {
+            notificationManager.notify(nudgeNotificationId(nudgeId), notification)
+            Log.i(TAG, "Notification shown for nudge: $nudgeId")
+        } catch (e: SecurityException) {
+            // The permission can be revoked between the check above and this call.
+            Log.w(TAG, "Not allowed to post the alert for nudge $nudgeId", e)
+        }
     }
 
     private fun scheduleNextFire(nudge: Nudge, schedule: Schedule?) {

@@ -15,6 +15,7 @@ import androidx.work.workDataOf
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.nudgery.shared.db.NudgeryDatabase
 import com.nudgery.shared.db.SqlDelightAnswerRepository
+import com.nudgery.shared.db.SqlDelightNotificationFireRepository
 import com.nudgery.shared.db.SqlDelightNudgeEditRepository
 import com.nudgery.shared.db.SqlDelightNudgeRepository
 import com.nudgery.shared.db.SqlDelightQuestionOptionRepository
@@ -25,6 +26,7 @@ import com.nudgery.shared.model.ScheduleType
 import com.nudgery.shared.notification.NudgeAlarmReceiver
 import com.nudgery.shared.notification.NudgeNotificationWorker
 import com.nudgery.shared.repository.AnswerRepository
+import com.nudgery.shared.repository.NotificationFireRepository
 import com.nudgery.shared.repository.NudgeEditRepository
 import com.nudgery.shared.repository.NudgeRepository
 import com.nudgery.shared.repository.QuestionOptionRepository
@@ -78,6 +80,7 @@ class NudgeNotificationWorkerTest {
         optionRepo = SqlDelightQuestionOptionRepository(database)
         scheduleRepo = SqlDelightScheduleRepository(database)
         val answerRepo = SqlDelightAnswerRepository(database)
+        val notificationFireRepo = SqlDelightNotificationFireRepository(database)
         val nudgeEditRepo = SqlDelightNudgeEditRepository(database)
 
         stopKoin()
@@ -89,6 +92,7 @@ class NudgeNotificationWorkerTest {
                 single<QuestionOptionRepository> { optionRepo }
                 single<ScheduleRepository> { scheduleRepo }
                 single<AnswerRepository> { answerRepo }
+                single<NotificationFireRepository> { notificationFireRepo }
                 single<NudgeEditRepository> { nudgeEditRepo }
                 single<NotificationScheduler> { WorkManagerNotificationScheduler(context) }
                 factory { ComputeNextFireTimeUseCase() }

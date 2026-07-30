@@ -9,6 +9,12 @@ entry below, then distilled into the Play Store "What's new" text. See AGENTS.md
 
 ## [Unreleased]
 
+### Changed
+- **Now built against Android 16 (API 36).** Google Play requires new releases to target API 36.
+  Nothing changes for you: Nudgery already drew edge-to-edge, never locked its orientation, and
+  still runs on Android 8.0 (API 26) and up. Build tooling moved to Android Gradle Plugin 8.10.1,
+  the first line that supports compiling against API 36.
+
 ## [1.0.0] - 2026-07-02
 
 Nudgery's first full release — published on Google Play.

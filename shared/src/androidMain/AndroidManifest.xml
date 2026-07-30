@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- NudgeNotificationWorker posts nudge alerts from this module, so the permission it needs is
+         declared here and merges into any consuming app. The app module declares it too, for the
+         runtime request flow it owns; the merged manifest is unchanged either way. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+</manifest>
