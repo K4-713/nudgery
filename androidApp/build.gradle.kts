@@ -179,13 +179,13 @@ tasks.register("generateCredits") {
     val creditsFile = rootProject.layout.projectDirectory.file("CREDITS.md")
     // Manual license definitions (e.g. Unicode-3.0) for licenses AboutLibraries doesn't bundle text for.
     val licensesConfigDir = layout.projectDirectory.dir("config/licenses").asFile
-    // Thanks to the test-only tooling. It is deliberately absent from the release dependency graph,
-    // so it cannot be harvested — this section is written by hand and appended verbatim. Keeping it
-    // here rather than in CREDITS.md means regenerating the file preserves it.
-    val testToolingFile = layout.projectDirectory.file("config/credits/test-tooling.md").asFile
+    // Thanks to the tooling that builds and tests the app. It is deliberately absent from the release
+    // dependency graph, so it cannot be harvested — this section is written by hand and appended
+    // verbatim. Keeping it here rather than in CREDITS.md means regenerating the file preserves it.
+    val toolingCreditsFile = layout.projectDirectory.file("config/credits/build-and-test-tooling.md").asFile
     inputs.file(licenseJson)
     inputs.dir(licensesConfigDir)
-    inputs.file(testToolingFile)
+    inputs.file(toolingCreditsFile)
     outputs.file(creditsFile)
 
     doLast {
@@ -260,9 +260,9 @@ tasks.register("generateCredits") {
                 sb.appendLine()
             }
 
-        // Everything above is what ships; this is what tests it. The heading says so, so the list of
-        // shipped libraries stays an accurate statement about the app's own contents.
-        sb.appendLine(testToolingFile.readText().trimEnd()).appendLine()
+        // Everything above is what ships; this is what builds and tests it. The heading says so, so
+        // the list of shipped libraries stays an accurate statement about the app's own contents.
+        sb.appendLine(toolingCreditsFile.readText().trimEnd()).appendLine()
 
         sb.appendLine("---").appendLine()
         // AboutLibraries may key a manually-defined license by a content hash rather than its SPDX id,
