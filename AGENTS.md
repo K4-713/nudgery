@@ -27,6 +27,14 @@ See the **Regenerating Icon Assets** section under **App Icon** in `DESIGN.md` f
 # Tagging a new release
 Prior to tagging a new release:
 * Run the `wrap-up-work` skill to ensure that the work adheres to our own processes.
+* Run the full verification pass and leave it green: `./gradlew build`. This assembles debug and
+  release, runs every unit test in both modules, **and runs lint** — which nothing else does. The
+  `test*` tasks skip lint, and `assembleRelease` / `bundleRelease` prepare lint models but never run
+  the checks, so a lint regression is invisible unless this command is the one you run. Fix what it
+  reports rather than adding a lint baseline.
+* Run the instrumented tests with a device or emulator attached: `./gradlew connectedAndroidTest`.
+  These cover the alarm, scheduling, and notification-posting path, and `./gradlew build` never runs
+  them — so nothing else in this checklist exercises that code.
 * Verify the licensing split is intact. The project is dual-licensed: Nudgery's own
   source code and non-art assets are CC0 1.0 (public domain), while the original
   hand-drawn artwork is CC BY-SA 4.0. Check that:
