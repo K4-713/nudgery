@@ -100,6 +100,8 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric needs the merged manifest and resources to build its test application.
+            isIncludeAndroidResources = true
         }
     }
 
@@ -153,6 +155,13 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlinx.datetime)
     testImplementation(libs.org.json)
+    // Robolectric runs the Android framework on the JVM, so the alarm/scheduling/notification tests
+    // live in this source set and run with every `./gradlew build` rather than needing an emulator.
+    // They keep @RunWith(AndroidJUnit4::class), which delegates to Robolectric off-device.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext)
+    testImplementation(libs.workmanager.testing)
+    testImplementation(libs.sqldelight.android.driver)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.workmanager.testing)

@@ -14,6 +14,10 @@ rollback path:
 - [ ] Bump the Gradle wrapper and Kotlin to current releases, and AGP the rest of the way (check
       actual latest at the time). AGP past 8.10 needs Gradle 8.13+, so those move together.
 - [ ] Reconsider the JVM 11 bytecode target.
+- [ ] Move the Gradle JVM to Java 21 (currently 17), then delete the `sdk=35` pin in
+      `androidApp/src/test/resources/robolectric.properties`. Robolectric's API 36 sandbox requires
+      Java 21, so until then the alarm/scheduling/notification tests run against the API 35
+      framework rather than the API level the app actually targets.
 - [ ] After bumping, regenerate `CREDITS.md` (`./gradlew :androidApp:generateCredits`) if the
       dependency graph shifts.
 - [ ] When bumping the Compose BOM: check whether material3's `Switch` now resets its thumb
