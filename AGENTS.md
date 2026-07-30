@@ -20,6 +20,7 @@ from the [k5](https://github.com/K4-713/k5) submodule mounted at `.claude/shared
   * Run `./gradlew :androidApp:generateCredits` and commit the updated `CREDITS.md`. It is generated from the release build's actual dependency graph (harvested by the AboutLibraries Gradle plugin), so it must be refreshed by hand — it does not update itself.
   * The in-app *Settings → About → Open-source licenses* screen regenerates automatically on every build, so it needs no manual step.
   * Third-party assets that are **not** Maven dependencies (e.g. bundled fonts) are credited via manual entries under `androidApp/config/libraries/` and `androidApp/config/licenses/`. Add or remove these when such assets change.
+  * **Test-only dependencies** are absent from the release graph, so they are never harvested and owe us no attribution — but we credit them anyway. They live in `androidApp/config/credits/test-tooling.md`, which `generateCredits` appends verbatim to `CREDITS.md` under its own heading, keeping the generated list an accurate statement of what actually ships. Edit that file by hand when a test-only dependency is added, replaced, or removed; editing the section directly in `CREDITS.md` will be overwritten.
 
 # Regenerating Android Icon Assets
 See the **Regenerating Icon Assets** section under **App Icon** in `DESIGN.md` for artwork requirements, prerequisites, and step-by-step instructions.
